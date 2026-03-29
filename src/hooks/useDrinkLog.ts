@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { uploadDrinkPhoto } from '@/lib/storage';
 import { supabase } from '@/lib/supabase';
 import { DrinkLog, LogDrinkFormData } from '@/types/models';
 
@@ -25,10 +26,18 @@ export function useLogDrink() {
     mutationFn: async ({
       userId,
       formData,
+      sessionId,
     }: {
       userId: string;
       formData: LogDrinkFormData;
+      sessionId?: string | null;
     }) => {
+      // Upload photo to Storage if a local URI was provided
+      let photoUrl: string | null = null;
+      if (formData.photo_url) {
+        photoUrl = await uploadDrinkPhoto(userId, formData.photo_url);
+      }
+
       const { data, error } = await supabase
         .from('drink_logs')
         .insert({
@@ -40,7 +49,8 @@ export function useLogDrink() {
           location_lat: formData.location_lat ?? null,
           location_lng: formData.location_lng ?? null,
           notes: formData.notes || null,
-          photo_url: formData.photo_url ?? null,
+          photo_url: photoUrl,
+          session_id: sessionId ?? null,
         })
         .select()
         .single();
@@ -49,6 +59,66 @@ export function useLogDrink() {
     },
     onSuccess: (_data, { userId }) => {
       queryClient.invalidateQueries({ queryKey: ['drinkLogs', userId] });
+      queryClient.invalidateQueries({ queryKey: ['feed', userId] });
+      queryClient.invalidateQueries({ queryKey: ['userStats', userId] });
+    },
+  });
+}
+
+export function useUpdateDrinkLog() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      id,
+      userId,
+      formData,
+      existingPhotoUrl,
+      newPhotoUri,
+      removePhoto,
+    }: {
+      id: string;
+      userId: string;
+      formData: Omit<LogDrinkFormData, 'photo_url'>;
+      existingPhotoUrl: string | null;
+      newPhotoUri: string | null;
+      removePhoto: boolean;
+    }) => {
+      let photoUrl: string | null = existingPhotoUrl;
+
+      if (removePhoto && existingPhotoUrl) {
+        const { deleteDrinkPhoto } = await import('@/lib/storage');
+        await deleteDrinkPhoto(existingPhotoUrl);
+        photoUrl = null;
+      } else if (newPhotoUri) {
+        if (existingPhotoUrl) {
+          const { deleteDrinkPhoto } = await import('@/lib/storage');
+          await deleteDrinkPhoto(existingPhotoUrl);
+        }
+        photoUrl = await uploadDrinkPhoto(userId, newPhotoUri);
+      }
+
+      const { data, error } = await supabase
+        .from('drink_logs')
+        .update({
+          drink_type: formData.drink_type,
+          drink_name: formData.drink_name || null,
+          quantity: formData.quantity,
+          location_name: formData.location_name || null,
+          location_lat: formData.location_lat ?? null,
+          location_lng: formData.location_lng ?? null,
+          notes: formData.notes || null,
+          photo_url: photoUrl,
+        })
+        .eq('id', id)
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (_data, { userId, id }) => {
+      queryClient.invalidateQueries({ queryKey: ['drinkLogs', userId] });
+      queryClient.invalidateQueries({ queryKey: ['drinkDetail', id] });
       queryClient.invalidateQueries({ queryKey: ['feed', userId] });
       queryClient.invalidateQueries({ queryKey: ['userStats', userId] });
     },

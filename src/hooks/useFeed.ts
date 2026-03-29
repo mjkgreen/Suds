@@ -1,9 +1,9 @@
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
-import { FeedItem } from '@/types/models';
+import { FeedEntry, FeedItem } from '@/types/models';
 import { FEED_PAGE_SIZE } from '@/lib/constants';
 
-async function fetchFeedPage(userId: string, offset: number): Promise<FeedItem[]> {
+async function fetchFeedPage(userId: string, offset: number): Promise<FeedEntry[]> {
   const { data, error } = await supabase.rpc('get_feed', {
     p_user_id: userId,
     p_limit: FEED_PAGE_SIZE,
@@ -11,7 +11,7 @@ async function fetchFeedPage(userId: string, offset: number): Promise<FeedItem[]
   });
   if (error) throw error;
 
-  return (data ?? []).map((row: any) => ({
+  const rows: FeedItem[] = (data ?? []).map((row: any) => ({
     id: row.id,
     user_id: row.user_id,
     drink_type: row.drink_type,
@@ -24,6 +24,8 @@ async function fetchFeedPage(userId: string, offset: number): Promise<FeedItem[]
     photo_url: row.photo_url,
     logged_at: row.logged_at,
     created_at: row.created_at,
+    session_id: row.session_id ?? null,
+    session_title: row.session_title ?? null,
     profile: {
       id: row.user_id,
       username: row.username,
@@ -34,6 +36,30 @@ async function fetchFeedPage(userId: string, offset: number): Promise<FeedItem[]
       updated_at: '',
     },
   }));
+
+  // Group consecutive rows that share a session_id into SessionFeedGroups
+  const entries: FeedEntry[] = [];
+  const seenSessions = new Set<string>();
+
+  for (const row of rows) {
+    if (row.session_id && !seenSessions.has(row.session_id)) {
+      seenSessions.add(row.session_id);
+      const sessionItems = rows.filter((r) => r.session_id === row.session_id);
+      entries.push({
+        type: 'session',
+        session_id: row.session_id,
+        session_title: row.session_title ?? null,
+        profile: row.profile,
+        items: sessionItems,
+        started_at: sessionItems[sessionItems.length - 1].logged_at,
+        ended_at: sessionItems[0].logged_at,
+      });
+    } else if (!row.session_id) {
+      entries.push({ type: 'drink', item: row });
+    }
+  }
+
+  return entries;
 }
 
 export function useFeed(userId: string | undefined) {

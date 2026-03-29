@@ -65,6 +65,31 @@ export interface UserStats {
 
 export interface FeedItem extends DrinkLog {
   profile: Profile;
+  session_id?: string | null;
+  session_title?: string | null;
+}
+
+export interface SessionFeedGroup {
+  type: 'session';
+  session_id: string;
+  session_title: string | null;
+  profile: Profile;
+  items: FeedItem[];
+  started_at: string;
+  ended_at?: string | null;
+}
+
+export type FeedEntry =
+  | { type: 'drink'; item: FeedItem }
+  | SessionFeedGroup;
+
+export interface Session {
+  id: string;
+  user_id: string;
+  title: string | null;
+  started_at: string;
+  ended_at: string | null;
+  created_at: string;
 }
 
 export type LogDrinkFormData = {

@@ -78,9 +78,14 @@ export default function DrinkDetailScreen() {
         </Pressable>
         <Text className="font-bold text-gray-900 text-base">Drink</Text>
         {isOwner ? (
-          <Pressable onPress={handleDelete} className="p-2">
-            <Ionicons name="trash-outline" size={22} color="#ef4444" />
-          </Pressable>
+          <View className="flex-row gap-1">
+            <Pressable onPress={() => router.push(`/drink/edit/${data?.id}`)} className="p-2">
+              <Ionicons name="pencil-outline" size={22} color="#374151" />
+            </Pressable>
+            <Pressable onPress={handleDelete} className="p-2">
+              <Ionicons name="trash-outline" size={22} color="#ef4444" />
+            </Pressable>
+          </View>
         ) : (
           <View className="w-10" />
         )}

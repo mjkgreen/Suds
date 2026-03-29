@@ -1,8 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
-import { Pressable, View } from 'react-native';
+import { View } from 'react-native';
+import { SessionBanner } from '@/components/session/SessionBanner';
+import { useMyOpenSession } from '@/hooks/useSession';
+import { useAuthStore } from '@/stores/authStore';
 
-export default function TabsLayout() {
+function TabsLayoutInner() {
   return (
     <Tabs
       screenOptions={{
@@ -71,5 +74,18 @@ export default function TabsLayout() {
         }}
       />
     </Tabs>
+  );
+}
+
+export default function TabsLayout() {
+  const { user } = useAuthStore();
+  // Hydrates sessionStore with any open session from the DB on mount
+  useMyOpenSession(user?.id);
+
+  return (
+    <View className="flex-1">
+      <SessionBanner />
+      <TabsLayoutInner />
+    </View>
   );
 }

@@ -1,11 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
-import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import {
+  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -15,47 +15,64 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/common/Button';
 import { LocationPicker } from '@/components/common/LocationPicker';
 import { DrinkTypePicker } from '@/components/drink/DrinkTypePicker';
-import { useLogDrink } from '@/hooks/useDrinkLog';
-import { useActiveSession, useEndSession } from '@/hooks/useSession';
+import { useUpdateDrinkLog } from '@/hooks/useDrinkLog';
+import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/stores/authStore';
-import { LogDrinkFormData } from '@/types/models';
+import { DrinkLog, DrinkType, LogDrinkFormData } from '@/types/models';
 
-const DEFAULT_VALUES: LogDrinkFormData = {
-  drink_type: 'beer',
-  drink_name: '',
-  quantity: 1,
-  location_name: '',
-  notes: '',
-};
-
-export default function LogScreen() {
+export default function EditDrinkScreen() {
+  const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { user } = useAuthStore();
-  const { mutateAsync: logDrink } = useLogDrink();
-  const activeSession = useActiveSession();
-  const { mutateAsync: endSession, isPending: isEnding } = useEndSession();
-  const [photoUri, setPhotoUri] = useState<string | null>(null);
+  const { mutateAsync: updateDrink, isPending } = useUpdateDrinkLog();
+
+  const [newPhotoUri, setNewPhotoUri] = useState<string | null>(null);
+  const [removePhoto, setRemovePhoto] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
 
-  // Pre-fill from map click: /(tabs)/log?lat=xx&lng=yy&name=encoded
-  const params = useLocalSearchParams<{ lat?: string; lng?: string; name?: string }>();
+  const { data: drink, isLoading } = useQuery({
+    queryKey: ['drinkDetail', id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('drink_logs')
+        .select('*')
+        .eq('id', id!)
+        .single();
+      if (error) throw error;
+      return data as DrinkLog;
+    },
+    enabled: !!id,
+  });
 
-  const { control, handleSubmit, watch, setValue, reset } =
-    useForm<LogDrinkFormData>({ defaultValues: DEFAULT_VALUES });
+  const { control, handleSubmit, watch, setValue, reset } = useForm<LogDrinkFormData>({
+    defaultValues: {
+      drink_type: 'beer',
+      drink_name: '',
+      quantity: 1,
+      location_name: '',
+      notes: '',
+    },
+  });
 
   const quantity = watch('quantity');
 
+  // Pre-fill form once drink data loads
   useEffect(() => {
-    if (params.lat && params.lng) {
-      setValue('location_lat', parseFloat(params.lat));
-      setValue('location_lng', parseFloat(params.lng));
-      setValue('location_name', params.name ? decodeURIComponent(params.name) : `${parseFloat(params.lat).toFixed(4)}, ${parseFloat(params.lng).toFixed(4)}`);
-    }
-  }, [params.lat, params.lng, params.name]);
+    if (!drink) return;
+    reset({
+      drink_type: drink.drink_type as DrinkType,
+      drink_name: drink.drink_name ?? '',
+      quantity: drink.quantity,
+      location_name: drink.location_name ?? '',
+      location_lat: drink.location_lat ?? undefined,
+      location_lng: drink.location_lng ?? undefined,
+      notes: drink.notes ?? '',
+    });
+  }, [drink]);
 
   async function handlePickPhoto() {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -65,31 +82,40 @@ export default function LogScreen() {
       quality: 0.8,
     });
     if (!result.canceled) {
-      setPhotoUri(result.assets[0].uri);
+      setNewPhotoUri(result.assets[0].uri);
+      setRemovePhoto(false);
     }
   }
 
   async function onSubmit(data: LogDrinkFormData) {
-    if (!user) return;
+    if (!user || !drink) return;
     setError(null);
-    setSubmitting(true);
     try {
-      await logDrink({
+      await updateDrink({
+        id: drink.id,
         userId: user.id,
-        formData: { ...data, photo_url: photoUri ?? undefined },
-        sessionId: activeSession?.id ?? null,
+        formData: data,
+        existingPhotoUrl: drink.photo_url,
+        newPhotoUri,
+        removePhoto,
       });
-      if (Platform.OS !== 'web') {
-        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      }
-      reset(DEFAULT_VALUES);
-      setPhotoUri(null);
-      router.replace('/(tabs)/feed');
+      router.back();
     } catch (err: any) {
-      setError(err.message ?? 'Something went wrong.');
-    } finally {
-      setSubmitting(false);
+      setError(err.message ?? 'Failed to save changes.');
     }
+  }
+
+  // What photo to show in the preview
+  const previewUri = removePhoto
+    ? null
+    : newPhotoUri ?? drink?.photo_url ?? null;
+
+  if (isLoading) {
+    return (
+      <SafeAreaView className="flex-1 bg-amber-50 items-center justify-center">
+        <ActivityIndicator size="large" color="#f59e0b" />
+      </SafeAreaView>
+    );
   }
 
   return (
@@ -98,39 +124,22 @@ export default function LogScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         className="flex-1"
       >
+        {/* Nav */}
+        <View className="flex-row items-center px-4 py-3 bg-white border-b border-gray-100">
+          <Pressable onPress={() => router.back()} className="p-2 mr-2">
+            <Ionicons name="arrow-back" size={22} color="#374151" />
+          </Pressable>
+          <Text className="font-bold text-gray-900 text-base flex-1">Edit Drink</Text>
+          {isPending && <ActivityIndicator size="small" color="#f59e0b" />}
+        </View>
+
         <ScrollView
           className="flex-1"
           contentContainerStyle={{ paddingBottom: 40 }}
           keyboardShouldPersistTaps="handled"
         >
-          {/* Header */}
-          <View className="px-6 pt-6 pb-4">
-            <Text className="text-2xl font-bold text-gray-900">Log a Drink</Text>
-            {activeSession ? (
-              <View className="flex-row items-center justify-between mt-1">
-                <View className="flex-row items-center gap-1.5">
-                  <View className="w-2 h-2 rounded-full bg-amber-500" />
-                  <Text className="text-amber-600 text-sm font-medium">
-                    Adding to: {activeSession.title ?? 'Night Out'}
-                  </Text>
-                </View>
-                <Pressable
-                  onPress={() => endSession(activeSession.id)}
-                  disabled={isEnding}
-                  className="bg-amber-100 rounded-full px-3 py-1"
-                >
-                  <Text className="text-amber-700 text-xs font-semibold">
-                    {isEnding ? 'Ending…' : '🏁 End Night Out'}
-                  </Text>
-                </Pressable>
-              </View>
-            ) : (
-              <Text className="text-gray-500 text-sm mt-1">What are you having?</Text>
-            )}
-          </View>
-
           {/* Drink Type */}
-          <View className="mb-6">
+          <View className="mb-6 mt-4">
             <Text className="text-gray-700 font-semibold px-6 mb-3">Type</Text>
             <Controller
               control={control}
@@ -183,7 +192,6 @@ export default function LogScreen() {
                   <Ionicons name="add" size={22} color="#374151" />
                 </Pressable>
               </View>
-              <Text className="text-gray-400 text-xs mt-1">Standard drinks</Text>
             </View>
 
             {/* Location */}
@@ -214,7 +222,7 @@ export default function LogScreen() {
                 render={({ field: { value, onChange, onBlur } }) => (
                   <TextInput
                     className="bg-white border border-gray-200 rounded-xl px-4 py-3 text-base text-gray-900"
-                    placeholder="How was it? Any thoughts?"
+                    placeholder="How was it?"
                     placeholderTextColor="#9ca3af"
                     value={value}
                     onChangeText={onChange}
@@ -231,19 +239,31 @@ export default function LogScreen() {
             {/* Photo */}
             <View>
               <Text className="text-gray-700 font-semibold mb-2">Photo (optional)</Text>
-              {photoUri ? (
+              {previewUri ? (
                 <View className="relative">
                   <Image
-                    source={{ uri: photoUri }}
-                    style={{ height: 160, borderRadius: 12 }}
+                    source={{ uri: previewUri }}
+                    style={{ height: 180, borderRadius: 12 }}
                     contentFit="cover"
                   />
-                  <Pressable
-                    className="absolute top-2 right-2 bg-black/50 rounded-full p-1"
-                    onPress={() => setPhotoUri(null)}
-                  >
-                    <Ionicons name="close" size={18} color="#fff" />
-                  </Pressable>
+                  <View className="absolute top-2 right-2 flex-row gap-2">
+                    <Pressable
+                      className="bg-black/50 rounded-full px-3 py-1.5 flex-row items-center gap-1"
+                      onPress={handlePickPhoto}
+                    >
+                      <Ionicons name="swap-horizontal" size={14} color="#fff" />
+                      <Text className="text-white text-xs font-medium">Replace</Text>
+                    </Pressable>
+                    <Pressable
+                      className="bg-red-500/80 rounded-full p-1.5"
+                      onPress={() => {
+                        setNewPhotoUri(null);
+                        setRemovePhoto(true);
+                      }}
+                    >
+                      <Ionicons name="trash" size={14} color="#fff" />
+                    </Pressable>
+                  </View>
                 </View>
               ) : (
                 <Pressable
@@ -262,11 +282,10 @@ export default function LogScreen() {
               </View>
             )}
 
-            {/* Submit */}
             <Button
-              label={photoUri && submitting ? 'Uploading photo…' : 'Log It 🍺'}
+              label={newPhotoUri && isPending ? 'Uploading photo…' : 'Save Changes'}
               onPress={handleSubmit(onSubmit)}
-              loading={submitting}
+              loading={isPending}
               size="lg"
               className="mt-2"
             />
