@@ -47,7 +47,8 @@
           "photosPermission": "Allow Suds to access your photos."
         }
       ],
-      "expo-font"
+      "expo-font",
+      "react-native-purchases"
     ],
     "experiments": {
       "typedRoutes": true

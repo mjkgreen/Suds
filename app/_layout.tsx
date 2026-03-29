@@ -7,11 +7,21 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { queryClient } from '@/lib/queryClient';
 import { useAuth } from '@/hooks/useAuth';
+import { initRevenueCat } from '@/lib/revenuecat';
+import { useAuthStore } from '@/stores/authStore';
 
 function AuthGuard() {
   const { session, isLoading } = useAuth();
+  const { user } = useAuthStore();
   const segments = useSegments();
   const router = useRouter();
+
+  // Initialize RevenueCat whenever we have a logged-in user
+  useEffect(() => {
+    if (user?.id) {
+      initRevenueCat(user.id);
+    }
+  }, [user?.id]);
 
   useEffect(() => {
     if (isLoading) return;
@@ -42,6 +52,7 @@ function AuthGuard() {
       <Stack.Screen name="drink/edit/[id]" />
       <Stack.Screen name="user/[id]" />
       <Stack.Screen name="user/edit" />
+      <Stack.Screen name="paywall" options={{ presentation: 'modal' }} />
     </Stack>
   );
 }

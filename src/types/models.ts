@@ -7,12 +7,15 @@ export type DrinkType =
   | 'seltzer'
   | 'other';
 
+export type SubscriptionTier = 'free' | 'premium';
+
 export interface Profile {
   id: string;
   username: string;
   display_name: string | null;
   avatar_url: string | null;
   bio: string | null;
+  subscription_tier: SubscriptionTier;
   created_at: string;
   updated_at: string;
   // Computed at query time
@@ -90,6 +93,66 @@ export interface Session {
   started_at: string;
   ended_at: string | null;
   created_at: string;
+}
+
+// ── Streaks ──────────────────────────────────────────────────
+export interface StreakData {
+  drink_streak: number;
+  sober_streak: number;
+  last_drink_date: string | null;
+}
+
+// ── Milestones ───────────────────────────────────────────────
+export interface MilestoneData {
+  total_drinks: number;
+  latest_milestone: number | null;
+  latest_earned_at: string | null;
+  is_new: boolean;
+  all_earned: number[];
+  by_type: Partial<Record<DrinkType, number>>;
+}
+
+// ── Goals (free — moderation) ────────────────────────────────
+export interface Goal {
+  id: string;
+  user_id: string;
+  weekly_limit: number;
+  created_at: string;
+  updated_at: string;
+}
+
+// ── Advanced Stats (premium) ─────────────────────────────────
+export interface WeeklyTrendPoint {
+  week_start: string;
+  count: number;
+  total_quantity: number;
+}
+
+export interface MonthlyTrendPoint {
+  month: string; // "YYYY-MM"
+  count: number;
+  total_quantity: number;
+}
+
+export interface DayOfWeekPoint {
+  day_of_week: number; // 0 = Sunday
+  count: number;
+}
+
+export interface HourPoint {
+  hour: number;
+  count: number;
+}
+
+export interface AdvancedStats {
+  weekly_trend: WeeklyTrendPoint[];
+  monthly_trend: MonthlyTrendPoint[];
+  by_day_of_week: DayOfWeekPoint[];
+  by_hour: HourPoint[];
+  this_year_count: number;
+  last_year_count: number;
+  avg_per_week: number;
+  best_session_count: number | null;
 }
 
 export type LogDrinkFormData = {

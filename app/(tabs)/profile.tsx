@@ -12,9 +12,17 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Avatar } from '@/components/common/Avatar';
 import { DrinkBadge } from '@/components/drink/DrinkBadge';
+import { PremiumGate } from '@/components/common/PremiumGate';
+import { AdvancedStatsCard } from '@/components/profile/AdvancedStatsCard';
+import { BACEstimator } from '@/components/profile/BACEstimator';
+import { GoalCard } from '@/components/profile/GoalCard';
+import { MilestoneBanner } from '@/components/profile/MilestoneBanner';
+import { StreakCard } from '@/components/profile/StreakCard';
 import { useAuth } from '@/hooks/useAuth';
 import { useMyDrinkLogs } from '@/hooks/useDrinkLog';
+import { useMilestones } from '@/hooks/useMilestones';
 import { useProfile, useUserStats } from '@/hooks/useProfile';
+import { useStreaks } from '@/hooks/useStreaks';
 import { useAuthStore } from '@/stores/authStore';
 import { DrinkLog, DrinkType } from '@/types/models';
 import { formatDateTime } from '@/utils/dateHelpers';
@@ -53,7 +61,7 @@ function DrinkLogRow({ item }: { item: DrinkLog }) {
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const { user } = useAuthStore();
+  const { user, isPremium } = useAuthStore();
   const { signOut } = useAuth();
 
   const { data: profile, isLoading: profileLoading, refetch: refetchProfile } =
@@ -61,6 +69,8 @@ export default function ProfileScreen() {
   const { data: stats } = useUserStats(user?.id);
   const { data: logs, isLoading: logsLoading, refetch: refetchLogs } =
     useMyDrinkLogs(user?.id);
+  const { data: streaks } = useStreaks(user?.id);
+  const { data: milestones } = useMilestones(user?.id);
 
   const isLoading = profileLoading || logsLoading;
 
@@ -90,12 +100,27 @@ export default function ProfileScreen() {
             {/* Profile header */}
             <View className="bg-white px-6 pt-6 pb-5 border-b border-gray-100">
               <View className="flex-row items-start justify-between mb-4">
-                <Avatar
-                  uri={profile?.avatar_url}
-                  name={profile ? getDisplayName(profile) : 'User'}
-                  size={72}
-                />
+                <View className="flex-row items-center gap-2">
+                  <Avatar
+                    uri={profile?.avatar_url}
+                    name={profile ? getDisplayName(profile) : 'User'}
+                    size={72}
+                  />
+                  {isPremium && (
+                    <View className="bg-amber-400 rounded-full px-2 py-0.5 self-start mt-1">
+                      <Text className="text-white text-xs font-bold">Plus</Text>
+                    </View>
+                  )}
+                </View>
                 <View className="flex-row gap-2">
+                  {!isPremium && (
+                    <Pressable
+                      className="bg-amber-400 rounded-xl px-4 py-2"
+                      onPress={() => router.push('/paywall')}
+                    >
+                      <Text className="text-white font-bold text-sm">Upgrade</Text>
+                    </Pressable>
+                  )}
                   <Pressable
                     className="bg-gray-100 rounded-xl px-4 py-2"
                     onPress={() => router.push('/user/edit')}
@@ -138,7 +163,18 @@ export default function ProfileScreen() {
               </View>
             </View>
 
-            {/* Stats */}
+            {/* Milestone banner (free) */}
+            {milestones && <MilestoneBanner milestones={milestones} />}
+
+            {/* Streaks (free) */}
+            {streaks && <StreakCard streaks={streaks} />}
+
+            {/* Weekly goal / moderation (free) */}
+            {stats && user?.id && (
+              <GoalCard userId={user.id} stats={stats} />
+            )}
+
+            {/* Basic stats (free) */}
             {stats && (
               <View className="bg-white mx-4 mt-4 rounded-2xl border border-gray-100 p-4 gap-4">
                 {/* Top numbers */}
@@ -211,6 +247,18 @@ export default function ProfileScreen() {
                 )}
               </View>
             )}
+
+            {/* Advanced stats (premium) */}
+            {user?.id && (
+              <PremiumGate featureName="Advanced Analytics">
+                <AdvancedStatsCard userId={user.id} />
+              </PremiumGate>
+            )}
+
+            {/* BAC estimator (premium) */}
+            <PremiumGate featureName="BAC Estimator">
+              <BACEstimator />
+            </PremiumGate>
 
             {/* Section header */}
             <View className="px-6 pt-5 pb-2">
