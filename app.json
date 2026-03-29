@@ -1,0 +1,56 @@
+{
+  "expo": {
+    "name": "Suds",
+    "slug": "suds",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "userInterfaceStyle": "automatic",
+    "splash": {
+      "image": "./assets/images/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#F59E0B"
+    },
+    "scheme": "suds",
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.suds.app",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Suds uses your location to tag where you had drinks.",
+        "NSCameraUsageDescription": "Suds uses your camera to add photos to drink logs.",
+        "NSPhotoLibraryUsageDescription": "Suds uses your photo library to add photos to drink logs."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "backgroundColor": "#F59E0B"
+      },
+      "package": "com.suds.app",
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE"
+      ]
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static",
+      "favicon": "./assets/images/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-location",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow Suds to access your photos."
+        }
+      ],
+      "expo-font"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
