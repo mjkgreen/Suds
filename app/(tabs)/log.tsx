@@ -1,7 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
-import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
@@ -17,6 +16,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '@/components/common/Button';
 import { LocationPicker } from '@/components/common/LocationPicker';
+import { RemoteImage } from '@/components/common/RemoteImage';
 import { DrinkTypePicker } from '@/components/drink/DrinkTypePicker';
 import { useLogDrink } from '@/hooks/useDrinkLog';
 import { useActiveSession, useEndSession } from '@/hooks/useSession';
@@ -38,6 +38,7 @@ export default function LogScreen() {
   const activeSession = useActiveSession();
   const { mutateAsync: endSession, isPending: isEnding } = useEndSession();
   const [photoUri, setPhotoUri] = useState<string | null>(null);
+  const [photoBase64, setPhotoBase64] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -63,9 +64,11 @@ export default function LogScreen() {
       allowsEditing: true,
       aspect: [4, 3],
       quality: 0.8,
+      base64: true,
     });
     if (!result.canceled) {
       setPhotoUri(result.assets[0].uri);
+      setPhotoBase64(result.assets[0].base64 ?? null);
     }
   }
 
@@ -76,7 +79,11 @@ export default function LogScreen() {
     try {
       await logDrink({
         userId: user.id,
-        formData: { ...data, photo_url: photoUri ?? undefined },
+        formData: { 
+          ...data, 
+          photo_url: photoUri ?? undefined,
+          photoBase64: photoBase64 ?? undefined 
+        },
         sessionId: activeSession?.id ?? null,
       });
       if (Platform.OS !== 'web') {
@@ -84,6 +91,7 @@ export default function LogScreen() {
       }
       reset(DEFAULT_VALUES);
       setPhotoUri(null);
+      setPhotoBase64(null);
       router.replace('/(tabs)/feed');
     } catch (err: any) {
       setError(err.message ?? 'Something went wrong.');
@@ -232,11 +240,11 @@ export default function LogScreen() {
             <View>
               <Text className="text-gray-700 font-semibold mb-2">Photo (optional)</Text>
               {photoUri ? (
-                <View className="relative">
-                  <Image
-                    source={{ uri: photoUri }}
-                    style={{ height: 160, borderRadius: 12 }}
-                    contentFit="cover"
+                <View className="relative" style={{ height: 160 }}>
+                  <RemoteImage
+                    uri={photoUri}
+                    height={160}
+                    borderRadius={12}
                   />
                   <Pressable
                     className="absolute top-2 right-2 bg-black/50 rounded-full p-1"

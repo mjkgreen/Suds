@@ -1,6 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
@@ -18,6 +17,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/common/Button';
 import { LocationPicker } from '@/components/common/LocationPicker';
+import { RemoteImage } from '@/components/common/RemoteImage';
 import { DrinkTypePicker } from '@/components/drink/DrinkTypePicker';
 import { useUpdateDrinkLog } from '@/hooks/useDrinkLog';
 import { supabase } from '@/lib/supabase';
@@ -31,6 +31,7 @@ export default function EditDrinkScreen() {
   const { mutateAsync: updateDrink, isPending } = useUpdateDrinkLog();
 
   const [newPhotoUri, setNewPhotoUri] = useState<string | null>(null);
+  const [newPhotoBase64, setNewPhotoBase64] = useState<string | null>(null);
   const [removePhoto, setRemovePhoto] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -80,9 +81,11 @@ export default function EditDrinkScreen() {
       allowsEditing: true,
       aspect: [4, 3],
       quality: 0.8,
+      base64: true,
     });
     if (!result.canceled) {
       setNewPhotoUri(result.assets[0].uri);
+      setNewPhotoBase64(result.assets[0].base64 ?? null);
       setRemovePhoto(false);
     }
   }
@@ -97,9 +100,10 @@ export default function EditDrinkScreen() {
         formData: data,
         existingPhotoUrl: drink.photo_url,
         newPhotoUri,
+        newPhotoBase64,
         removePhoto,
       });
-      router.back();
+      router.replace(`/drink/${id}`);
     } catch (err: any) {
       setError(err.message ?? 'Failed to save changes.');
     }
@@ -240,11 +244,11 @@ export default function EditDrinkScreen() {
             <View>
               <Text className="text-gray-700 font-semibold mb-2">Photo (optional)</Text>
               {previewUri ? (
-                <View className="relative">
-                  <Image
-                    source={{ uri: previewUri }}
-                    style={{ height: 180, borderRadius: 12 }}
-                    contentFit="cover"
+                <View className="relative" style={{ height: 180 }}>
+                  <RemoteImage
+                    uri={previewUri}
+                    height={180}
+                    borderRadius={12}
                   />
                   <View className="absolute top-2 right-2 flex-row gap-2">
                     <Pressable

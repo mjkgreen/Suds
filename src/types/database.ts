@@ -52,6 +52,7 @@ export interface Database {
           location_lng: number | null;
           notes: string | null;
           photo_url: string | null;
+          session_id: string | null;
           logged_at: string;
           created_at: string;
         };
@@ -66,6 +67,7 @@ export interface Database {
           location_lng?: number | null;
           notes?: string | null;
           photo_url?: string | null;
+          session_id?: string | null;
           logged_at?: string;
           created_at?: string;
         };
@@ -78,6 +80,7 @@ export interface Database {
           location_lng?: number | null;
           notes?: string | null;
           photo_url?: string | null;
+          session_id?: string | null;
           logged_at?: string;
         };
       };
@@ -99,7 +102,12 @@ export interface Database {
     Functions: {
       get_feed: {
         Args: { p_user_id: string; p_limit: number; p_offset: number };
-        Returns: Database['public']['Tables']['drink_logs']['Row'][];
+        Returns: (Database['public']['Tables']['drink_logs']['Row'] & {
+          username: string;
+          display_name: string | null;
+          avatar_url: string | null;
+          session_title: string | null;
+        })[];
       };
       get_user_stats: {
         Args: { p_user_id: string };

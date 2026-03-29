@@ -1,9 +1,9 @@
-import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import React from 'react';
 import { Text, View } from 'react-native';
 import { Avatar } from '@/components/common/Avatar';
 import { PressableCard } from '@/components/common/Card';
+import { RemoteImage } from '@/components/common/RemoteImage';
 import { DrinkBadge } from '@/components/drink/DrinkBadge';
 import { DRINK_TYPE_MAP } from '@/lib/constants';
 import { FeedItem } from '@/types/models';
@@ -69,10 +69,11 @@ export function DrinkCard({ item }: DrinkCardProps) {
 
       {/* Photo */}
       {item.photo_url ? (
-        <Image
-          source={{ uri: item.photo_url }}
-          style={{ height: 180, borderRadius: 12, marginTop: 10 }}
-          contentFit="cover"
+        <RemoteImage
+          uri={item.photo_url}
+          height={180}
+          borderRadius={12}
+          style={{ marginTop: 10 }}
         />
       ) : null}
     </PressableCard>

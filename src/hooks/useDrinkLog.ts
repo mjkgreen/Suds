@@ -29,17 +29,16 @@ export function useLogDrink() {
       sessionId,
     }: {
       userId: string;
-      formData: LogDrinkFormData;
+      formData: LogDrinkFormData & { photoBase64?: string | null };
       sessionId?: string | null;
     }) => {
       // Upload photo to Storage if a local URI was provided
       let photoUrl: string | null = null;
       if (formData.photo_url) {
-        photoUrl = await uploadDrinkPhoto(userId, formData.photo_url);
+        photoUrl = await uploadDrinkPhoto(userId, formData.photo_url, formData.photoBase64);
       }
 
-      const { data, error } = await supabase
-        .from('drink_logs')
+      const { data, error } = await (supabase.from('drink_logs') as any)
         .insert({
           user_id: userId,
           drink_type: formData.drink_type,
@@ -75,6 +74,7 @@ export function useUpdateDrinkLog() {
       formData,
       existingPhotoUrl,
       newPhotoUri,
+      newPhotoBase64,
       removePhoto,
     }: {
       id: string;
@@ -82,6 +82,7 @@ export function useUpdateDrinkLog() {
       formData: Omit<LogDrinkFormData, 'photo_url'>;
       existingPhotoUrl: string | null;
       newPhotoUri: string | null;
+      newPhotoBase64?: string | null;
       removePhoto: boolean;
     }) => {
       let photoUrl: string | null = existingPhotoUrl;
@@ -95,11 +96,10 @@ export function useUpdateDrinkLog() {
           const { deleteDrinkPhoto } = await import('@/lib/storage');
           await deleteDrinkPhoto(existingPhotoUrl);
         }
-        photoUrl = await uploadDrinkPhoto(userId, newPhotoUri);
+        photoUrl = await uploadDrinkPhoto(userId, newPhotoUri, newPhotoBase64);
       }
 
-      const { data, error } = await supabase
-        .from('drink_logs')
+      const { data, error } = await (supabase.from('drink_logs') as any)
         .update({
           drink_type: formData.drink_type,
           drink_name: formData.drink_name || null,

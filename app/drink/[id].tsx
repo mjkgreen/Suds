@@ -1,6 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
-import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React from 'react';
 import {
@@ -13,6 +12,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Avatar } from '@/components/common/Avatar';
+import { RemoteImage } from '@/components/common/RemoteImage';
 import { DrinkBadge } from '@/components/drink/DrinkBadge';
 import { useDeleteDrinkLog } from '@/hooks/useDrinkLog';
 import { supabase } from '@/lib/supabase';
@@ -30,13 +30,23 @@ export default function DrinkDetailScreen() {
   const { data, isLoading } = useQuery({
     queryKey: ['drinkDetail', id],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data: log, error: logError } = await supabase
         .from('drink_logs')
-        .select('*, profile:profiles(*)')
+        .select('*')
         .eq('id', id!)
         .single();
-      if (error) throw error;
-      return data as DrinkLog & { profile: Profile };
+      if (logError) throw logError;
+
+      const drinkLog = log as unknown as DrinkLog;
+
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', drinkLog.user_id)
+        .single();
+      if (profileError) throw profileError;
+
+      return { ...drinkLog, profile: profile as Profile };
     },
     enabled: !!id,
   });
@@ -50,7 +60,7 @@ export default function DrinkDetailScreen() {
         style: 'destructive',
         onPress: async () => {
           await deleteDrink({ id: data.id, userId: user.id });
-          router.back();
+          router.replace('/(tabs)/feed');
         },
       },
     ]);
@@ -94,10 +104,11 @@ export default function DrinkDetailScreen() {
       <ScrollView contentContainerStyle={{ padding: 24 }}>
         {/* Photo */}
         {data.photo_url && (
-          <Image
-            source={{ uri: data.photo_url }}
-            style={{ height: 220, borderRadius: 16, marginBottom: 20 }}
-            contentFit="cover"
+          <RemoteImage
+            uri={data.photo_url}
+            height={220}
+            borderRadius={16}
+            style={{ marginBottom: 20 }}
           />
         )}
 
@@ -144,23 +155,25 @@ export default function DrinkDetailScreen() {
         )}
 
         {/* Author */}
-        <Pressable
-          className="flex-row items-center mt-2 p-3 bg-gray-50 rounded-2xl"
-          onPress={() => router.push(`/user/${data.profile.id}`)}
-        >
-          <Avatar
-            uri={data.profile.avatar_url}
-            name={data.profile.display_name ?? data.profile.username}
-            size={38}
-          />
-          <View className="ml-3">
-            <Text className="font-semibold text-gray-800">
-              {data.profile.display_name ?? data.profile.username}
-            </Text>
-            <Text className="text-gray-400 text-xs">@{data.profile.username}</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={18} color="#9ca3af" style={{ marginLeft: 'auto' }} />
-        </Pressable>
+        {data.profile && (
+          <Pressable
+            className="flex-row items-center mt-2 p-3 bg-gray-50 rounded-2xl"
+            onPress={() => router.push(`/user/${data.profile?.id}`)}
+          >
+            <Avatar
+              uri={data.profile.avatar_url}
+              name={data.profile.display_name ?? data.profile.username}
+              size={38}
+            />
+            <View className="ml-3">
+              <Text className="font-semibold text-gray-800">
+                {data.profile.display_name ?? data.profile.username}
+              </Text>
+              <Text className="text-gray-400 text-xs">@{data.profile.username}</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color="#9ca3af" style={{ marginLeft: 'auto' }} />
+          </Pressable>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
