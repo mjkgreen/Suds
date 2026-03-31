@@ -12,6 +12,8 @@ import {
 } from 'react-native';
 import MapView, { Callout, LongPressEvent, Marker, Region } from 'react-native-maps';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { DrinkBadge } from '@/components/drink/DrinkBadge';
+import { DrinkIcon } from '@/components/icons/DrinkIcon';
 import { supabase } from '@/lib/supabase';
 import { DRINK_TYPE_MAP } from '@/lib/constants';
 import { useAuthStore } from '@/stores/authStore';
@@ -99,7 +101,7 @@ export default function MapScreen() {
           .from('follows')
           .select('following_id')
           .eq('follower_id', user.id);
-        const ids = (follows ?? []).map((f) => f.following_id);
+        const ids = (follows as { following_id: string }[] | null ?? []).map((f) => f.following_id);
         if (ids.length === 0) return [];
         query = query.in('user_id', ids);
       } else {
@@ -194,7 +196,7 @@ export default function MapScreen() {
                     style={{ backgroundColor: info.color }}
                     className="w-9 h-9 rounded-full items-center justify-center shadow border-2 border-white"
                   >
-                    <Text className="text-base">{info.emoji}</Text>
+                    <DrinkIcon type={log.drink_type as DrinkType} size={20} color="white" />
                   </View>
                   <Callout>
                     <View style={{ minWidth: 160, padding: 8 }}>
@@ -239,7 +241,7 @@ export default function MapScreen() {
                       const info = DRINK_TYPE_MAP[log.drink_type as DrinkType] ?? DRINK_TYPE_MAP['other'];
                       return (
                         <Text key={log.id} style={{ color: '#6b7280', fontSize: 12 }}>
-                          {info.emoji} {log.drink_name || info.label} · @{log.profile?.username}
+                          • {log.drink_name || info.label} · @{log.profile?.username}
                         </Text>
                       );
                     })}

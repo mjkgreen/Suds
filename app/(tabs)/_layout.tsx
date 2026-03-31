@@ -53,6 +53,7 @@ function TabsLayoutInner() {
             </View>
           ),
           tabBarLabel: () => null,
+          tabBarStyle: { display: 'none' },
         }}
       />
       <Tabs.Screen

@@ -61,6 +61,9 @@ export function DrinkCard({ item }: DrinkCardProps) {
               <Text className="text-gray-500 font-normal"> × {item.quantity}</Text>
             )}
           </Text>
+          {item.brand ? (
+            <Text className="text-gray-500 text-xs mt-0.5">{item.brand}</Text>
+          ) : null}
           {item.location_name && (
             <View className="flex-row items-center mt-0.5 gap-1">
               <Ionicons name="location-outline" size={11} color="#9ca3af" />

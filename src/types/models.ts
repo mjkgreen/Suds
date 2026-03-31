@@ -29,12 +29,14 @@ export interface DrinkLog {
   user_id: string;
   drink_type: DrinkType;
   drink_name: string | null;
+  brand: string | null;
   quantity: number;
   location_name: string | null;
   location_lat: number | null;
   location_lng: number | null;
   notes: string | null;
   photo_url: string | null;
+  rating: number | null;
   logged_at: string;
   created_at: string;
   // Joined
@@ -158,10 +160,13 @@ export interface AdvancedStats {
 export type LogDrinkFormData = {
   drink_type: DrinkType;
   drink_name: string;
+  brand: string;
   quantity: number;
   location_name: string;
   location_lat?: number;
   location_lng?: number;
   notes: string;
+  rating: number;
   photo_url?: string;
+  logged_at?: string;
 };

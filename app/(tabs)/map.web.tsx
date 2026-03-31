@@ -90,6 +90,13 @@ export default function MapScreen() {
       link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
       document.head.appendChild(link);
     }
+    if (!document.getElementById('mci-css')) {
+      const link = document.createElement('link');
+      link.id = 'mci-css';
+      link.rel = 'stylesheet';
+      link.href = 'https://cdn.jsdelivr.net/npm/@mdi/font@7.2.96/css/materialdesignicons.min.css';
+      document.head.appendChild(link);
+    }
     import('react-leaflet').then(setL);
   }, []);
 
@@ -110,7 +117,7 @@ export default function MapScreen() {
           .from('follows')
           .select('following_id')
           .eq('follower_id', user.id);
-        const ids = (follows ?? []).map((f) => f.following_id);
+        const ids = (follows as { following_id: string }[] | null ?? []).map((f) => f.following_id);
         if (ids.length === 0) return [];
         query = query.in('user_id', ids);
       } else {
@@ -189,10 +196,20 @@ export default function MapScreen() {
             if (items.length === 1) {
               const log = items[0];
               const info = DRINK_TYPE_MAP[log.drink_type as DrinkType] ?? DRINK_TYPE_MAP['other'];
+              const mciName =
+                {
+                  beer: 'beer',
+                  wine: 'glass-wine',
+                  cocktail: 'glass-cocktail',
+                  spirit: 'liquor',
+                  cider: 'bottle-wine',
+                  seltzer: 'bottle-soda',
+                }[log.drink_type as string] || 'help-circle-outline';
+
               const divIcon =
                 typeof window !== 'undefined'
                   ? (window as any).L?.divIcon({
-                      html: `<div style="background:${info.color};width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;border:2px solid white;box-shadow:0 2px 4px rgba(0,0,0,0.3)">${info.emoji}</div>`,
+                      html: `<div style="background:${info.color};width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;border:2px solid white;box-shadow:0 2px 4px rgba(0,0,0,0.3)"><span class="mdi mdi-${mciName}" style="font-size:20px; line-height: 1"></span></div>`,
                       className: '',
                       iconSize: [36, 36],
                       iconAnchor: [18, 18],
@@ -243,7 +260,7 @@ export default function MapScreen() {
                       const info = DRINK_TYPE_MAP[log.drink_type as DrinkType] ?? DRINK_TYPE_MAP['other'];
                       return (
                         <Text key={log.id} style={{ color: '#6b7280', fontSize: 12 }}>
-                          {info.emoji} {log.drink_name || info.label} · @{log.profile?.username}
+                          • {log.drink_name || info.label} · @{log.profile?.username}
                         </Text>
                       );
                     })}

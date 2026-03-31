@@ -43,12 +43,15 @@ export function useLogDrink() {
           user_id: userId,
           drink_type: formData.drink_type,
           drink_name: formData.drink_name || null,
+          brand: formData.brand || null,
           quantity: formData.quantity,
           location_name: formData.location_name || null,
           location_lat: formData.location_lat ?? null,
           location_lng: formData.location_lng ?? null,
           notes: formData.notes || null,
           photo_url: photoUrl,
+          rating: formData.rating ?? null,
+          logged_at: formData.logged_at ?? new Date().toISOString(),
           session_id: sessionId ?? null,
         })
         .select()
@@ -103,12 +106,15 @@ export function useUpdateDrinkLog() {
         .update({
           drink_type: formData.drink_type,
           drink_name: formData.drink_name || null,
+          brand: formData.brand || null,
           quantity: formData.quantity,
           location_name: formData.location_name || null,
           location_lat: formData.location_lat ?? null,
           location_lng: formData.location_lng ?? null,
           notes: formData.notes || null,
           photo_url: photoUrl,
+          rating: formData.rating ?? null,
+          logged_at: formData.logged_at ?? new Date().toISOString(),
         })
         .eq('id', id)
         .select()

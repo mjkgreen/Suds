@@ -125,7 +125,12 @@ export default function DrinkDetailScreen() {
             <Text className="text-2xl font-bold text-gray-900">
               {data.drink_name || info.label}
             </Text>
-            <DrinkBadge type={data.drink_type as DrinkType} />
+            {data.brand ? (
+              <Text className="text-gray-500 text-sm mt-0.5">{data.brand}</Text>
+            ) : null}
+            <View className="mt-1">
+              <DrinkBadge type={data.drink_type as DrinkType} />
+            </View>
           </View>
         </View>
 

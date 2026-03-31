@@ -61,9 +61,11 @@ CREATE TABLE IF NOT EXISTS public.drink_logs (
   location_geom geography(POINT, 4326),
   notes         text,
   photo_url     text,
+  brand         text,
+  rating        integer CHECK (rating >= 1 AND rating <= 10),
   logged_at     timestamptz NOT NULL DEFAULT now(),
   created_at    timestamptz NOT NULL DEFAULT now()
-);
+ );
 
 CREATE INDEX IF NOT EXISTS idx_drink_logs_user_id   ON public.drink_logs(user_id);
 CREATE INDEX IF NOT EXISTS idx_drink_logs_logged_at ON public.drink_logs(logged_at DESC);
@@ -331,6 +333,8 @@ RETURNS TABLE (
   location_lng  numeric,
   notes         text,
   photo_url     text,
+  brand         text,
+  rating        integer,
   logged_at     timestamptz,
   created_at    timestamptz,
   username      text,
@@ -350,6 +354,8 @@ RETURNS TABLE (
     dl.location_lng,
     dl.notes,
     dl.photo_url,
+    dl.brand,
+    dl.rating,
     dl.logged_at,
     dl.created_at,
     p.username,

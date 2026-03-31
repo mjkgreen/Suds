@@ -18,7 +18,9 @@ import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/common/Button';
 import { LocationPicker } from '@/components/common/LocationPicker';
 import { RemoteImage } from '@/components/common/RemoteImage';
+import { DrinkAutocomplete } from '@/components/drink/DrinkAutocomplete';
 import { DrinkTypePicker } from '@/components/drink/DrinkTypePicker';
+import { DRINK_BRANDS, DRINK_NAMES } from '@/lib/drinkData';
 import { useUpdateDrinkLog } from '@/hooks/useDrinkLog';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/stores/authStore';
@@ -53,6 +55,7 @@ export default function EditDrinkScreen() {
     defaultValues: {
       drink_type: 'beer',
       drink_name: '',
+      brand: '',
       quantity: 1,
       location_name: '',
       notes: '',
@@ -60,6 +63,7 @@ export default function EditDrinkScreen() {
   });
 
   const quantity = watch('quantity');
+  const drinkType = watch('drink_type');
 
   // Pre-fill form once drink data loads
   useEffect(() => {
@@ -67,6 +71,7 @@ export default function EditDrinkScreen() {
     reset({
       drink_type: drink.drink_type as DrinkType,
       drink_name: drink.drink_name ?? '',
+      brand: drink.brand ?? '',
       quantity: drink.quantity,
       location_name: drink.location_name ?? '',
       location_lat: drink.location_lat ?? undefined,
@@ -163,14 +168,29 @@ export default function EditDrinkScreen() {
               <Controller
                 control={control}
                 name="drink_name"
-                render={({ field: { value, onChange, onBlur } }) => (
-                  <TextInput
-                    className="bg-white border border-gray-200 rounded-xl px-4 py-3 text-base text-gray-900"
-                    placeholder="e.g. Guinness, Aperol Spritz…"
-                    placeholderTextColor="#9ca3af"
+                render={({ field: { value, onChange } }) => (
+                  <DrinkAutocomplete
                     value={value}
-                    onChangeText={onChange}
-                    onBlur={onBlur}
+                    onChange={onChange}
+                    options={DRINK_NAMES[drinkType]}
+                    placeholder="e.g. IPA, Pinot Noir, Margarita…"
+                  />
+                )}
+              />
+            </View>
+
+            {/* Brand */}
+            <View>
+              <Text className="text-gray-700 font-semibold mb-2">Brand (optional)</Text>
+              <Controller
+                control={control}
+                name="brand"
+                render={({ field: { value, onChange } }) => (
+                  <DrinkAutocomplete
+                    value={value}
+                    onChange={onChange}
+                    options={DRINK_BRANDS[drinkType]}
+                    placeholder="e.g. Guinness, Bacardi, Don Julio…"
                   />
                 )}
               />
