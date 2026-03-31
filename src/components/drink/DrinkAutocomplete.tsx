@@ -45,21 +45,20 @@ export function DrinkAutocomplete({
     <View>
       <TextInput
         ref={inputRef}
-        className="bg-white border border-gray-200 rounded-xl px-4 py-3 text-base text-gray-900"
+        className="bg-card border border-border rounded-xl px-4 py-3 text-base text-foreground"
         placeholder={placeholder}
-        placeholderTextColor="#9ca3af"
+        placeholderTextColor="hsl(var(--muted-foreground))"
         value={value}
         onChangeText={onChange}
         onFocus={() => setFocused(true)}
         onBlur={() => {
-          // Delay so taps on suggestions register first
           setTimeout(() => setFocused(false), 150);
         }}
         returnKeyType="done"
         blurOnSubmit
       />
       {showDropdown && (
-        <View className="bg-white border border-gray-200 rounded-xl mt-1 overflow-hidden shadow-sm z-50">
+        <View className="bg-card border border-border rounded-xl mt-1 overflow-hidden shadow-sm z-50">
           <FlatList
             data={suggestions}
             keyExtractor={(item) => item}
@@ -68,12 +67,9 @@ export function DrinkAutocomplete({
             renderItem={({ item, index }) => (
               <Pressable
                 onPress={() => handleSelect(item)}
-                className="px-4 py-3 active:bg-amber-50"
-                style={index < suggestions.length - 1
-                  ? { borderBottomWidth: 1, borderBottomColor: '#f3f4f6' }
-                  : undefined}
+                className={`px-4 py-3 active:bg-accent ${index < suggestions.length - 1 ? 'border-b border-border/50' : ''}`}
               >
-                <Text className="text-gray-800 text-base">{item}</Text>
+                <Text className="text-foreground text-base">{item}</Text>
               </Pressable>
             )}
           />

@@ -45,7 +45,6 @@ export function LocationPicker({ value, onChange }: LocationPickerProps) {
   const { getCurrentLocation, isLoading: isGettingGPS } = useLocation();
   const suppressSearch = useRef(false);
 
-  // Sync external value changes (e.g. from GPS or map click pre-fill)
   useEffect(() => {
     if (value !== query) {
       suppressSearch.current = true;
@@ -96,9 +95,9 @@ export function LocationPicker({ value, onChange }: LocationPickerProps) {
       <View className="flex-row gap-2">
         <View className="flex-1 relative">
           <TextInput
-            className="bg-white border border-gray-200 rounded-xl px-4 py-3 text-base text-gray-900"
+            className="bg-card border border-border rounded-xl px-4 py-3 text-base text-foreground"
             placeholder="Search a venue or address…"
-            placeholderTextColor="#9ca3af"
+            placeholderTextColor="hsl(var(--muted-foreground))"
             value={query}
             onChangeText={(t) => {
               setQuery(t);
@@ -116,7 +115,7 @@ export function LocationPicker({ value, onChange }: LocationPickerProps) {
         </View>
 
         <Pressable
-          className="bg-white border border-gray-200 rounded-xl px-4 items-center justify-center"
+          className="bg-card border border-border rounded-xl px-4 items-center justify-center"
           onPress={handleGPS}
           disabled={isGettingGPS}
         >
@@ -130,7 +129,7 @@ export function LocationPicker({ value, onChange }: LocationPickerProps) {
 
       {showSuggestions && (
         <View
-          className="bg-white border border-gray-200 rounded-xl mt-1 overflow-hidden"
+          className="bg-card border border-border rounded-xl mt-1 overflow-hidden"
           style={{ maxHeight: 220 }}
         >
           <ScrollView keyboardShouldPersistTaps="handled" nestedScrollEnabled>
@@ -141,14 +140,14 @@ export function LocationPicker({ value, onChange }: LocationPickerProps) {
               return (
                 <Pressable
                   key={r.place_id}
-                  className="px-4 py-3 border-b border-gray-100 active:bg-amber-50"
+                  className="px-4 py-3 border-b border-border/50 active:bg-accent"
                   onPress={() => handleSelect(r)}
                 >
-                  <Text className="text-gray-900 text-sm font-medium" numberOfLines={1}>
+                  <Text className="text-foreground text-sm font-medium" numberOfLines={1}>
                     {primary}
                   </Text>
                   {secondary ? (
-                    <Text className="text-gray-400 text-xs mt-0.5" numberOfLines={1}>
+                    <Text className="text-muted-foreground text-xs mt-0.5" numberOfLines={1}>
                       {secondary}
                     </Text>
                   ) : null}

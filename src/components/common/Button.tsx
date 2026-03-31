@@ -18,15 +18,15 @@ interface ButtonProps extends PressableProps {
 
 const variantStyles = {
   primary:   'bg-primary active:opacity-90',
-  secondary: 'bg-background border border-primary active:bg-accent',
-  ghost:     'bg-transparent active:bg-accent',
+  secondary: 'bg-background dark:bg-card border border-primary active:bg-accent dark:active:bg-accent',
+  ghost:     'bg-transparent active:bg-accent dark:active:bg-accent',
   danger:    'bg-destructive active:opacity-90',
 };
 
 const labelStyles = {
   primary:   'text-primary-foreground font-semibold',
   secondary: 'text-primary font-semibold',
-  ghost:     'text-foreground font-medium',
+  ghost:     'text-foreground dark:text-foreground font-medium',
   danger:    'text-destructive-foreground font-semibold',
 };
 
@@ -66,7 +66,7 @@ export function Button({
     <Pressable
       {...props}
       disabled={isDisabled}
-      className={`flex-row items-center justify-center ${variantStyles[variant]} ${sizeStyles[size]} ${isDisabled ? 'opacity-50' : ''}`}
+      className={`flex-row items-center justify-center ${variantStyles[variant]} ${sizeStyles[size]} ${isDisabled ? 'opacity-50' : ''} ${isDark ? 'dark' : ''}`}
     >
       {loading ? (
         <ActivityIndicator

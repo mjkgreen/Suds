@@ -1,12 +1,11 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   FlatList,
   Modal,
   Pressable,
   Text,
-  View,
-  SafeAreaView,
   TouchableOpacity,
+  View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -18,6 +17,7 @@ interface ScrollPickerProps {
   selectedValue: number;
   title: string;
   unit?: string;
+  formatValue?: (value: number) => string;
 }
 
 export function ScrollPicker({
@@ -28,6 +28,7 @@ export function ScrollPicker({
   selectedValue,
   title,
   unit,
+  formatValue,
 }: ScrollPickerProps) {
   return (
     <Modal
@@ -37,14 +38,14 @@ export function ScrollPicker({
       onRequestClose={onClose}
     >
       <View className="flex-1 justify-center items-center bg-black/60 px-6">
-        <View className="bg-white rounded-3xl w-full max-w-[280px] overflow-hidden shadow-2xl">
-          <View className="px-6 py-5 border-b border-gray-100 items-center justify-center relative">
-            <Text className="text-xl font-bold text-gray-900">{title}</Text>
-            <TouchableOpacity 
-              onPress={onClose} 
+        <View className="bg-card rounded-3xl w-full max-w-[280px] overflow-hidden border border-border shadow-2xl">
+          <View className="px-6 py-5 border-b border-border items-center justify-center relative">
+            <Text className="text-xl font-bold text-foreground">{title}</Text>
+            <TouchableOpacity
+              onPress={onClose}
               className="absolute right-4 p-1"
             >
-              <Ionicons name="close" size={20} color="#9ca3af" />
+              <Ionicons name="close" size={20} color="hsl(var(--muted-foreground))" />
             </TouchableOpacity>
           </View>
 
@@ -62,17 +63,11 @@ export function ScrollPicker({
                     onSelect(item);
                     onClose();
                   }}
-                  className={`px-6 py-4 items-center justify-center ${
-                    isSelected ? 'bg-amber-50' : 'bg-transparent'
-                  }`}
+                  className={`px-6 py-4 items-center justify-center ${isSelected ? 'bg-primary/10' : ''}`}
                 >
-                  <Text 
-                    className={`text-2xl ${
-                      isSelected ? 'font-bold text-amber-600' : 'text-gray-700'
-                    }`}
-                  >
-                    {item}
-                    {unit ? <Text className="text-sm font-normal text-gray-400"> {unit}</Text> : ''}
+                  <Text className={`text-2xl ${isSelected ? 'font-bold text-primary' : 'text-foreground'}`}>
+                    {formatValue ? formatValue(item) : item}
+                    {unit && !formatValue ? <Text className="text-sm font-normal text-muted-foreground"> {unit}</Text> : ''}
                   </Text>
                 </Pressable>
               );

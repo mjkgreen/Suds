@@ -66,7 +66,7 @@ export function DrinkCard({ item }: DrinkCardProps) {
           ) : null}
           {item.location_name && (
             <View className="flex-row items-center mt-0.5 gap-1">
-              <Ionicons name="location-outline" size={11} color="#9ca3af" />
+              <Ionicons name="location-outline" size={11} color="hsl(var(--muted-foreground))" />
               <Text className="text-muted-foreground text-xs">{item.location_name}</Text>
             </View>
           )}

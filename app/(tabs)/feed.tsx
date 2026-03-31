@@ -1,4 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
+import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useCallback, useState } from "react";
 import { ActivityIndicator, FlatList, Modal, Pressable, RefreshControl, Text, TextInput, View } from "react-native";
@@ -40,9 +41,11 @@ export default function FeedScreen() {
     setShowStartModal(false);
   }
 
+  const topEdges = activeSession ? [] : ["top" as const];
+
   if (isLoading) {
     return (
-      <SafeAreaView className="flex-1 bg-background items-center justify-center">
+      <SafeAreaView className="flex-1 bg-background items-center justify-center" edges={topEdges}>
         <ActivityIndicator size="large" color="#f59e0b" />
       </SafeAreaView>
     );
@@ -50,7 +53,7 @@ export default function FeedScreen() {
 
   if (isError) {
     return (
-      <SafeAreaView className="flex-1 bg-background">
+      <SafeAreaView className="flex-1 bg-background" edges={topEdges}>
         <EmptyState
           emoji="😬"
           title="Couldn't load feed"
@@ -62,7 +65,7 @@ export default function FeedScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-background" edges={["top"]}>
+    <SafeAreaView className="flex-1 bg-background" edges={topEdges}>
       <FlatList
         data={entries}
         keyExtractor={(entry) => (entry.type === "session" ? `session-${entry.session_id}` : `drink-${entry.item.id}`)}
@@ -70,7 +73,7 @@ export default function FeedScreen() {
           entry.type === "session" ? <SessionCard group={entry} /> : <DrinkCard item={entry.item} />
         }
         ListHeaderComponent={
-          <View className="px-4 pt-6 pb-3 gap-3">
+          <View className="px-4 pt-0 mt-0 pb-3 gap-3">
             <View>
               <Text className="text-2xl font-bold text-foreground"> Suds</Text>
               <Text className="text-muted-foreground text-sm">What your crew is drinking</Text>
@@ -96,13 +99,11 @@ export default function FeedScreen() {
                     <Text className="text-primary-foreground font-semibold text-sm">+ Log a Drink</Text>
                   </Pressable>
                   <Pressable
-                    className="flex-1 bg-background border border-primary/30 rounded-xl py-2.5 items-center"
+                    className="flex-1 bg-card border border-primary/30 rounded-xl py-2.5 items-center"
                     onPress={() => endSession(activeSession.id)}
                     disabled={isEnding}
                   >
-                    <Text className="text-primary font-semibold text-sm">
-                      {isEnding ? "Ending…" : "🏁 End Night Out"}
-                    </Text>
+                    <Text className="text-primary font-semibold text-sm">{isEnding ? "Ending…" : "End Night Out"}</Text>
                   </Pressable>
                 </View>
               </View>
@@ -115,7 +116,7 @@ export default function FeedScreen() {
                   <Text className="text-primary-foreground font-bold text-sm">Start a Night Out</Text>
                   <Text className="text-primary-foreground/70 text-xs">Track all your drinks as one session</Text>
                 </View>
-                <Text className="text-2xl">🌙</Text>
+                <Ionicons name="moon" size={24} color="#f59e0b" />
               </Pressable>
             )}
           </View>
@@ -151,7 +152,10 @@ export default function FeedScreen() {
           className="flex-1 bg-black/40 items-center justify-center px-6"
           onPress={() => setShowStartModal(false)}
         >
-          <Pressable className="bg-card rounded-3xl p-6 w-full border border-border" onPress={(e) => e.stopPropagation()}>
+          <Pressable
+            className="bg-card rounded-3xl p-6 w-full border border-border"
+            onPress={(e) => e.stopPropagation()}
+          >
             <Text className="text-xl font-bold text-foreground mb-1">Start a Night Out</Text>
             <Text className="text-muted-foreground text-sm mb-4">
               Give it a name, or leave blank. All drinks you log will be grouped together.

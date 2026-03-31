@@ -18,6 +18,7 @@ import { useMilestones } from "@/hooks/useMilestones";
 import { useProfile, useUserStats } from "@/hooks/useProfile";
 import { useStreaks } from "@/hooks/useStreaks";
 import { useAuthStore } from "@/stores/authStore";
+import { useActiveSession } from "@/hooks/useSession";
 import { DrinkLog, DrinkType } from "@/types/models";
 import { formatDateTime } from "@/utils/dateHelpers";
 import { getDisplayName, getUsername } from "@/utils/profileHelpers";
@@ -82,6 +83,8 @@ function TabBar({ active, onChange }: { active: Tab; onChange: (t: Tab) => void 
 export default function ProfileScreen() {
   const router = useRouter();
   const { user, isPremium } = useAuthStore();
+  const activeSession = useActiveSession();
+  const topEdges = activeSession ? [] : ["top" as const];
   const { signOut } = useAuth();
   const [activeTab, setActiveTab] = useState<Tab>("activities");
 
@@ -155,9 +158,9 @@ export default function ProfileScreen() {
           >
             <Ionicons 
               name={
-                themePreference === 'light' ? 'sunny-outline' :
-                themePreference === 'dark' ? 'moon-outline' :
-                'settings-outline'
+                themePreference === 'light' ? 'sunny' :
+                themePreference === 'dark' ? 'moon' :
+                'contrast'
               } 
               size={14} 
               color="hsl(var(--foreground))" 
@@ -179,7 +182,7 @@ export default function ProfileScreen() {
 
   if (activeTab === "progress") {
     return (
-      <SafeAreaView className="flex-1 bg-background" edges={["top"]}>
+      <SafeAreaView className="flex-1 bg-background" edges={topEdges}>
         <ProfileHeader />
         <TabBar active={activeTab} onChange={setActiveTab} />
         <ScrollView
@@ -276,7 +279,7 @@ export default function ProfileScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-background" edges={["top"]}>
+    <SafeAreaView className="flex-1 bg-background" edges={topEdges}>
       <FlatList
         data={logs ?? []}
         keyExtractor={(item) => item.id}

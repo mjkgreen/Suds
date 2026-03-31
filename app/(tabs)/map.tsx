@@ -17,6 +17,7 @@ import { DrinkIcon } from '@/components/icons/DrinkIcon';
 import { supabase } from '@/lib/supabase';
 import { DRINK_TYPE_MAP } from '@/lib/constants';
 import { useAuthStore } from '@/stores/authStore';
+import { useActiveSession } from '@/hooks/useSession';
 import { DrinkLog, DrinkType } from '@/types/models';
 import { formatDateTime } from '@/utils/dateHelpers';
 
@@ -47,6 +48,8 @@ type MapFilter = 'mine' | 'friends';
 
 export default function MapScreen() {
   const { user } = useAuthStore();
+  const activeSession = useActiveSession();
+  const topEdges = activeSession ? [] : ['top' as const];
   const router = useRouter();
   const [filter, setFilter] = useState<MapFilter>('mine');
   const mapRef = useRef<MapView>(null);
@@ -138,7 +141,7 @@ export default function MapScreen() {
   }, [logs]);
 
   return (
-    <SafeAreaView className="flex-1 bg-background" edges={['top']}>
+    <SafeAreaView className="flex-1 bg-background" edges={topEdges}>
       {/* Long-press hint */}
       <View className="absolute bottom-6 left-0 right-0 items-center z-10 pointer-events-none">
         <View className="bg-card/60 rounded-full px-4 py-2 border border-border/20">

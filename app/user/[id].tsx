@@ -16,7 +16,9 @@ import { Button } from '@/components/common/Button';
 import { useFollow, useIsFollowing } from '@/hooks/useFollow';
 import { supabase } from '@/lib/supabase';
 import { DRINK_TYPE_MAP } from '@/lib/constants';
+import { DrinkIcon } from '@/components/icons/DrinkIcon';
 import { useAuthStore } from '@/stores/authStore';
+import { useColorScheme } from 'nativewind';
 import { DrinkLog, DrinkType, Profile } from '@/types/models';
 import { formatDateTime } from '@/utils/dateHelpers';
 
@@ -37,10 +39,11 @@ export default function UserProfileScreen() {
         .eq('id', id!)
         .single();
       if (error) throw error;
+      const res = data as any;
       return {
-        ...data,
-        followers_count: (data.followers_count as any)?.[0]?.count ?? 0,
-        following_count: (data.following_count as any)?.[0]?.count ?? 0,
+        ...res,
+        followers_count: res.followers_count?.[0]?.count ?? 0,
+        following_count: res.following_count?.[0]?.count ?? 0,
       } as Profile;
     },
     enabled: !!id,
@@ -63,10 +66,12 @@ export default function UserProfileScreen() {
 
   const { data: isFollowing } = useIsFollowing(currentUser?.id, id);
   const { follow, unfollow } = useFollow(currentUser?.id);
+  const { colorScheme } = useColorScheme();
+  const isDark = colorScheme === 'dark';
 
   if (profileLoading || logsLoading) {
     return (
-      <SafeAreaView className="flex-1 bg-amber-50 items-center justify-center">
+      <SafeAreaView className={`flex-1 bg-background items-center justify-center ${isDark ? 'dark' : ''}`}>
         <ActivityIndicator size="large" color="#f59e0b" />
       </SafeAreaView>
     );
@@ -75,7 +80,7 @@ export default function UserProfileScreen() {
   if (!profile) return null;
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50">
+    <SafeAreaView className={`flex-1 bg-background ${isDark ? 'dark' : ''}`}>
       <FlatList
         data={logs ?? []}
         keyExtractor={(item) => item.id}
@@ -83,39 +88,41 @@ export default function UserProfileScreen() {
           const info = DRINK_TYPE_MAP[item.drink_type as DrinkType] ?? DRINK_TYPE_MAP['other'];
           return (
             <Pressable
-              className="flex-row items-center px-6 py-3 border-b border-gray-100 bg-white active:bg-gray-50"
+              className="flex-row items-center px-6 py-3 border-b border-border bg-background active:bg-accent"
               onPress={() => router.push(`/drink/${item.id}`)}
             >
-              <Text className="text-2xl mr-3">{info.emoji}</Text>
-              <View className="flex-1">
-                <Text className="text-gray-900 font-medium">
+              <DrinkIcon type={item.drink_type as DrinkType} size={24} color={info.color} />
+              <View className="flex-1 ml-3">
+                <Text className="text-foreground font-medium">
                   {item.drink_name || info.label}
                   {item.quantity !== 1 && (
-                    <Text className="text-gray-500 font-normal"> × {item.quantity}</Text>
+                    <Text className="text-muted-foreground font-normal"> × {item.quantity}</Text>
                   )}
                 </Text>
                 {item.location_name && (
-                  <Text className="text-gray-400 text-xs">📍 {item.location_name}</Text>
+                  <View className="flex-row items-center mt-0.5 gap-1">
+                    <Text className="text-muted-foreground text-xs">{item.location_name}</Text>
+                  </View>
                 )}
               </View>
-              <Text className="text-gray-400 text-xs">{formatDateTime(item.logged_at)}</Text>
+              <Text className="text-muted-foreground text-xs">{formatDateTime(item.logged_at)}</Text>
             </Pressable>
           );
         }}
         ListHeaderComponent={
           <View>
             {/* Nav */}
-            <View className="flex-row items-center px-4 py-3 bg-white border-b border-gray-100">
+            <View className="flex-row items-center px-4 py-3 bg-background border-b border-border">
               <Pressable onPress={() => router.back()} className="p-2 mr-2">
-                <Ionicons name="arrow-back" size={22} color="#374151" />
+                <Ionicons name="arrow-back" size={22} color="orange" />
               </Pressable>
-              <Text className="font-bold text-gray-900 text-base flex-1">
+              <Text className="font-bold text-foreground text-base flex-1">
                 @{profile.username}
               </Text>
             </View>
 
             {/* Profile */}
-            <View className="bg-white px-6 pt-5 pb-5 border-b border-gray-100">
+            <View className="bg-background px-6 pt-5 pb-5 border-b border-border">
               <View className="flex-row items-start justify-between mb-4">
                 <Avatar
                   uri={profile.avatar_url}
@@ -138,38 +145,38 @@ export default function UserProfileScreen() {
                   />
                 )}
               </View>
-
-              <Text className="text-xl font-bold text-gray-900">
+ 
+              <Text className="text-xl font-bold text-foreground">
                 {profile.display_name ?? profile.username}
               </Text>
-              <Text className="text-gray-400 text-sm">@{profile.username}</Text>
+              <Text className="text-muted-foreground text-sm">@{profile.username}</Text>
               {profile.bio && (
-                <Text className="text-gray-600 text-sm mt-2">{profile.bio}</Text>
+                <Text className="text-muted-foreground text-sm mt-2">{profile.bio}</Text>
               )}
-
+ 
               <View className="flex-row gap-6 mt-3">
-                <Text className="text-gray-700 text-sm">
-                  <Text className="font-bold text-gray-900">{logs?.length ?? 0}</Text> Drinks
+                <Text className="text-muted-foreground text-sm">
+                  <Text className="font-bold text-foreground">{logs?.length ?? 0}</Text> Drinks
                 </Text>
-                <Text className="text-gray-700 text-sm">
-                  <Text className="font-bold text-gray-900">{profile.followers_count ?? 0}</Text>{' '}
+                <Text className="text-muted-foreground text-sm">
+                  <Text className="font-bold text-foreground">{profile.followers_count ?? 0}</Text>{' '}
                   Followers
                 </Text>
-                <Text className="text-gray-700 text-sm">
-                  <Text className="font-bold text-gray-900">{profile.following_count ?? 0}</Text>{' '}
+                <Text className="text-muted-foreground text-sm">
+                  <Text className="font-bold text-foreground">{profile.following_count ?? 0}</Text>{' '}
                   Following
                 </Text>
               </View>
             </View>
 
-            <View className="px-6 pt-4 pb-2 bg-gray-50">
-              <Text className="text-base font-bold text-gray-700">Drinks</Text>
+            <View className="px-6 pt-4 pb-2 bg-muted/30">
+              <Text className="text-base font-bold text-muted-foreground">Drinks</Text>
             </View>
           </View>
         }
         ListEmptyComponent={
           <View className="py-16 items-center">
-            <Text className="text-gray-400 text-base">No drinks logged yet.</Text>
+            <Text className="text-muted-foreground text-base">No drinks logged yet.</Text>
           </View>
         }
         contentContainerStyle={{ paddingBottom: 32 }}

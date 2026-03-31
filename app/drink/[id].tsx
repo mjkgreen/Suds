@@ -10,6 +10,7 @@ import {
   Text,
   View,
 } from 'react-native';
+import { useColorScheme } from 'nativewind';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Avatar } from '@/components/common/Avatar';
 import { RemoteImage } from '@/components/common/RemoteImage';
@@ -27,6 +28,8 @@ export default function DrinkDetailScreen() {
   const router = useRouter();
   const { user } = useAuthStore();
   const { mutateAsync: deleteDrink } = useDeleteDrinkLog();
+  const { colorScheme } = useColorScheme();
+  const isDark = colorScheme === 'dark';
 
   const { data, isLoading } = useQuery({
     queryKey: ['drinkDetail', id],
@@ -69,7 +72,7 @@ export default function DrinkDetailScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView className="flex-1 bg-amber-50 items-center justify-center">
+      <SafeAreaView className={`flex-1 bg-background items-center justify-center ${isDark ? 'dark' : ''}`}>
         <ActivityIndicator size="large" color="#f59e0b" />
       </SafeAreaView>
     );
@@ -81,17 +84,17 @@ export default function DrinkDetailScreen() {
   const isOwner = user?.id === data.user_id;
 
   return (
-    <SafeAreaView className="flex-1 bg-white">
+    <SafeAreaView className={`flex-1 bg-background ${isDark ? 'dark' : ''}`}>
       {/* Nav bar */}
-      <View className="flex-row items-center justify-between px-4 py-3 border-b border-gray-100">
+      <View className="flex-row items-center justify-between px-4 py-3 border-b border-border">
         <Pressable onPress={() => router.back()} className="p-2">
-          <Ionicons name="close" size={24} color="#374151" />
+          <Ionicons name="close" size={24} color="orange" />
         </Pressable>
-        <Text className="font-bold text-gray-900 text-base">Drink</Text>
+        <Text className="font-bold text-foreground text-base">Drink</Text>
         {isOwner ? (
           <View className="flex-row gap-1">
             <Pressable onPress={() => router.push(`/drink/edit/${data?.id}`)} className="p-2">
-              <Ionicons name="pencil-outline" size={22} color="#374151" />
+              <Ionicons name="pencil-outline" size={22} color="orange" />
             </Pressable>
             <Pressable onPress={handleDelete} className="p-2">
               <Ionicons name="trash-outline" size={22} color="#ef4444" />
@@ -122,11 +125,11 @@ export default function DrinkDetailScreen() {
             <DrinkIcon type={data.drink_type as DrinkType} size={36} color={info.color} />
           </View>
           <View className="flex-1">
-            <Text className="text-2xl font-bold text-gray-900">
+            <Text className="text-2xl font-bold text-foreground">
               {data.drink_name || info.label}
             </Text>
             {data.brand ? (
-              <Text className="text-gray-500 text-sm mt-0.5">{data.brand}</Text>
+              <Text className="text-muted-foreground text-sm mt-0.5">{data.brand}</Text>
             ) : null}
             <View className="mt-1">
               <DrinkBadge type={data.drink_type as DrinkType} />
@@ -135,22 +138,22 @@ export default function DrinkDetailScreen() {
         </View>
 
         {/* Meta */}
-        <View className="bg-gray-50 rounded-2xl p-4 gap-3 mb-4">
+        <View className="bg-card rounded-2xl p-4 gap-3 mb-4">
           <View className="flex-row items-center">
-            <Ionicons name="beaker-outline" size={18} color="#6b7280" />
-            <Text className="text-gray-600 ml-2">
-              <Text className="font-semibold text-gray-900">{data.quantity}</Text> standard drink
+            <Ionicons name="beaker-outline" size={18} color="hsl(var(--muted-foreground))" />
+            <Text className="text-muted-foreground ml-2">
+              <Text className="font-semibold text-foreground">{data.quantity}</Text> standard drink
               {data.quantity !== 1 ? 's' : ''}
             </Text>
           </View>
           <View className="flex-row items-center">
-            <Ionicons name="time-outline" size={18} color="#6b7280" />
-            <Text className="text-gray-600 ml-2">{formatDateTime(data.logged_at)}</Text>
+            <Ionicons name="time-outline" size={18} color="hsl(var(--muted-foreground))" />
+            <Text className="text-muted-foreground ml-2">{formatDateTime(data.logged_at)}</Text>
           </View>
           {data.location_name && (
             <View className="flex-row items-center">
-              <Ionicons name="location-outline" size={18} color="#6b7280" />
-              <Text className="text-gray-600 ml-2">{data.location_name}</Text>
+              <Ionicons name="location-outline" size={18} color="hsl(var(--muted-foreground))" />
+              <Text className="text-muted-foreground ml-2">{data.location_name}</Text>
             </View>
           )}
         </View>
@@ -158,17 +161,17 @@ export default function DrinkDetailScreen() {
         {/* Notes */}
         {data.notes && (
           <View className="mb-4">
-            <Text className="text-gray-400 text-xs font-semibold uppercase tracking-wide mb-1">
+            <Text className="text-muted-foreground text-xs font-semibold uppercase tracking-wide mb-1">
               Notes
             </Text>
-            <Text className="text-gray-700 text-base">{data.notes}</Text>
+            <Text className="text-foreground text-base">{data.notes}</Text>
           </View>
         )}
 
         {/* Author */}
         {data.profile && (
           <Pressable
-            className="flex-row items-center mt-2 p-3 bg-gray-50 rounded-2xl"
+            className="flex-row items-center mt-2 p-3 bg-card rounded-2xl"
             onPress={() => router.push(`/user/${data.profile?.id}`)}
           >
             <Avatar
@@ -177,12 +180,12 @@ export default function DrinkDetailScreen() {
               size={38}
             />
             <View className="ml-3">
-              <Text className="font-semibold text-gray-800">
+              <Text className="font-semibold text-foreground">
                 {data.profile.display_name ?? data.profile.username}
               </Text>
-              <Text className="text-gray-400 text-xs">@{data.profile.username}</Text>
+              <Text className="text-muted-foreground text-xs">@{data.profile.username}</Text>
             </View>
-            <Ionicons name="chevron-forward" size={18} color="#9ca3af" style={{ marginLeft: 'auto' }} />
+            <Ionicons name="chevron-forward" size={18} color="hsl(var(--muted-foreground))" style={{ marginLeft: 'auto' }} />
           </Pressable>
         )}
       </ScrollView>

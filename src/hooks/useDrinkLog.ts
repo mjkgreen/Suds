@@ -50,7 +50,7 @@ export function useLogDrink() {
           location_lng: formData.location_lng ?? null,
           notes: formData.notes || null,
           photo_url: photoUrl,
-          rating: formData.rating ?? null,
+          rating: formData.rating || null,
           logged_at: formData.logged_at ?? new Date().toISOString(),
           session_id: sessionId ?? null,
         })
@@ -113,7 +113,7 @@ export function useUpdateDrinkLog() {
           location_lng: formData.location_lng ?? null,
           notes: formData.notes || null,
           photo_url: photoUrl,
-          rating: formData.rating ?? null,
+          rating: formData.rating || null,
           logged_at: formData.logged_at ?? new Date().toISOString(),
         })
         .eq('id', id)

@@ -19,6 +19,8 @@ import { Button } from '@/components/common/Button';
 import { uploadAvatarPhoto } from '@/lib/storage';
 import { useUpdateProfile } from '@/hooks/useProfile';
 import { useAuthStore } from '@/stores/authStore';
+import { useColorScheme } from 'nativewind';
+import { Profile } from '@/types/models';
 
 export default function EditProfileScreen() {
   const router = useRouter();
@@ -104,7 +106,11 @@ export default function EditProfileScreen() {
           avatar_url: newAvatarUrl,
         },
       });
-      setProfile({ ...profile!, ...updated });
+      if (profile) {
+        setProfile({ ...profile, ...updated });
+      } else {
+        setProfile(updated as Profile);
+      }
       setSaved(true);
       setTimeout(() => router.back(), 800);
     } catch (err: any) {
@@ -114,20 +120,23 @@ export default function EditProfileScreen() {
 
   const previewUri = avatarUri ?? profile?.avatar_url ?? null;
 
+  const { colorScheme } = useColorScheme();
+  const isDark = colorScheme === 'dark';
+
   return (
-    <SafeAreaView className="flex-1 bg-gray-50">
+    <SafeAreaView className={`flex-1 bg-background ${isDark ? 'dark' : ''}`}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         className="flex-1"
       >
-        <View className="flex-row items-center px-4 py-3 bg-white border-b border-gray-100">
+        <View className="flex-row items-center px-4 py-3 bg-background border-b border-border">
           <Pressable onPress={() => router.back()} className="p-2 mr-2">
-            <Ionicons name="arrow-back" size={22} color="#374151" />
+            <Ionicons name="arrow-back" size={22} color="hsl(var(--foreground))" />
           </Pressable>
-          <Text className="font-bold text-gray-900 text-base flex-1">Edit Profile</Text>
+          <Text className="font-bold text-foreground text-base flex-1">Edit Profile</Text>
           {isPending && <ActivityIndicator size="small" color="#f59e0b" />}
         </View>
-
+ 
         <ScrollView
           className="flex-1"
           contentContainerStyle={{ padding: 24, gap: 20 }}
@@ -137,53 +146,53 @@ export default function EditProfileScreen() {
             <Pressable onPress={handlePickAvatar} className="relative">
               <Avatar uri={previewUri} name={displayName || username || 'U'} size={88} />
               <View
-                className="absolute bottom-0 right-0 bg-amber-400 rounded-full p-1.5"
-                style={{ borderWidth: 2, borderColor: '#f9fafb' }}
+                className="absolute bottom-0 right-0 bg-primary rounded-full p-1.5"
+                style={{ borderWidth: 2, borderColor: isDark ? 'hsl(var(--background))' : '#f9fafb' }}
               >
                 <Ionicons name="camera" size={14} color="#fff" />
               </View>
             </Pressable>
-            <Text className="text-gray-400 text-xs mt-2">Tap to change photo</Text>
+            <Text className="text-muted-foreground text-xs mt-2">Tap to change photo</Text>
           </View>
 
           <View>
-            <Text className="text-gray-700 font-semibold mb-1.5 text-sm">Display Name</Text>
+            <Text className="text-foreground font-semibold mb-1.5 text-sm">Display Name</Text>
             <TextInput
-              className="bg-white border border-gray-200 rounded-xl px-4 py-3 text-base text-gray-900"
+              className="bg-card border border-border rounded-xl px-4 py-3 text-base text-foreground"
               placeholder="Your full name or nickname"
-              placeholderTextColor="#9ca3af"
+              placeholderTextColor="hsl(var(--muted-foreground))"
               value={displayName}
               onChangeText={setDisplayName}
               autoCorrect={false}
             />
-            <Text className="text-gray-400 text-xs mt-1">This is what others see in the feed</Text>
+            <Text className="text-muted-foreground text-xs mt-1">This is what others see in the feed</Text>
           </View>
 
           <View>
-            <Text className="text-gray-700 font-semibold mb-1.5 text-sm">
-              Username <Text className="text-red-400">*</Text>
+            <Text className="text-foreground font-semibold mb-1.5 text-sm">
+              Username <Text className="text-destructive">*</Text>
             </Text>
-            <View className="flex-row items-center bg-white border border-gray-200 rounded-xl px-4 py-3">
-              <Text className="text-gray-400 text-base mr-0.5">@</Text>
+            <View className="flex-row items-center bg-card border border-border rounded-xl px-4 py-3">
+              <Text className="text-muted-foreground text-base mr-0.5">@</Text>
               <TextInput
-                className="flex-1 text-base text-gray-900"
+                className="flex-1 text-base text-foreground"
                 placeholder="your_handle"
-                placeholderTextColor="#9ca3af"
+                placeholderTextColor="hsl(var(--muted-foreground))"
                 value={username}
                 onChangeText={(t) => setUsername(t.toLowerCase())}
                 autoCapitalize="none"
                 autoCorrect={false}
               />
             </View>
-            <Text className="text-gray-400 text-xs mt-1">Letters, numbers, underscores only</Text>
+            <Text className="text-muted-foreground text-xs mt-1">Letters, numbers, underscores only</Text>
           </View>
 
           <View>
-            <Text className="text-gray-700 font-semibold mb-1.5 text-sm">Bio</Text>
+            <Text className="text-foreground font-semibold mb-1.5 text-sm">Bio</Text>
             <TextInput
-              className="bg-white border border-gray-200 rounded-xl px-4 py-3 text-base text-gray-900"
+              className="bg-card border border-border rounded-xl px-4 py-3 text-base text-foreground"
               placeholder="Tell people what you drink…"
-              placeholderTextColor="#9ca3af"
+              placeholderTextColor="hsl(var(--muted-foreground))"
               value={bio}
               onChangeText={setBio}
               multiline
@@ -194,14 +203,14 @@ export default function EditProfileScreen() {
           </View>
 
           {error && (
-            <View className="bg-red-50 border border-red-200 rounded-xl px-4 py-3">
-              <Text className="text-red-600 text-sm">{error}</Text>
+            <View className="bg-destructive/10 border border-destructive/20 rounded-xl px-4 py-3">
+              <Text className="text-destructive text-sm">{error}</Text>
             </View>
           )}
 
           {saved && (
-            <View className="bg-green-50 border border-green-200 rounded-xl px-4 py-3">
-              <Text className="text-green-700 text-sm font-medium">Profile saved!</Text>
+            <View className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl px-4 py-3">
+              <Text className="text-green-700 dark:text-green-400 text-sm font-medium">Profile saved!</Text>
             </View>
           )}
 

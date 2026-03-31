@@ -15,6 +15,7 @@ import { Button } from '@/components/common/Button';
 import { useFollow, useIsFollowing } from '@/hooks/useFollow';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/stores/authStore';
+import { useActiveSession } from '@/hooks/useSession';
 import { Profile } from '@/types/models';
 import { SEARCH_DEBOUNCE_MS } from '@/lib/constants';
 import { useDebounce } from '@/hooks/useDebounce';
@@ -62,6 +63,8 @@ function UserRow({ profile, currentUserId }: { profile: Profile; currentUserId: 
 
 export default function SearchScreen() {
   const { user } = useAuthStore();
+  const activeSession = useActiveSession();
+  const topEdges = activeSession ? [] : ['top' as const];
   const [query, setQuery] = useState('');
   const debouncedQuery = useDebounce(query, SEARCH_DEBOUNCE_MS);
 
@@ -81,7 +84,7 @@ export default function SearchScreen() {
   });
 
   return (
-    <SafeAreaView className="flex-1 bg-background" edges={["top"]}>
+    <SafeAreaView className="flex-1 bg-background" edges={topEdges}>
       {/* Search bar */}
       <View className="px-4 pt-6 pb-3 bg-card border-b border-border">
         <Text className="text-2xl font-bold text-foreground mb-3">Find Friends</Text>

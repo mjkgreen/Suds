@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { Controller, useForm } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -10,17 +10,13 @@ import {
   Pressable,
   ScrollView,
   Text,
-  TextInput,
   View,
 } from 'react-native';
+import { useColorScheme } from 'nativewind';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/common/Button';
-import { LocationPicker } from '@/components/common/LocationPicker';
-import { RemoteImage } from '@/components/common/RemoteImage';
-import { DrinkAutocomplete } from '@/components/drink/DrinkAutocomplete';
-import { DrinkTypePicker } from '@/components/drink/DrinkTypePicker';
-import { DRINK_BRANDS, DRINK_NAMES } from '@/lib/drinkData';
+import { DrinkFormBody } from '@/components/drink/DrinkFormBody';
 import { useUpdateDrinkLog } from '@/hooks/useDrinkLog';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/stores/authStore';
@@ -31,6 +27,8 @@ export default function EditDrinkScreen() {
   const router = useRouter();
   const { user } = useAuthStore();
   const { mutateAsync: updateDrink, isPending } = useUpdateDrinkLog();
+  const { colorScheme } = useColorScheme();
+  const isDark = colorScheme === 'dark';
 
   const [newPhotoUri, setNewPhotoUri] = useState<string | null>(null);
   const [newPhotoBase64, setNewPhotoBase64] = useState<string | null>(null);
@@ -57,15 +55,13 @@ export default function EditDrinkScreen() {
       drink_name: '',
       brand: '',
       quantity: 1,
+      rating: 0,
       location_name: '',
       notes: '',
+      logged_at: new Date().toISOString(),
     },
   });
 
-  const quantity = watch('quantity');
-  const drinkType = watch('drink_type');
-
-  // Pre-fill form once drink data loads
   useEffect(() => {
     if (!drink) return;
     reset({
@@ -73,10 +69,12 @@ export default function EditDrinkScreen() {
       drink_name: drink.drink_name ?? '',
       brand: drink.brand ?? '',
       quantity: drink.quantity,
+      rating: drink.rating ?? 0,
       location_name: drink.location_name ?? '',
       location_lat: drink.location_lat ?? undefined,
       location_lng: drink.location_lng ?? undefined,
       notes: drink.notes ?? '',
+      logged_at: drink.logged_at,
     });
   }, [drink]);
 
@@ -114,207 +112,57 @@ export default function EditDrinkScreen() {
     }
   }
 
-  // What photo to show in the preview
-  const previewUri = removePhoto
-    ? null
-    : newPhotoUri ?? drink?.photo_url ?? null;
+  const previewUri = removePhoto ? null : newPhotoUri ?? drink?.photo_url ?? null;
 
   if (isLoading) {
     return (
-      <SafeAreaView className="flex-1 bg-amber-50 items-center justify-center">
+      <SafeAreaView className={`flex-1 bg-background items-center justify-center ${isDark ? 'dark' : ''}`}>
         <ActivityIndicator size="large" color="#f59e0b" />
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-amber-50">
+    <SafeAreaView className={`flex-1 bg-background ${isDark ? 'dark' : ''}`}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         className="flex-1"
       >
         {/* Nav */}
-        <View className="flex-row items-center px-4 py-3 bg-white border-b border-gray-100">
+        <View className="flex-row items-center px-4 py-3 bg-background border-b border-border">
           <Pressable onPress={() => router.back()} className="p-2 mr-2">
-            <Ionicons name="arrow-back" size={22} color="#374151" />
+            <Ionicons name="arrow-back" size={22} color={isDark ? '#e5e7eb' : '#374151'} />
           </Pressable>
-          <Text className="font-bold text-gray-900 text-base flex-1">Edit Drink</Text>
+          <Text className="font-bold text-foreground text-base flex-1">Edit Drink</Text>
           {isPending && <ActivityIndicator size="small" color="#f59e0b" />}
         </View>
 
         <ScrollView
           className="flex-1"
-          contentContainerStyle={{ paddingBottom: 40 }}
+          contentContainerStyle={{ paddingBottom: 24 }}
           keyboardShouldPersistTaps="handled"
         >
-          {/* Drink Type */}
-          <View className="mb-6 mt-4">
-            <Text className="text-gray-700 font-semibold px-6 mb-3">Type</Text>
-            <Controller
-              control={control}
-              name="drink_type"
-              render={({ field: { value, onChange } }) => (
-                <View className="px-6">
-                  <DrinkTypePicker value={value} onChange={onChange} />
-                </View>
-              )}
-            />
-          </View>
-
-          <View className="px-6 gap-5">
-            {/* Drink Name */}
-            <View>
-              <Text className="text-gray-700 font-semibold mb-2">Drink Name (optional)</Text>
-              <Controller
-                control={control}
-                name="drink_name"
-                render={({ field: { value, onChange } }) => (
-                  <DrinkAutocomplete
-                    value={value}
-                    onChange={onChange}
-                    options={DRINK_NAMES[drinkType]}
-                    placeholder="e.g. IPA, Pinot Noir, Margarita…"
-                  />
-                )}
-              />
-            </View>
-
-            {/* Brand */}
-            <View>
-              <Text className="text-gray-700 font-semibold mb-2">Brand (optional)</Text>
-              <Controller
-                control={control}
-                name="brand"
-                render={({ field: { value, onChange } }) => (
-                  <DrinkAutocomplete
-                    value={value}
-                    onChange={onChange}
-                    options={DRINK_BRANDS[drinkType]}
-                    placeholder="e.g. Guinness, Bacardi, Don Julio…"
-                  />
-                )}
-              />
-            </View>
-
-            {/* Quantity */}
-            <View>
-              <Text className="text-gray-700 font-semibold mb-2">Quantity</Text>
-              <View className="flex-row items-center bg-white border border-gray-200 rounded-xl overflow-hidden">
-                <Pressable
-                  className="px-5 py-3 active:bg-gray-100"
-                  onPress={() => setValue('quantity', Math.max(0.5, quantity - 0.5))}
-                >
-                  <Ionicons name="remove" size={22} color="#374151" />
-                </Pressable>
-                <Text className="flex-1 text-center text-xl font-bold text-gray-900">
-                  {quantity}
-                </Text>
-                <Pressable
-                  className="px-5 py-3 active:bg-gray-100"
-                  onPress={() => setValue('quantity', Math.min(20, quantity + 0.5))}
-                >
-                  <Ionicons name="add" size={22} color="#374151" />
-                </Pressable>
-              </View>
-            </View>
-
-            {/* Location */}
-            <View>
-              <Text className="text-gray-700 font-semibold mb-2">Location (optional)</Text>
-              <Controller
-                control={control}
-                name="location_name"
-                render={({ field: { value } }) => (
-                  <LocationPicker
-                    value={value}
-                    onChange={(name, lat, lng) => {
-                      setValue('location_name', name);
-                      if (lat !== undefined) setValue('location_lat', lat);
-                      if (lng !== undefined) setValue('location_lng', lng);
-                    }}
-                  />
-                )}
-              />
-            </View>
-
-            {/* Notes */}
-            <View>
-              <Text className="text-gray-700 font-semibold mb-2">Notes (optional)</Text>
-              <Controller
-                control={control}
-                name="notes"
-                render={({ field: { value, onChange, onBlur } }) => (
-                  <TextInput
-                    className="bg-white border border-gray-200 rounded-xl px-4 py-3 text-base text-gray-900"
-                    placeholder="How was it?"
-                    placeholderTextColor="#9ca3af"
-                    value={value}
-                    onChangeText={onChange}
-                    onBlur={onBlur}
-                    multiline
-                    numberOfLines={3}
-                    textAlignVertical="top"
-                    style={{ minHeight: 80 }}
-                  />
-                )}
-              />
-            </View>
-
-            {/* Photo */}
-            <View>
-              <Text className="text-gray-700 font-semibold mb-2">Photo (optional)</Text>
-              {previewUri ? (
-                <View className="relative" style={{ height: 180 }}>
-                  <RemoteImage
-                    uri={previewUri}
-                    height={180}
-                    borderRadius={12}
-                  />
-                  <View className="absolute top-2 right-2 flex-row gap-2">
-                    <Pressable
-                      className="bg-black/50 rounded-full px-3 py-1.5 flex-row items-center gap-1"
-                      onPress={handlePickPhoto}
-                    >
-                      <Ionicons name="swap-horizontal" size={14} color="#fff" />
-                      <Text className="text-white text-xs font-medium">Replace</Text>
-                    </Pressable>
-                    <Pressable
-                      className="bg-red-500/80 rounded-full p-1.5"
-                      onPress={() => {
-                        setNewPhotoUri(null);
-                        setRemovePhoto(true);
-                      }}
-                    >
-                      <Ionicons name="trash" size={14} color="#fff" />
-                    </Pressable>
-                  </View>
-                </View>
-              ) : (
-                <Pressable
-                  className="bg-white border-2 border-dashed border-gray-200 rounded-xl py-8 items-center active:bg-gray-50"
-                  onPress={handlePickPhoto}
-                >
-                  <Ionicons name="camera-outline" size={28} color="#9ca3af" />
-                  <Text className="text-gray-400 text-sm mt-2">Add a photo</Text>
-                </Pressable>
-              )}
-            </View>
-
-            {error && (
-              <View className="bg-red-50 border border-red-200 rounded-xl px-4 py-3">
-                <Text className="text-red-600 text-sm">{error}</Text>
-              </View>
-            )}
-
-            <Button
-              label={newPhotoUri && isPending ? 'Uploading photo…' : 'Save Changes'}
-              onPress={handleSubmit(onSubmit)}
-              loading={isPending}
-              size="lg"
-              className="mt-2"
-            />
-          </View>
+          <DrinkFormBody
+            control={control}
+            watch={watch}
+            setValue={setValue}
+            previewUri={previewUri}
+            onPickPhoto={handlePickPhoto}
+            onRemovePhoto={() => { setNewPhotoUri(null); setRemovePhoto(true); }}
+            onReplacePhoto={handlePickPhoto}
+            error={error}
+          />
         </ScrollView>
+
+        {/* Pinned Save Button */}
+        <View className="px-6 py-4 bg-background border-t border-border">
+          <Button
+            label={newPhotoUri && isPending ? 'Uploading photo…' : 'Save Changes'}
+            onPress={handleSubmit(onSubmit)}
+            loading={isPending}
+            size="lg"
+          />
+        </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
