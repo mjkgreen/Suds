@@ -1,8 +1,9 @@
-import React from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
-import { DrinkIcon } from '@/components/icons/DrinkIcon';
-import { DRINK_TYPES } from '@/lib/constants';
-import { DrinkType } from '@/types/models';
+import React from "react";
+import { Pressable, ScrollView, Text, View } from "react-native";
+import { useColorScheme } from "nativewind";
+import { DrinkIcon } from "@/components/icons/DrinkIcon";
+import { DRINK_TYPES } from "@/lib/constants";
+import { DrinkType } from "@/types/models";
 
 interface DrinkTypePickerProps {
   value: DrinkType;
@@ -10,6 +11,10 @@ interface DrinkTypePickerProps {
 }
 
 export function DrinkTypePicker({ value, onChange }: DrinkTypePickerProps) {
+  const { colorScheme } = useColorScheme();
+  const isDark = colorScheme === "dark";
+  const unselectedBorder = isDark ? "#374151" : "#d1d5db";
+
   return (
     <ScrollView
       horizontal
@@ -23,23 +28,17 @@ export function DrinkTypePicker({ value, onChange }: DrinkTypePickerProps) {
             key={type.value}
             onPress={() => onChange(type.value)}
             style={{
-              borderColor: isSelected ? type.color : undefined,
-              backgroundColor: isSelected ? type.color + '15' : undefined,
+              borderColor: isSelected ? type.color : unselectedBorder,
+              backgroundColor: isSelected ? type.color + "15" : undefined,
             }}
-            className={`items-center py-3 px-4 rounded-2xl border-2 min-w-[72px] ${
-              isSelected ? '' : 'border-border bg-card'
-            }`}
+            className="items-center py-3 px-4 rounded-2xl border-2 min-w-[72px] bg-card"
           >
             <View style={{ marginBottom: 4 }}>
-              <DrinkIcon
-                type={type.value}
-                size={28}
-                color={type.color}
-              />
+              <DrinkIcon type={type.value} size={28} color={type.color} />
             </View>
             <Text
               style={{ color: isSelected ? type.color : undefined }}
-              className={`text-xs font-semibold ${isSelected ? '' : 'text-muted-foreground'}`}
+              className={`text-xs font-semibold ${isSelected ? "" : "text-muted-foreground"}`}
             >
               {type.label}
             </Text>

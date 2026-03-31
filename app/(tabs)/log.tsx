@@ -11,6 +11,7 @@ import { useLogDrink } from "@/hooks/useDrinkLog";
 import { useLocation } from "@/hooks/useLocation";
 import { useActiveSession, useEndSession } from "@/hooks/useSession";
 import { useAuthStore } from "@/stores/authStore";
+import { usePrefsStore } from "@/stores/prefsStore";
 import { LogDrinkFormData } from "@/types/models";
 
 const DEFAULT_VALUES: LogDrinkFormData = {
@@ -32,11 +33,14 @@ export default function LogScreen() {
   const activeSession = useActiveSession();
   const { mutateAsync: endSession, isPending: isEnding } = useEndSession();
 
+  const { locationEnabled } = usePrefsStore();
+
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [photoBase64, setPhotoBase64] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [isKeyboardVisible, setKeyboardVisible] = useState(false);
+  const [locationClearedByUser, setLocationClearedByUser] = useState(false);
 
   const insets = useSafeAreaInsets();
 
@@ -71,7 +75,7 @@ export default function LogScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      if (!params.lat && !params.lng && !locationName) {
+      if (locationEnabled && !locationClearedByUser && !params.lat && !params.lng && !locationName) {
         getCurrentLocation().then((result) => {
           if (result) {
             const name = result.name ?? `${result.lat.toFixed(4)}, ${result.lng.toFixed(4)}`;
@@ -81,7 +85,7 @@ export default function LogScreen() {
           }
         });
       }
-    }, [params.lat, params.lng, locationName]),
+    }, [locationEnabled, locationClearedByUser, params.lat, params.lng, locationName]),
   );
 
   async function handlePickPhoto() {
@@ -133,6 +137,7 @@ export default function LogScreen() {
       reset({ ...DEFAULT_VALUES, logged_at: new Date().toISOString() });
       setPhotoUri(null);
       setPhotoBase64(null);
+      setLocationClearedByUser(false);
       router.replace("/(tabs)/feed");
     } catch (err: any) {
       setError(err.message ?? "Something went wrong.");
@@ -195,6 +200,7 @@ export default function LogScreen() {
               previewUri={photoUri}
               onPickPhoto={handlePickPhoto}
               onRemovePhoto={() => setPhotoUri(null)}
+              onClearLocation={() => setLocationClearedByUser(true)}
               error={error}
             />
           </ScrollView>

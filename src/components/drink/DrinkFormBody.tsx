@@ -22,6 +22,7 @@ interface DrinkFormBodyProps {
   onRemovePhoto: () => void;
   /** Edit mode only — shows Replace + Trash overlay instead of a close button */
   onReplacePhoto?: () => void;
+  onClearLocation?: () => void;
   error?: string | null;
 }
 
@@ -33,6 +34,7 @@ export function DrinkFormBody({
   onPickPhoto,
   onRemovePhoto,
   onReplacePhoto,
+  onClearLocation,
   error,
 }: DrinkFormBodyProps) {
   const [ratingPickerVisible, setRatingPickerVisible] = useState(false);
@@ -53,7 +55,7 @@ export function DrinkFormBody({
           control={control}
           name="drink_type"
           render={({ field: { value, onChange } }) => (
-            <View className="px-6">
+            <View className="px- ">
               <DrinkTypePicker value={value} onChange={onChange} />
             </View>
           )}
@@ -135,6 +137,7 @@ export function DrinkFormBody({
                   if (lat !== undefined) setValue("location_lat", lat);
                   if (lng !== undefined) setValue("location_lng", lng);
                 }}
+                onClear={onClearLocation}
               />
             )}
           />

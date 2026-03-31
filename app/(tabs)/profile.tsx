@@ -25,6 +25,7 @@ import { getDisplayName, getUsername } from "@/utils/profileHelpers";
 import { DrinkIcon } from "@/components/icons/DrinkIcon";
 import { DRINK_TYPE_MAP } from "@/lib/constants";
 import { useThemeStore } from "@/stores/themeStore";
+import { usePrefsStore } from "@/stores/prefsStore";
 import { useColorScheme } from "nativewind";
 
 type Tab = "progress" | "activities";
@@ -89,6 +90,7 @@ export default function ProfileScreen() {
   const [activeTab, setActiveTab] = useState<Tab>("activities");
 
   const { themePreference, setThemePreference } = useThemeStore();
+  const { locationEnabled, setLocationEnabled } = usePrefsStore();
   const { colorScheme } = useColorScheme();
 
   const { data: profile, isLoading: profileLoading, refetch: refetchProfile } = useProfile(user?.id);
@@ -148,27 +150,43 @@ export default function ProfileScreen() {
             </Text>
           </View>
 
-          <Pressable 
-            onPress={() => {
-              const options: ('light' | 'dark' | 'system')[] = ['light', 'dark', 'system'];
-              const nextIndex = (options.indexOf(themePreference) + 1) % options.length;
-              setThemePreference(options[nextIndex]);
-            }}
-            className="flex-row items-center gap-1.5 bg-accent rounded-full px-3 py-1.5"
-          >
-            <Ionicons 
-              name={
-                themePreference === 'light' ? 'sunny' :
-                themePreference === 'dark' ? 'moon' :
-                'contrast'
-              } 
-              size={14} 
-              color="hsl(var(--foreground))" 
-            />
-            <Text className="text-foreground text-xs font-bold capitalize">
-              {themePreference === 'system' ? 'System' : themePreference}
-            </Text>
-          </Pressable>
+          <View className="flex-row gap-2">
+            <Pressable
+              onPress={() => setLocationEnabled(!locationEnabled)}
+              className="flex-row items-center gap-1.5 bg-accent rounded-full px-3 py-1.5"
+            >
+              <Ionicons
+                name={locationEnabled ? 'location' : 'location-outline'}
+                size={14}
+                color={locationEnabled ? '#f59e0b' : 'hsl(var(--muted-foreground))'}
+              />
+              <Text className={`text-xs font-bold ${locationEnabled ? 'text-primary' : 'text-muted-foreground'}`}>
+                Location
+              </Text>
+            </Pressable>
+
+            <Pressable
+              onPress={() => {
+                const options: ('light' | 'dark' | 'system')[] = ['light', 'dark', 'system'];
+                const nextIndex = (options.indexOf(themePreference) + 1) % options.length;
+                setThemePreference(options[nextIndex]);
+              }}
+              className="flex-row items-center gap-1.5 bg-accent rounded-full px-3 py-1.5"
+            >
+              <Ionicons
+                name={
+                  themePreference === 'light' ? 'sunny' :
+                  themePreference === 'dark' ? 'moon' :
+                  'contrast'
+                }
+                size={14}
+                color="hsl(var(--foreground))"
+              />
+              <Text className="text-foreground text-xs font-bold capitalize">
+                {themePreference === 'system' ? 'System' : themePreference}
+              </Text>
+            </Pressable>
+          </View>
         </View>
       </View>
     );

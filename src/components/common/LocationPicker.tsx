@@ -20,6 +20,7 @@ interface LocationResult {
 interface LocationPickerProps {
   value: string;
   onChange: (name: string, lat?: number, lng?: number) => void;
+  onClear?: () => void;
 }
 
 interface NominatimResult {
@@ -36,7 +37,7 @@ async function searchPlaces(query: string): Promise<NominatimResult[]> {
   return res.json();
 }
 
-export function LocationPicker({ value, onChange }: LocationPickerProps) {
+export function LocationPicker({ value, onChange, onClear }: LocationPickerProps) {
   const [query, setQuery] = useState(value);
   const [suggestions, setSuggestions] = useState<NominatimResult[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -95,7 +96,7 @@ export function LocationPicker({ value, onChange }: LocationPickerProps) {
       <View className="flex-row gap-2">
         <View className="flex-1 relative">
           <TextInput
-            className="bg-card border border-border rounded-xl px-4 py-3 text-base text-foreground"
+            className="bg-card border border-border rounded-xl px-4 py-3 pr-10 text-base text-foreground"
             placeholder="Search a venue or address…"
             placeholderTextColor="hsl(var(--muted-foreground))"
             value={query}
@@ -107,11 +108,25 @@ export function LocationPicker({ value, onChange }: LocationPickerProps) {
             onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
             autoCorrect={false}
           />
-          {searching && (
-            <View className="absolute right-3 top-3.5">
+          <View className="absolute right-3 top-3.5">
+            {searching ? (
               <ActivityIndicator size="small" color="#f59e0b" />
-            </View>
-          )}
+            ) : query.length > 0 ? (
+              <Pressable
+                onPress={() => {
+                  suppressSearch.current = true;
+                  setQuery('');
+                  setSuggestions([]);
+                  setShowSuggestions(false);
+                  onChange('', undefined, undefined);
+                  onClear?.();
+                }}
+                hitSlop={8}
+              >
+                <Ionicons name="close-circle" size={18} color="#9ca3af" />
+              </Pressable>
+            ) : null}
+          </View>
         </View>
 
         <Pressable
