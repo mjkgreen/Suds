@@ -9,7 +9,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { DrinkLog, DrinkType } from '@/types/models';
 import { formatDateTime } from '@/utils/dateHelpers';
 
-type MapFilter = 'mine' | 'friends' | 'all';
+type MapFilter = 'mine' | 'friends';
 
 // Dynamically loaded react-leaflet components
 type LeafletComponents = typeof import('react-leaflet');
@@ -26,6 +26,21 @@ async function reverseGeocode(lat: number, lng: number): Promise<string> {
   } catch {
     return `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
   }
+}
+
+// Centers the map on the user's current GPS position on mount
+function MapLocationCenterer({ useMap }: { useMap: any }) {
+  const map = useMap();
+  useEffect(() => {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        map.flyTo([pos.coords.latitude, pos.coords.longitude], 14, { animate: true, duration: 0.5 });
+      },
+      () => {},
+    );
+  }, [map]);
+  return null;
 }
 
 // Inner component that uses react-leaflet hooks (must be inside MapContainer)
@@ -54,7 +69,7 @@ function MapClickHandlerInner({
 export default function MapScreen() {
   const { user } = useAuthStore();
   const router = useRouter();
-  const [filter, setFilter] = useState<MapFilter>('all');
+  const [filter, setFilter] = useState<MapFilter>('mine');
   const [L, setL] = useState<LeafletComponents | null>(null);
 
   async function handleMapClick(lat: number, lng: number) {
@@ -90,9 +105,7 @@ export default function MapScreen() {
         .order('logged_at', { ascending: false })
         .limit(200);
 
-      if (filter === 'mine') {
-        query = query.eq('user_id', user.id);
-      } else if (filter === 'friends') {
+      if (filter === 'friends') {
         const { data: follows } = await supabase
           .from('follows')
           .select('following_id')
@@ -100,6 +113,8 @@ export default function MapScreen() {
         const ids = (follows ?? []).map((f) => f.following_id);
         if (ids.length === 0) return [];
         query = query.in('user_id', ids);
+      } else {
+        query = query.eq('user_id', user.id);
       }
       const { data, error } = await query;
       if (error) throw error;
@@ -115,6 +130,21 @@ export default function MapScreen() {
     return [avgLat, avgLng];
   }, [logs]);
 
+  // Group nearby logs into clusters (~100m radius via 3-decimal rounding)
+  const clusters = React.useMemo(() => {
+    const groups = new Map<string, (DrinkLog & { profile: any })[]>();
+    for (const log of logs ?? []) {
+      if (!log.location_lat || !log.location_lng) continue;
+      const key = `${log.location_lat.toFixed(3)},${log.location_lng.toFixed(3)}`;
+      const existing = groups.get(key) ?? [];
+      groups.set(key, [...existing, log]);
+    }
+    return Array.from(groups.entries()).map(([key, items]) => {
+      const [lat, lng] = key.split(',').map(Number);
+      return { lat, lng, items };
+    });
+  }, [logs]);
+
   return (
     <SafeAreaView className="flex-1 bg-gray-900" edges={['top']}>
       {/* Tap hint */}
@@ -126,14 +156,14 @@ export default function MapScreen() {
 
       {/* Filter chips */}
       <View className="absolute top-14 left-4 right-4 z-10 flex-row gap-2" style={{ zIndex: 1000 }}>
-        {(['all', 'mine', 'friends'] as MapFilter[]).map((f) => (
+        {(['mine', 'friends'] as MapFilter[]).map((f) => (
           <Pressable
             key={f}
             onPress={() => setFilter(f)}
             className={`px-4 py-2 rounded-full shadow ${filter === f ? 'bg-amber-500' : 'bg-white'}`}
           >
-            <Text className={`font-semibold text-sm capitalize ${filter === f ? 'text-white' : 'text-gray-700'}`}>
-              {f === 'all' ? 'Everyone' : f === 'mine' ? 'My Drinks' : 'Friends'}
+            <Text className={`font-semibold text-sm ${filter === f ? 'text-white' : 'text-gray-700'}`}>
+              {f === 'mine' ? 'My Drinks' : 'Friends'}
             </Text>
           </Pressable>
         ))}
@@ -153,41 +183,75 @@ export default function MapScreen() {
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
           />
+          <MapLocationCenterer useMap={L.useMap} />
           <MapClickHandler onMapClick={handleMapClick} />
-          {(logs ?? []).map((log) => {
-            if (!log.location_lat || !log.location_lng) return null;
-            const info = DRINK_TYPE_MAP[log.drink_type as DrinkType] ?? DRINK_TYPE_MAP['other'];
-            const divIcon =
+          {clusters.map(({ lat, lng, items }) => {
+            if (items.length === 1) {
+              const log = items[0];
+              const info = DRINK_TYPE_MAP[log.drink_type as DrinkType] ?? DRINK_TYPE_MAP['other'];
+              const divIcon =
+                typeof window !== 'undefined'
+                  ? (window as any).L?.divIcon({
+                      html: `<div style="background:${info.color};width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;border:2px solid white;box-shadow:0 2px 4px rgba(0,0,0,0.3)">${info.emoji}</div>`,
+                      className: '',
+                      iconSize: [36, 36],
+                      iconAnchor: [18, 18],
+                    })
+                  : undefined;
+              return (
+                <L.Marker key={log.id} position={[lat, lng]} icon={divIcon}>
+                  <L.Popup>
+                    <View style={{ minWidth: 160 }}>
+                      <Text style={{ fontWeight: '700', fontSize: 14 }}>
+                        {log.drink_name || info.label}
+                      </Text>
+                      <Text style={{ color: '#6b7280', fontSize: 12 }}>
+                        @{log.profile?.username}
+                      </Text>
+                      {log.location_name && (
+                        <Text style={{ color: '#6b7280', fontSize: 12 }}>
+                          📍 {log.location_name}
+                        </Text>
+                      )}
+                      <Text style={{ color: '#9ca3af', fontSize: 11, marginTop: 2 }}>
+                        {formatDateTime(log.logged_at)}
+                      </Text>
+                    </View>
+                  </L.Popup>
+                </L.Marker>
+              );
+            }
+
+            // Cluster: multiple drinks at this location
+            const clusterIcon =
               typeof window !== 'undefined'
                 ? (window as any).L?.divIcon({
-                    html: `<div style="background:${info.color};width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;border:2px solid white;box-shadow:0 2px 4px rgba(0,0,0,0.3)">${info.emoji}</div>`,
+                    html: `<div style="background:#f59e0b;width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;color:white;border:2px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.35)">${items.length}</div>`,
                     className: '',
-                    iconSize: [36, 36],
-                    iconAnchor: [18, 18],
+                    iconSize: [44, 44],
+                    iconAnchor: [22, 22],
                   })
                 : undefined;
             return (
-              <L.Marker
-                key={log.id}
-                position={[log.location_lat, log.location_lng]}
-                icon={divIcon}
-              >
+              <L.Marker key={`cluster-${lat}-${lng}`} position={[lat, lng]} icon={clusterIcon}>
                 <L.Popup>
-                  <View style={{ minWidth: 160 }}>
-                    <Text style={{ fontWeight: '700', fontSize: 14 }}>
-                      {log.drink_name || info.label}
+                  <View style={{ minWidth: 180 }}>
+                    <Text style={{ fontWeight: '700', fontSize: 14, marginBottom: 4 }}>
+                      {items.length} drinks here
                     </Text>
-                    <Text style={{ color: '#6b7280', fontSize: 12 }}>
-                      @{log.profile?.username}
-                    </Text>
-                    {log.location_name && (
-                      <Text style={{ color: '#6b7280', fontSize: 12 }}>
-                        📍 {log.location_name}
+                    {items.slice(0, 3).map((log) => {
+                      const info = DRINK_TYPE_MAP[log.drink_type as DrinkType] ?? DRINK_TYPE_MAP['other'];
+                      return (
+                        <Text key={log.id} style={{ color: '#6b7280', fontSize: 12 }}>
+                          {info.emoji} {log.drink_name || info.label} · @{log.profile?.username}
+                        </Text>
+                      );
+                    })}
+                    {items.length > 3 && (
+                      <Text style={{ color: '#9ca3af', fontSize: 11, marginTop: 2 }}>
+                        +{items.length - 3} more
                       </Text>
                     )}
-                    <Text style={{ color: '#9ca3af', fontSize: 11, marginTop: 2 }}>
-                      {formatDateTime(log.logged_at)}
-                    </Text>
                   </View>
                 </L.Popup>
               </L.Marker>

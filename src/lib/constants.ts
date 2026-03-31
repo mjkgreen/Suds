@@ -3,16 +3,15 @@ import { DrinkType } from '@/types/models';
 export const DRINK_TYPES: {
   value: DrinkType;
   label: string;
-  emoji: string;
   color: string;
 }[] = [
-  { value: 'beer', label: 'Beer', emoji: '🍺', color: '#F59E0B' },
-  { value: 'wine', label: 'Wine', emoji: '🍷', color: '#7C3AED' },
-  { value: 'cocktail', label: 'Cocktail', emoji: '🍸', color: '#EC4899' },
-  { value: 'spirit', label: 'Spirit', emoji: '🥃', color: '#92400E' },
-  { value: 'cider', label: 'Cider', emoji: '🍏', color: '#10B981' },
-  { value: 'seltzer', label: 'Seltzer', emoji: '🥤', color: '#38BDF8' },
-  { value: 'other', label: 'Other', emoji: '🥂', color: '#6B7280' },
+  { value: 'beer', label: 'Beer', color: '#F59E0B' },
+  { value: 'wine', label: 'Wine', color: '#7C3AED' },
+  { value: 'cocktail', label: 'Cocktail', color: '#EC4899' },
+  { value: 'spirit', label: 'Spirit', color: '#92400E' },
+  { value: 'cider', label: 'Cider', color: '#10B981' },
+  { value: 'seltzer', label: 'Seltzer', color: '#38BDF8' },
+  { value: 'other', label: 'Other', color: '#6B7280' },
 ];
 
 export const DRINK_TYPE_MAP = Object.fromEntries(

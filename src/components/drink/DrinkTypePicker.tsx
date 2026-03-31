@@ -1,5 +1,6 @@
 import React from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
+import { DrinkIcon } from '@/components/icons/DrinkIcon';
 import { DRINK_TYPES } from '@/lib/constants';
 import { DrinkType } from '@/types/models';
 
@@ -27,7 +28,13 @@ export function DrinkTypePicker({ value, onChange }: DrinkTypePickerProps) {
             }}
             className="items-center py-3 px-4 rounded-2xl border-2 min-w-[72px]"
           >
-            <Text className="text-3xl mb-1">{type.emoji}</Text>
+            <View style={{ marginBottom: 4 }}>
+              <DrinkIcon
+                type={type.value}
+                size={28}
+                color={type.color}
+              />
+            </View>
             <Text
               style={{ color: isSelected ? type.color : '#6b7280' }}
               className="text-xs font-semibold"

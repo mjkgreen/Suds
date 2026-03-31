@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React from 'react';
 import { Text, View } from 'react-native';
@@ -5,6 +6,7 @@ import { Avatar } from '@/components/common/Avatar';
 import { PressableCard } from '@/components/common/Card';
 import { RemoteImage } from '@/components/common/RemoteImage';
 import { DrinkBadge } from '@/components/drink/DrinkBadge';
+import { DrinkIcon } from '@/components/icons/DrinkIcon';
 import { DRINK_TYPE_MAP } from '@/lib/constants';
 import { FeedItem } from '@/types/models';
 import { relativeTime } from '@/utils/dateHelpers';
@@ -46,7 +48,12 @@ export function DrinkCard({ item }: DrinkCardProps) {
 
       {/* Drink info */}
       <View className="flex-row items-center mb-2">
-        <Text className="text-2xl mr-2">{drinkInfo.emoji}</Text>
+        <View
+          style={{ backgroundColor: drinkInfo.color + '15' }}
+          className="w-10 h-10 rounded-xl items-center justify-center mr-3"
+        >
+          <DrinkIcon type={item.drink_type} size={22} color={drinkInfo.color} />
+        </View>
         <View className="flex-1">
           <Text className="text-gray-900 font-medium text-base">
             {item.drink_name || drinkInfo.label}
@@ -55,8 +62,9 @@ export function DrinkCard({ item }: DrinkCardProps) {
             )}
           </Text>
           {item.location_name && (
-            <View className="flex-row items-center mt-0.5">
-              <Text className="text-gray-400 text-xs">📍 {item.location_name}</Text>
+            <View className="flex-row items-center mt-0.5 gap-1">
+              <Ionicons name="location-outline" size={11} color="#9ca3af" />
+              <Text className="text-gray-400 text-xs">{item.location_name}</Text>
             </View>
           )}
         </View>

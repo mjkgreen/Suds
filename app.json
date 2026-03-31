@@ -4,40 +4,43 @@
     "slug": "suds",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/Suds.png",
     "userInterfaceStyle": "automatic",
     "splash": {
-      "image": "./assets/splash-icon.png",
+      "image": "./assets/Suds.png",
       "resizeMode": "contain",
       "backgroundColor": "#F59E0B"
     },
     "scheme": "suds",
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.suds.app",
+      "bundleIdentifier": "com.sudssocial.app",
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "Suds uses your location to tag where you had drinks.",
         "NSCameraUsageDescription": "Suds uses your camera to add photos to drink logs.",
-        "NSPhotoLibraryUsageDescription": "Suds uses your photo library to add photos to drink logs."
+        "NSPhotoLibraryUsageDescription": "Suds uses your photo library to add photos to drink logs.",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/android-icon-foreground.png",
+        "foregroundImage": "./assets/Suds.png",
         "backgroundImage": "./assets/android-icon-background.png",
-        "monochromeImage": "./assets/android-icon-monochrome.png"
+        "monochromeImage": "./assets/Suds.png"
       },
-      "package": "com.suds.app",
+      "package": "com.sudssocial.app",
       "permissions": [
-        "ACCESS_FINE_LOCATION",
-        "CAMERA",
-        "READ_EXTERNAL_STORAGE"
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.CAMERA",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.RECORD_AUDIO"
       ]
     },
     "web": {
       "bundler": "metro",
       "output": "static",
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/Suds.png"
     },
     "plugins": [
       "expo-router",
@@ -52,6 +55,12 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "12c7fee8-d880-4426-8732-0c6af1c9845a"
+      }
     }
   }
 }

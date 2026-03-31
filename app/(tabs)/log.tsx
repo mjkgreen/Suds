@@ -1,40 +1,34 @@
-import { Ionicons } from '@expo/vector-icons';
-import * as Haptics from 'expo-haptics';
-import * as ImagePicker from 'expo-image-picker';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
-import { Controller, useForm } from 'react-hook-form';
-import {
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Button } from '@/components/common/Button';
-import { LocationPicker } from '@/components/common/LocationPicker';
-import { RemoteImage } from '@/components/common/RemoteImage';
-import { DrinkTypePicker } from '@/components/drink/DrinkTypePicker';
-import { useLogDrink } from '@/hooks/useDrinkLog';
-import { useActiveSession, useEndSession } from '@/hooks/useSession';
-import { useAuthStore } from '@/stores/authStore';
-import { LogDrinkFormData } from '@/types/models';
+import { Ionicons } from "@expo/vector-icons";
+import * as Haptics from "expo-haptics";
+import * as ImagePicker from "expo-image-picker";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import React, { useEffect, useState } from "react";
+import { Controller, useForm } from "react-hook-form";
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Button } from "@/components/common/Button";
+import { LocationPicker } from "@/components/common/LocationPicker";
+import { RemoteImage } from "@/components/common/RemoteImage";
+import { DrinkTypePicker } from "@/components/drink/DrinkTypePicker";
+import { useLogDrink } from "@/hooks/useDrinkLog";
+import { useLocation } from "@/hooks/useLocation";
+import { useActiveSession, useEndSession } from "@/hooks/useSession";
+import { useAuthStore } from "@/stores/authStore";
+import { LogDrinkFormData } from "@/types/models";
 
 const DEFAULT_VALUES: LogDrinkFormData = {
-  drink_type: 'beer',
-  drink_name: '',
+  drink_type: "beer",
+  drink_name: "",
   quantity: 1,
-  location_name: '',
-  notes: '',
+  location_name: "",
+  notes: "",
 };
 
 export default function LogScreen() {
   const router = useRouter();
   const { user } = useAuthStore();
   const { mutateAsync: logDrink } = useLogDrink();
+  const { getCurrentLocation } = useLocation();
   const activeSession = useActiveSession();
   const { mutateAsync: endSession, isPending: isEnding } = useEndSession();
   const [photoUri, setPhotoUri] = useState<string | null>(null);
@@ -45,22 +39,39 @@ export default function LogScreen() {
   // Pre-fill from map click: /(tabs)/log?lat=xx&lng=yy&name=encoded
   const params = useLocalSearchParams<{ lat?: string; lng?: string; name?: string }>();
 
-  const { control, handleSubmit, watch, setValue, reset } =
-    useForm<LogDrinkFormData>({ defaultValues: DEFAULT_VALUES });
+  const { control, handleSubmit, watch, setValue, reset } = useForm<LogDrinkFormData>({
+    defaultValues: DEFAULT_VALUES,
+  });
 
-  const quantity = watch('quantity');
+  const quantity = watch("quantity");
 
   useEffect(() => {
     if (params.lat && params.lng) {
-      setValue('location_lat', parseFloat(params.lat));
-      setValue('location_lng', parseFloat(params.lng));
-      setValue('location_name', params.name ? decodeURIComponent(params.name) : `${parseFloat(params.lat).toFixed(4)}, ${parseFloat(params.lng).toFixed(4)}`);
+      setValue("location_lat", parseFloat(params.lat));
+      setValue("location_lng", parseFloat(params.lng));
+      setValue(
+        "location_name",
+        params.name
+          ? decodeURIComponent(params.name)
+          : `${parseFloat(params.lat).toFixed(4)}, ${parseFloat(params.lng).toFixed(4)}`,
+      );
+    } else {
+      // Auto-fill with GPS on mount when not pre-filled from map click
+      getCurrentLocation().then((result) => {
+        if (result) {
+          const name = result.name ?? `${result.lat.toFixed(4)}, ${result.lng.toFixed(4)}`;
+          setValue("location_name", name);
+          setValue("location_lat", result.lat);
+          setValue("location_lng", result.lng);
+        }
+      });
     }
-  }, [params.lat, params.lng, params.name]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function handlePickPhoto() {
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
+      mediaTypes: ["images"],
       allowsEditing: true,
       aspect: [4, 3],
       quality: 0.8,
@@ -79,22 +90,22 @@ export default function LogScreen() {
     try {
       await logDrink({
         userId: user.id,
-        formData: { 
-          ...data, 
+        formData: {
+          ...data,
           photo_url: photoUri ?? undefined,
-          photoBase64: photoBase64 ?? undefined 
+          photoBase64: photoBase64 ?? undefined,
         },
         sessionId: activeSession?.id ?? null,
       });
-      if (Platform.OS !== 'web') {
+      if (Platform.OS !== "web") {
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       }
       reset(DEFAULT_VALUES);
       setPhotoUri(null);
       setPhotoBase64(null);
-      router.replace('/(tabs)/feed');
+      router.replace("/(tabs)/feed");
     } catch (err: any) {
-      setError(err.message ?? 'Something went wrong.');
+      setError(err.message ?? "Something went wrong.");
     } finally {
       setSubmitting(false);
     }
@@ -102,10 +113,7 @@ export default function LogScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-amber-50">
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        className="flex-1"
-      >
+      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} className="flex-1">
         <ScrollView
           className="flex-1"
           contentContainerStyle={{ paddingBottom: 40 }}
@@ -119,7 +127,7 @@ export default function LogScreen() {
                 <View className="flex-row items-center gap-1.5">
                   <View className="w-2 h-2 rounded-full bg-amber-500" />
                   <Text className="text-amber-600 text-sm font-medium">
-                    Adding to: {activeSession.title ?? 'Night Out'}
+                    Adding to: {activeSession.title ?? "Night Out"}
                   </Text>
                 </View>
                 <Pressable
@@ -128,7 +136,7 @@ export default function LogScreen() {
                   className="bg-amber-100 rounded-full px-3 py-1"
                 >
                   <Text className="text-amber-700 text-xs font-semibold">
-                    {isEnding ? 'Ending…' : '🏁 End Night Out'}
+                    {isEnding ? "Ending…" : "🏁 End Night Out"}
                   </Text>
                 </Pressable>
               </View>
@@ -177,16 +185,14 @@ export default function LogScreen() {
               <View className="flex-row items-center bg-white border border-gray-200 rounded-xl overflow-hidden">
                 <Pressable
                   className="px-5 py-3 active:bg-gray-100"
-                  onPress={() => setValue('quantity', Math.max(0.5, quantity - 0.5))}
+                  onPress={() => setValue("quantity", Math.max(0.5, quantity - 0.5))}
                 >
                   <Ionicons name="remove" size={22} color="#374151" />
                 </Pressable>
-                <Text className="flex-1 text-center text-xl font-bold text-gray-900">
-                  {quantity}
-                </Text>
+                <Text className="flex-1 text-center text-xl font-bold text-gray-900">{quantity}</Text>
                 <Pressable
                   className="px-5 py-3 active:bg-gray-100"
-                  onPress={() => setValue('quantity', Math.min(20, quantity + 0.5))}
+                  onPress={() => setValue("quantity", Math.min(20, quantity + 0.5))}
                 >
                   <Ionicons name="add" size={22} color="#374151" />
                 </Pressable>
@@ -204,9 +210,9 @@ export default function LogScreen() {
                   <LocationPicker
                     value={value}
                     onChange={(name, lat, lng) => {
-                      setValue('location_name', name);
-                      if (lat !== undefined) setValue('location_lat', lat);
-                      if (lng !== undefined) setValue('location_lng', lng);
+                      setValue("location_name", name);
+                      if (lat !== undefined) setValue("location_lat", lat);
+                      if (lng !== undefined) setValue("location_lng", lng);
                     }}
                   />
                 )}
@@ -241,11 +247,7 @@ export default function LogScreen() {
               <Text className="text-gray-700 font-semibold mb-2">Photo (optional)</Text>
               {photoUri ? (
                 <View className="relative" style={{ height: 160 }}>
-                  <RemoteImage
-                    uri={photoUri}
-                    height={160}
-                    borderRadius={12}
-                  />
+                  <RemoteImage uri={photoUri} height={160} borderRadius={12} />
                   <Pressable
                     className="absolute top-2 right-2 bg-black/50 rounded-full p-1"
                     onPress={() => setPhotoUri(null)}
@@ -272,7 +274,7 @@ export default function LogScreen() {
 
             {/* Submit */}
             <Button
-              label={photoUri && submitting ? 'Uploading photo…' : 'Log It 🍺'}
+              label={photoUri && submitting ? "Uploading photo…" : "Log It"}
               onPress={handleSubmit(onSubmit)}
               loading={submitting}
               size="lg"

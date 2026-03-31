@@ -14,6 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Avatar } from '@/components/common/Avatar';
 import { RemoteImage } from '@/components/common/RemoteImage';
 import { DrinkBadge } from '@/components/drink/DrinkBadge';
+import { DrinkIcon } from '@/components/icons/DrinkIcon';
 import { useDeleteDrinkLog } from '@/hooks/useDrinkLog';
 import { supabase } from '@/lib/supabase';
 import { DRINK_TYPE_MAP } from '@/lib/constants';
@@ -114,7 +115,12 @@ export default function DrinkDetailScreen() {
 
         {/* Drink */}
         <View className="flex-row items-center mb-4">
-          <Text className="text-5xl mr-4">{info.emoji}</Text>
+          <View
+            style={{ backgroundColor: info.color + '15' }}
+            className="w-16 h-16 rounded-2xl items-center justify-center mr-4"
+          >
+            <DrinkIcon type={data.drink_type as DrinkType} size={36} color={info.color} />
+          </View>
           <View className="flex-1">
             <Text className="text-2xl font-bold text-gray-900">
               {data.drink_name || info.label}
