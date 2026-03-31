@@ -23,10 +23,12 @@ export function DrinkTypePicker({ value, onChange }: DrinkTypePickerProps) {
             key={type.value}
             onPress={() => onChange(type.value)}
             style={{
-              borderColor: isSelected ? type.color : '#e5e7eb',
-              backgroundColor: isSelected ? type.color + '15' : '#fff',
+              borderColor: isSelected ? type.color : undefined,
+              backgroundColor: isSelected ? type.color + '15' : undefined,
             }}
-            className="items-center py-3 px-4 rounded-2xl border-2 min-w-[72px]"
+            className={`items-center py-3 px-4 rounded-2xl border-2 min-w-[72px] ${
+              isSelected ? '' : 'border-border bg-card'
+            }`}
           >
             <View style={{ marginBottom: 4 }}>
               <DrinkIcon
@@ -36,8 +38,8 @@ export function DrinkTypePicker({ value, onChange }: DrinkTypePickerProps) {
               />
             </View>
             <Text
-              style={{ color: isSelected ? type.color : '#6b7280' }}
-              className="text-xs font-semibold"
+              style={{ color: isSelected ? type.color : undefined }}
+              className={`text-xs font-semibold ${isSelected ? '' : 'text-muted-foreground'}`}
             >
               {type.label}
             </Text>

@@ -138,11 +138,11 @@ export default function MapScreen() {
   }, [logs]);
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-900" edges={['top']}>
+    <SafeAreaView className="flex-1 bg-background" edges={['top']}>
       {/* Long-press hint */}
       <View className="absolute bottom-6 left-0 right-0 items-center z-10 pointer-events-none">
-        <View className="bg-black/60 rounded-full px-4 py-2">
-          <Text className="text-white text-xs">Hold to log a drink at any location</Text>
+        <View className="bg-card/60 rounded-full px-4 py-2 border border-border/20">
+          <Text className="text-foreground text-xs">Hold to log a drink at any location</Text>
         </View>
       </View>
 
@@ -152,10 +152,10 @@ export default function MapScreen() {
           <Pressable
             key={f}
             onPress={() => setFilter(f)}
-            className={`px-4 py-2 rounded-full shadow ${filter === f ? 'bg-amber-500' : 'bg-white'}`}
+            className={`px-4 py-2 rounded-full shadow-sm border border-border ${filter === f ? 'bg-primary' : 'bg-card'}`}
           >
             <Text
-              className={`font-semibold text-sm ${filter === f ? 'text-white' : 'text-gray-700'}`}
+              className={`font-semibold text-sm ${filter === f ? 'text-primary-foreground' : 'text-muted-foreground'}`}
             >
               {f === 'mine' ? 'My Drinks' : 'Friends'}
             </Text>
@@ -194,7 +194,7 @@ export default function MapScreen() {
                 >
                   <View
                     style={{ backgroundColor: info.color }}
-                    className="w-9 h-9 rounded-full items-center justify-center shadow border-2 border-white"
+                    className="w-9 h-9 rounded-full items-center justify-center shadow border-2 border-card"
                   >
                     <DrinkIcon type={log.drink_type as DrinkType} size={20} color="white" />
                   </View>
@@ -228,8 +228,8 @@ export default function MapScreen() {
                 coordinate={{ latitude: lat, longitude: lng }}
               >
                 <View className="items-center justify-center">
-                  <View className="w-11 h-11 rounded-full bg-amber-500 items-center justify-center shadow border-2 border-white">
-                    <Text className="text-white font-bold text-sm">{items.length}</Text>
+                  <View className="w-11 h-11 rounded-full bg-primary items-center justify-center shadow border-2 border-card">
+                    <Text className="text-primary-foreground font-bold text-sm">{items.length}</Text>
                   </View>
                 </View>
                 <Callout>
@@ -267,10 +267,10 @@ export default function MapScreen() {
       {/* Empty overlay */}
       {!isLoading && !logs?.length && (
         <View className="absolute inset-0 items-center justify-center">
-          <View className="bg-white rounded-2xl px-8 py-6 mx-8 items-center shadow-lg">
+          <View className="bg-card rounded-2xl px-8 py-6 mx-8 items-center shadow-lg border border-border">
             <Text className="text-3xl mb-2">🗺️</Text>
-            <Text className="text-gray-700 font-semibold text-center">No drinks on the map yet</Text>
-            <Text className="text-gray-400 text-sm text-center mt-1">
+            <Text className="text-foreground font-semibold text-center">No drinks on the map yet</Text>
+            <Text className="text-muted-foreground text-sm text-center mt-1">
               Log a drink with a location to see it here.
             </Text>
           </View>

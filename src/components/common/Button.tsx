@@ -6,6 +6,7 @@ import {
   Text,
   View,
 } from 'react-native';
+import { useColorScheme } from 'nativewind';
 
 interface ButtonProps extends PressableProps {
   label: string;
@@ -16,17 +17,17 @@ interface ButtonProps extends PressableProps {
 }
 
 const variantStyles = {
-  primary:   'bg-amber-500 active:bg-amber-600',
-  secondary: 'bg-white border border-amber-500 active:bg-amber-50',
-  ghost:     'bg-transparent active:bg-gray-100',
-  danger:    'bg-red-500 active:bg-red-600',
+  primary:   'bg-primary active:opacity-90',
+  secondary: 'bg-background border border-primary active:bg-accent',
+  ghost:     'bg-transparent active:bg-accent',
+  danger:    'bg-destructive active:opacity-90',
 };
 
 const labelStyles = {
-  primary:   'text-white font-semibold',
-  secondary: 'text-amber-600 font-semibold',
-  ghost:     'text-gray-700 font-medium',
-  danger:    'text-white font-semibold',
+  primary:   'text-primary-foreground font-semibold',
+  secondary: 'text-primary font-semibold',
+  ghost:     'text-foreground font-medium',
+  danger:    'text-destructive-foreground font-semibold',
 };
 
 const sizeStyles = {
@@ -50,7 +51,16 @@ export function Button({
   disabled,
   ...props
 }: ButtonProps) {
+  const { colorScheme } = useColorScheme();
+  const isDark = colorScheme === 'dark';
   const isDisabled = disabled || loading;
+
+  let indicatorColor = '#f59e0b';
+  if (variant === 'primary' || variant === 'danger') {
+    indicatorColor = '#fff';
+  } else if (isDark) {
+    indicatorColor = '#f59e0b';
+  }
 
   return (
     <Pressable
@@ -61,7 +71,7 @@ export function Button({
       {loading ? (
         <ActivityIndicator
           size="small"
-          color={variant === 'primary' || variant === 'danger' ? '#fff' : '#d97706'}
+          color={indicatorColor}
         />
       ) : (
         <>

@@ -23,14 +23,16 @@ import { formatDateTime } from "@/utils/dateHelpers";
 import { getDisplayName, getUsername } from "@/utils/profileHelpers";
 import { DrinkIcon } from "@/components/icons/DrinkIcon";
 import { DRINK_TYPE_MAP } from "@/lib/constants";
+import { useThemeStore } from "@/stores/themeStore";
+import { useColorScheme } from "nativewind";
 
 type Tab = "progress" | "activities";
 
 function StatBlock({ label, value }: { label: string; value: string | number }) {
   return (
     <View className="flex-1 items-center">
-      <Text className="text-2xl font-bold text-gray-900">{value}</Text>
-      <Text className="text-xs text-gray-400 mt-0.5">{label}</Text>
+      <Text className="text-2xl font-bold text-foreground">{value}</Text>
+      <Text className="text-xs text-muted-foreground mt-0.5">{label}</Text>
     </View>
   );
 }
@@ -38,7 +40,7 @@ function StatBlock({ label, value }: { label: string; value: string | number }) 
 function DrinkLogRow({ item }: { item: DrinkLog }) {
   const info = DRINK_TYPE_MAP[item.drink_type as DrinkType] ?? DRINK_TYPE_MAP["other"];
   return (
-    <View className="flex-row items-center px-6 py-3 border-b border-gray-100">
+    <View className="flex-row items-center px-6 py-3 border-b border-border">
       <View
         style={{ backgroundColor: info.color + "15" }}
         className="w-9 h-9 rounded-xl items-center justify-center mr-3"
@@ -46,31 +48,31 @@ function DrinkLogRow({ item }: { item: DrinkLog }) {
         <DrinkIcon type={item.drink_type as DrinkType} size={18} color={info.color} />
       </View>
       <View className="flex-1">
-        <Text className="text-gray-900 font-medium">
+        <Text className="text-foreground font-medium">
           {item.drink_name || info.label}
-          {item.quantity !== 1 && <Text className="text-gray-500 font-normal"> × {item.quantity}</Text>}
+          {item.quantity !== 1 && <Text className="text-muted-foreground font-normal"> × {item.quantity}</Text>}
         </Text>
         {item.location_name && (
           <View className="flex-row items-center gap-1">
             <Ionicons name="location-outline" size={11} color="#9ca3af" />
-            <Text className="text-gray-400 text-xs">{item.location_name}</Text>
+            <Text className="text-muted-foreground text-xs">{item.location_name}</Text>
           </View>
         )}
       </View>
-      <Text className="text-gray-400 text-xs">{formatDateTime(item.logged_at)}</Text>
+      <Text className="text-muted-foreground text-xs">{formatDateTime(item.logged_at)}</Text>
     </View>
   );
 }
 
 function TabBar({ active, onChange }: { active: Tab; onChange: (t: Tab) => void }) {
   return (
-    <View className="flex-row bg-white border-b border-gray-100 px-6">
+    <View className="flex-row bg-card border-b border-border px-6">
       {(["progress", "activities"] as Tab[]).map((tab) => (
         <Pressable key={tab} onPress={() => onChange(tab)} className="mr-6 py-3">
-          <Text className={active === tab ? "font-bold text-amber-500 text-sm" : "font-medium text-gray-400 text-sm"}>
+          <Text className={active === tab ? "font-bold text-primary text-sm" : "font-medium text-muted-foreground text-sm"}>
             {tab === "progress" ? "Progress" : "Activities"}
           </Text>
-          {active === tab && <View className="absolute bottom-0 left-0 right-0 h-0.5 bg-amber-400 rounded-full" />}
+          {active === tab && <View className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-full" />}
         </Pressable>
       ))}
     </View>
@@ -83,6 +85,9 @@ export default function ProfileScreen() {
   const { signOut } = useAuth();
   const [activeTab, setActiveTab] = useState<Tab>("activities");
 
+  const { themePreference, setThemePreference } = useThemeStore();
+  const { colorScheme } = useColorScheme();
+
   const { data: profile, isLoading: profileLoading, refetch: refetchProfile } = useProfile(user?.id);
   const { data: stats, refetch: refetchStats } = useUserStats(user?.id);
   const { data: logs, isLoading: logsLoading, refetch: refetchLogs } = useMyDrinkLogs(user?.id);
@@ -93,7 +98,7 @@ export default function ProfileScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView className="flex-1 bg-amber-50 items-center justify-center">
+      <SafeAreaView className="flex-1 bg-background items-center justify-center">
         <ActivityIndicator size="large" color="#f59e0b" />
       </SafeAreaView>
     );
@@ -101,42 +106,66 @@ export default function ProfileScreen() {
 
   function ProfileHeader() {
     return (
-      <View className="bg-white px-6 pt-6 pb-5 border-b border-gray-100">
+      <View className="bg-card px-6 pt-6 pb-5 border-b border-border">
         <View className="flex-row items-start justify-between mb-4">
           <View className="flex-row items-center gap-2">
             <Avatar uri={profile?.avatar_url} name={profile ? getDisplayName(profile) : "User"} size={72} />
             {isPremium && (
-              <View className="bg-amber-400 rounded-full px-2 py-0.5 self-start mt-1">
-                <Text className="text-white text-xs font-bold">Plus</Text>
+              <View className="bg-primary rounded-full px-2 py-0.5 self-start mt-1">
+                <Text className="text-primary-foreground text-xs font-bold">Plus</Text>
               </View>
             )}
           </View>
           <View className="flex-row gap-2">
             {!isPremium && (
-              <Pressable className="bg-amber-400 rounded-xl px-4 py-2" onPress={() => router.push("/paywall")}>
-                <Text className="text-white font-bold text-sm">Upgrade</Text>
+              <Pressable className="bg-primary rounded-xl px-4 py-2" onPress={() => router.push("/paywall")}>
+                <Text className="text-primary-foreground font-bold text-sm">Upgrade</Text>
               </Pressable>
             )}
-            <Pressable className="bg-gray-100 rounded-xl px-4 py-2" onPress={() => router.push("/user/edit")}>
-              <Text className="text-gray-700 font-medium text-sm">Edit</Text>
+            <Pressable className="bg-accent rounded-xl px-4 py-2" onPress={() => router.push("/user/edit")}>
+              <Text className="text-accent-foreground font-medium text-sm">Edit</Text>
             </Pressable>
-            <Pressable className="bg-gray-100 rounded-xl p-2" onPress={signOut}>
+            <Pressable className="bg-accent rounded-xl p-2" onPress={signOut}>
               <Ionicons name="log-out-outline" size={20} color="#6b7280" />
             </Pressable>
           </View>
         </View>
 
-        <Text className="text-xl font-bold text-gray-900">{profile ? getDisplayName(profile) : "User"}</Text>
-        <Text className="text-gray-400 text-sm">@{profile ? getUsername(profile) : "unknown"}</Text>
-        {profile?.bio && <Text className="text-gray-600 text-sm mt-2">{profile.bio}</Text>}
+        <Text className="text-xl font-bold text-foreground">{profile ? getDisplayName(profile) : "User"}</Text>
+        <Text className="text-muted-foreground text-sm">@{profile ? getUsername(profile) : "unknown"}</Text>
+        {profile?.bio && <Text className="text-muted-foreground text-sm mt-2">{profile.bio}</Text>}
 
-        <View className="flex-row gap-6 mt-3">
-          <Text className="text-gray-700 text-sm">
-            <Text className="font-bold text-gray-900">{profile?.followers_count ?? 0}</Text> Followers
-          </Text>
-          <Text className="text-gray-700 text-sm">
-            <Text className="font-bold text-gray-900">{profile?.following_count ?? 0}</Text> Following
-          </Text>
+        <View className="flex-row items-center justify-between mt-3">
+          <View className="flex-row gap-6">
+            <Text className="text-muted-foreground text-sm">
+              <Text className="font-bold text-foreground">{profile?.followers_count ?? 0}</Text> Followers
+            </Text>
+            <Text className="text-muted-foreground text-sm">
+              <Text className="font-bold text-foreground">{profile?.following_count ?? 0}</Text> Following
+            </Text>
+          </View>
+
+          <Pressable 
+            onPress={() => {
+              const options: ('light' | 'dark' | 'system')[] = ['light', 'dark', 'system'];
+              const nextIndex = (options.indexOf(themePreference) + 1) % options.length;
+              setThemePreference(options[nextIndex]);
+            }}
+            className="flex-row items-center gap-1.5 bg-accent rounded-full px-3 py-1.5"
+          >
+            <Ionicons 
+              name={
+                themePreference === 'light' ? 'sunny-outline' :
+                themePreference === 'dark' ? 'moon-outline' :
+                'settings-outline'
+              } 
+              size={14} 
+              color="hsl(var(--foreground))" 
+            />
+            <Text className="text-foreground text-xs font-bold capitalize">
+              {themePreference === 'system' ? 'System' : themePreference}
+            </Text>
+          </Pressable>
         </View>
       </View>
     );
@@ -150,11 +179,11 @@ export default function ProfileScreen() {
 
   if (activeTab === "progress") {
     return (
-      <SafeAreaView className="flex-1 bg-gray-50">
+      <SafeAreaView className="flex-1 bg-background" edges={["top"]}>
         <ProfileHeader />
         <TabBar active={activeTab} onChange={setActiveTab} />
         <ScrollView
-          contentContainerStyle={{ paddingBottom: 40 }}
+          contentContainerStyle={{ paddingBottom: 24 }}
           refreshControl={<RefreshControl refreshing={false} onRefresh={onRefresh} tintColor="#f59e0b" />}
         >
           {milestones && <MilestoneBanner milestones={milestones} />}
@@ -162,12 +191,12 @@ export default function ProfileScreen() {
           {stats && user?.id && <GoalCard userId={user.id} stats={stats} />}
 
           {stats && (
-            <View className="bg-white mx-4 mt-4 rounded-2xl border border-gray-100 p-4 gap-4">
+            <View className="bg-card mx-4 mt-4 rounded-2xl border border-border p-4 gap-4">
               <View className="flex-row">
                 <StatBlock label="Total Drinks" value={stats.total_drinks} />
-                <View className="w-px bg-gray-100" />
+                <View className="w-px bg-border" />
                 <StatBlock label="This Week" value={stats.drinks_this_week} />
-                <View className="w-px bg-gray-100" />
+                <View className="w-px bg-border" />
                 <StatBlock label="This Month" value={stats.drinks_this_month} />
               </View>
 
@@ -247,7 +276,7 @@ export default function ProfileScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50">
+    <SafeAreaView className="flex-1 bg-background" edges={["top"]}>
       <FlatList
         data={logs ?? []}
         keyExtractor={(item) => item.id}
@@ -258,17 +287,17 @@ export default function ProfileScreen() {
             <ProfileHeader />
             <TabBar active={activeTab} onChange={setActiveTab} />
             <View className="px-6 pt-5 pb-2">
-              <Text className="text-base font-bold text-gray-700">Drink History</Text>
+              <Text className="text-base font-bold text-muted-foreground">Drink History</Text>
             </View>
           </View>
         }
         ListEmptyComponent={
           <View className="px-6 py-10 items-center">
             <Text className="text-3xl mb-2">🍺</Text>
-            <Text className="text-gray-500 text-center">No drinks logged yet. Crack one open!</Text>
+            <Text className="text-muted-foreground text-center">No drinks logged yet. Crack one open!</Text>
           </View>
         }
-        contentContainerStyle={{ paddingBottom: 32 }}
+        contentContainerStyle={{ paddingBottom: 24 }}
       />
     </SafeAreaView>
   );

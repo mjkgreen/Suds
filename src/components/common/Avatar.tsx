@@ -23,7 +23,7 @@ export function Avatar({ uri, name, size = 40 }: AvatarProps) {
   return (
     <View
       style={{ width: size, height: size, borderRadius: size / 2 }}
-      className="bg-amber-200 items-center justify-center overflow-hidden"
+      className="bg-primary/20 items-center justify-center overflow-hidden"
     >
       {uri ? (
         <Image
@@ -34,7 +34,7 @@ export function Avatar({ uri, name, size = 40 }: AvatarProps) {
       ) : (
         <Text
           style={{ fontSize }}
-          className="text-amber-800 font-bold"
+          className="text-primary font-bold"
         >
           {initials}
         </Text>

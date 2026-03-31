@@ -34,12 +34,12 @@ export function DrinkCard({ item }: DrinkCardProps) {
         />
         <View className="ml-3 flex-1">
           <Text
-            className="font-semibold text-gray-900 text-base"
+            className="font-semibold text-foreground text-base"
             onPress={() => router.push(`/user/${item.profile.id}`)}
           >
             {getDisplayName(item.profile)}
           </Text>
-          <Text className="text-gray-400 text-xs">
+          <Text className="text-muted-foreground text-xs">
             @{getUsername(item.profile)} · {relativeTime(item.logged_at)}
           </Text>
         </View>
@@ -55,19 +55,19 @@ export function DrinkCard({ item }: DrinkCardProps) {
           <DrinkIcon type={item.drink_type} size={22} color={drinkInfo.color} />
         </View>
         <View className="flex-1">
-          <Text className="text-gray-900 font-medium text-base">
+          <Text className="text-foreground font-medium text-base">
             {item.drink_name || drinkInfo.label}
             {item.quantity !== 1 && (
-              <Text className="text-gray-500 font-normal"> × {item.quantity}</Text>
+              <Text className="text-muted-foreground font-normal"> × {item.quantity}</Text>
             )}
           </Text>
           {item.brand ? (
-            <Text className="text-gray-500 text-xs mt-0.5">{item.brand}</Text>
+            <Text className="text-muted-foreground text-xs mt-0.5">{item.brand}</Text>
           ) : null}
           {item.location_name && (
             <View className="flex-row items-center mt-0.5 gap-1">
               <Ionicons name="location-outline" size={11} color="#9ca3af" />
-              <Text className="text-gray-400 text-xs">{item.location_name}</Text>
+              <Text className="text-muted-foreground text-xs">{item.location_name}</Text>
             </View>
           )}
         </View>
@@ -75,7 +75,7 @@ export function DrinkCard({ item }: DrinkCardProps) {
 
       {/* Notes */}
       {item.notes ? (
-        <Text className="text-gray-600 text-sm mt-1">{item.notes}</Text>
+        <Text className="text-muted-foreground text-sm mt-1">{item.notes}</Text>
       ) : null}
 
       {/* Photo */}

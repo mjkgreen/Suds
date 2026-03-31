@@ -170,7 +170,7 @@ export default function LogScreen() {
   }
 
   return (
-    <View className="flex-1 bg-amber-50 my-0" style={{ paddingTop: insets.top, paddingBottom: 0, marginBottom: 0 }}>
+    <View className="flex-1 bg-background my-0" style={{ paddingTop: insets.top, paddingBottom: 0, marginBottom: 0 }}>
       <KeyboardAvoidingView 
         behavior={Platform.OS === "ios" ? "padding" : "height"} 
         className="flex-1"
@@ -178,14 +178,14 @@ export default function LogScreen() {
       >
         <View className="flex-1 relative">
           {/* Custom Header */}
-          <View className="flex-row items-center justify-between px-6 py-2 bg-transparent border-b border-amber-100">
+          <View className="flex-row items-center justify-between px-6 py-2 bg-transparent border-b border-border/50">
             <Pressable 
               onPress={() => router.back()}
               className="py-1 pr-4"
             >
-              <Text className="text-amber-600 font-medium text-base">Cancel</Text>
+              <Text className="text-primary font-medium text-base">Cancel</Text>
             </Pressable>
-            <Text className="text-lg font-bold text-gray-900">Log a Drink</Text>
+            <Text className="text-lg font-bold text-foreground">Log a Drink</Text>
             <View className="w-12" /> {/* Spacer for centering */}
           </View>
 
@@ -197,31 +197,31 @@ export default function LogScreen() {
             {/* Session Info */}
             <View className="px-6 pt-4 pb-0">
               {activeSession ? (
-                <View className="flex-row items-center justify-between mt-2 bg-white/60 p-3 rounded-xl border border-amber-100">
+                <View className="flex-row items-center justify-between mt-2 bg-card/60 p-3 rounded-xl border border-border">
                   <View className="flex-row items-center gap-2">
-                    <View className="w-2.5 h-2.5 rounded-full bg-amber-500" />
-                    <Text className="text-amber-700 text-sm font-semibold">
+                    <View className="w-2.5 h-2.5 rounded-full bg-primary" />
+                    <Text className="text-primary text-sm font-semibold">
                       At {activeSession.title ?? "Night Out"}
                     </Text>
                   </View>
                   <Pressable
                     onPress={() => endSession(activeSession.id)}
                     disabled={isEnding}
-                    className="bg-amber-100 rounded-lg px-2.5 py-1.5"
+                    className="bg-primary/10 rounded-lg px-2.5 py-1.5"
                   >
-                    <Text className="text-amber-700 text-[10px] font-bold uppercase tracking-wider">
+                    <Text className="text-primary text-[10px] font-bold uppercase tracking-wider">
                       {isEnding ? "Ending…" : "End Session"}
                     </Text>
                   </Pressable>
                 </View>
               ) : (
-                <Text className="text-gray-500 text-sm mt-1">Record your latest beverage</Text>
+                <Text className="text-muted-foreground text-sm mt-1">Record your latest beverage</Text>
               )}
             </View>
 
             {/* Drink Type Selector */}
             <View className="mb-6">
-              <Text className="text-gray-700 font-semibold px-6 mb-3">Type</Text>
+              <Text className="text-foreground font-semibold px-6 mb-3">Type</Text>
               <Controller
                 control={control}
                 name="drink_type"
@@ -236,7 +236,7 @@ export default function LogScreen() {
             <View className="px-6 gap-5">
               {/* Combined Drink Input */}
               <View style={{ zIndex: 50 }}>
-                <Text className="text-gray-700 font-semibold mb-2">Drink & Brand (optional)</Text>
+                <Text className="text-foreground font-semibold mb-2">Drink & Brand (optional)</Text>
                 <Controller
                   control={control}
                   name="drink_name"
@@ -253,7 +253,7 @@ export default function LogScreen() {
                     />
                   )}
                 />
-                <Text className="text-gray-400 text-[10px] mt-1 ml-1 italic">
+                <Text className="text-muted-foreground text-[10px] mt-1 ml-1 italic">
                   Tip: Comma separate name and brand (e.g. IPA, Lagunitas)
                 </Text>
               </View>
@@ -261,30 +261,30 @@ export default function LogScreen() {
               {/* Rating & Quantity Row */}
               <View className="flex-row gap-4">
                 <View className="flex-1">
-                  <Text className="text-gray-700 font-semibold mb-2">Rating</Text>
+                  <Text className="text-foreground font-semibold mb-2">Rating</Text>
                   <Pressable
                     onPress={() => setRatingPickerVisible(true)}
-                    className="bg-white border border-gray-200 rounded-xl px-4 py-3 flex-row items-center justify-between"
+                    className="bg-card border border-border rounded-xl px-4 py-3 flex-row items-center justify-between"
                   >
-                    <Text className="text-gray-900 text-base font-bold">{rating}/10</Text>
+                    <Text className="text-foreground text-base font-bold">{rating}/10</Text>
                     <Ionicons name="star" size={18} color="#f59e0b" />
                   </Pressable>
                 </View>
                 <View className="flex-1">
-                  <Text className="text-gray-700 font-semibold mb-2">Quantity</Text>
+                  <Text className="text-foreground font-semibold mb-2">Quantity</Text>
                   <Pressable
                     onPress={() => setQuantityPickerVisible(true)}
-                    className="bg-white border border-gray-200 rounded-xl px-4 py-3 flex-row items-center justify-between"
+                    className="bg-card border border-border rounded-xl px-4 py-3 flex-row items-center justify-between"
                   >
-                    <Text className="text-gray-900 text-base font-bold">{quantity}</Text>
-                    <Text className="text-gray-400 text-xs">Drinks</Text>
+                    <Text className="text-foreground text-base font-bold">{quantity}</Text>
+                    <Text className="text-muted-foreground text-xs">Drinks</Text>
                   </Pressable>
                 </View>
               </View>
 
               {/* Date & Time */}
               <View>
-                <Text className="text-gray-700 font-semibold mb-2">When</Text>
+                <Text className="text-foreground font-semibold mb-2">When</Text>
                 <Controller
                   control={control}
                   name="logged_at"
@@ -296,7 +296,7 @@ export default function LogScreen() {
 
               {/* Location */}
               <View>
-                <Text className="text-gray-700 font-semibold mb-2">Location (optional)</Text>
+                <Text className="text-foreground font-semibold mb-2">Location (optional)</Text>
                 <Controller
                   control={control}
                   name="location_name"
@@ -315,7 +315,7 @@ export default function LogScreen() {
 
               {/* Photo */}
               <View>
-                <Text className="text-gray-700 font-semibold mb-2">Photo (optional)</Text>
+                <Text className="text-foreground font-semibold mb-2">Photo (optional)</Text>
                 {photoUri ? (
                   <View className="relative" style={{ height: 160 }}>
                     <RemoteImage uri={photoUri} height={160} borderRadius={12} />
@@ -328,24 +328,24 @@ export default function LogScreen() {
                   </View>
                 ) : (
                   <Pressable
-                    className="bg-white border-2 border-dashed border-gray-200 rounded-xl py-6 items-center active:bg-gray-50"
+                    className="bg-card border-2 border-dashed border-border rounded-xl py-6 items-center active:bg-accent"
                     onPress={handlePickPhoto}
                   >
                     <Ionicons name="camera-outline" size={24} color="#9ca3af" />
-                    <Text className="text-gray-400 text-xs mt-1">Add a photo</Text>
+                    <Text className="text-muted-foreground text-xs mt-1">Add a photo</Text>
                   </Pressable>
                 )}
               </View>
 
               {/* Notes */}
               <View>
-                <Text className="text-gray-700 font-semibold mb-2">Notes (optional)</Text>
+                <Text className="text-foreground font-semibold mb-2">Notes (optional)</Text>
                 <Controller
                   control={control}
                   name="notes"
                   render={({ field: { value, onChange, onBlur } }) => (
                     <TextInput
-                      className="bg-white border border-gray-200 rounded-xl px-4 py-3 text-base text-gray-900"
+                      className="bg-card border border-border rounded-xl px-4 py-3 text-base text-foreground"
                       placeholder="How was it? Any thoughts?"
                       placeholderTextColor="#9ca3af"
                       value={value}
@@ -361,8 +361,8 @@ export default function LogScreen() {
               </View>
 
               {error && (
-                <View className="bg-red-50 border border-red-200 rounded-xl px-4 py-3">
-                  <Text className="text-red-600 text-sm">{error}</Text>
+                <View className="bg-destructive/10 border border-destructive/20 rounded-xl px-4 py-3">
+                  <Text className="text-destructive text-sm">{error}</Text>
                 </View>
               )}
             </View>

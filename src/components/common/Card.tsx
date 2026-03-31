@@ -12,7 +12,7 @@ interface PressableCardProps extends PressableProps {
 export function Card({ children, className, ...props }: CardProps) {
   return (
     <View
-      className={`bg-white rounded-2xl shadow-sm border border-gray-100 ${className ?? ''}`}
+      className={`bg-card rounded-2xl shadow-sm border border-border ${className ?? ''}`}
       {...props}
     >
       {children}
@@ -23,7 +23,7 @@ export function Card({ children, className, ...props }: CardProps) {
 export function PressableCard({ children, className, style, ...props }: PressableCardProps) {
   return (
     <Pressable
-      className={`bg-white rounded-2xl shadow-sm border border-gray-100 active:opacity-80 ${className ?? ''}`}
+      className={`bg-card rounded-2xl shadow-sm border border-border active:opacity-80 ${className ?? ''}`}
       style={[{ alignSelf: 'stretch' }, style as any]}
       {...props}
     >

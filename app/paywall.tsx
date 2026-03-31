@@ -97,12 +97,12 @@ export default function PaywallScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-white">
+    <SafeAreaView className="flex-1 bg-background">
       <ScrollView contentContainerStyle={{ paddingBottom: 40 }}>
         {/* Header */}
         <View className="flex-row items-center justify-between px-5 pt-4 pb-2">
           <Pressable onPress={() => router.back()} hitSlop={12}>
-            <Ionicons name="close" size={24} color="#6b7280" />
+            <Ionicons name="close" size={24} color="hsl(var(--muted-foreground))" />
           </Pressable>
           <View />
         </View>
@@ -110,15 +110,15 @@ export default function PaywallScreen() {
         {/* Hero */}
         <View className="items-center px-6 pt-4 pb-6">
           <Text className="text-5xl mb-3">🍺</Text>
-          <Text className="text-3xl font-bold text-gray-900 text-center">Suds Plus</Text>
-          <Text className="text-gray-500 text-base text-center mt-2">
+          <Text className="text-3xl font-bold text-foreground text-center">Suds Plus</Text>
+          <Text className="text-muted-foreground text-base text-center mt-2">
             Deeper insights into your drinking.{'\n'}Still have fun — just know the numbers.
           </Text>
         </View>
 
         {/* Premium features */}
-        <View className="mx-5 bg-amber-50 rounded-2xl p-5 mb-4">
-          <Text className="text-xs font-bold text-amber-600 uppercase tracking-widest mb-4">
+        <View className="mx-5 bg-accent/50 rounded-2xl p-5 mb-4 border border-border/50">
+          <Text className="text-xs font-bold text-primary uppercase tracking-widest mb-4">
             Plus features
           </Text>
           <View className="gap-4">
@@ -126,8 +126,8 @@ export default function PaywallScreen() {
               <View key={f.title} className="flex-row gap-3">
                 <Text className="text-2xl">{f.icon}</Text>
                 <View className="flex-1">
-                  <Text className="font-semibold text-gray-900 text-sm">{f.title}</Text>
-                  <Text className="text-gray-500 text-xs mt-0.5">{f.description}</Text>
+                  <Text className="font-semibold text-foreground text-sm">{f.title}</Text>
+                  <Text className="text-muted-foreground text-xs mt-0.5">{f.description}</Text>
                 </View>
               </View>
             ))}
@@ -136,17 +136,17 @@ export default function PaywallScreen() {
 
         {/* Free features */}
         <View className="mx-5 mb-6">
-          <Text className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">
+          <Text className="text-xs font-bold text-muted-foreground/60 uppercase tracking-widest mb-3">
             Always free
           </Text>
           <View className="flex-row flex-wrap gap-2">
             {FREE_FEATURES.map((f) => (
               <View
                 key={f.label}
-                className="flex-row items-center gap-1.5 bg-gray-100 rounded-full px-3 py-1.5"
+                className="flex-row items-center gap-1.5 bg-accent rounded-full px-3 py-1.5"
               >
                 <Text className="text-sm">{f.icon}</Text>
-                <Text className="text-gray-600 text-xs font-medium">{f.label}</Text>
+                <Text className="text-muted-foreground text-xs font-medium">{f.label}</Text>
               </View>
             ))}
           </View>
@@ -155,12 +155,12 @@ export default function PaywallScreen() {
         {/* Purchase buttons */}
         <View className="mx-5 gap-3">
           {isLoading && !packages.length ? (
-            <ActivityIndicator color="#f59e0b" />
+            <ActivityIndicator color="hsl(var(--primary))" />
           ) : packages.length > 0 ? (
             packages.map((pkg) => (
               <Pressable
                 key={pkg.identifier}
-                className="bg-amber-400 rounded-2xl py-4 items-center"
+                className="bg-primary rounded-2xl py-4 items-center"
                 onPress={() => handlePurchase(pkg)}
                 disabled={purchasing}
               >
@@ -168,10 +168,10 @@ export default function PaywallScreen() {
                   <ActivityIndicator color="white" />
                 ) : (
                   <>
-                    <Text className="text-white font-bold text-base">
+                    <Text className="text-primary-foreground font-bold text-base">
                       {pkg.product.title || 'Subscribe'}
                     </Text>
-                    <Text className="text-white/80 text-xs mt-0.5">
+                    <Text className="text-primary-foreground/80 text-xs mt-0.5">
                       {pkg.product.priceString} · {pkg.packageType}
                     </Text>
                   </>
@@ -180,9 +180,9 @@ export default function PaywallScreen() {
             ))
           ) : (
             // Fallback when RevenueCat isn't configured yet
-            <View className="bg-amber-400 rounded-2xl py-4 items-center opacity-60">
-              <Text className="text-white font-bold text-base">Suds Plus — Coming Soon</Text>
-              <Text className="text-white/80 text-xs mt-0.5">Payments not yet configured</Text>
+            <View className="bg-primary rounded-2xl py-4 items-center opacity-60">
+              <Text className="text-primary-foreground font-bold text-base">Suds Plus — Coming Soon</Text>
+              <Text className="text-primary-foreground/80 text-xs mt-0.5">Payments not yet configured</Text>
             </View>
           )}
 
@@ -191,7 +191,7 @@ export default function PaywallScreen() {
             onPress={handleRestore}
             disabled={purchasing}
           >
-            <Text className="text-gray-400 text-sm">Restore purchases</Text>
+            <Text className="text-muted-foreground text-sm">Restore purchases</Text>
           </Pressable>
         </View>
       </ScrollView>

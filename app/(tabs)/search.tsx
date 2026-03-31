@@ -27,7 +27,7 @@ function UserRow({ profile, currentUserId }: { profile: Profile; currentUserId: 
 
   return (
     <Pressable
-      className="flex-row items-center px-6 py-4 border-b border-gray-100 active:bg-gray-50"
+      className="flex-row items-center px-6 py-4 border-b border-border active:bg-accent"
       onPress={() => router.push(`/user/${profile.id}`)}
     >
       <Avatar
@@ -36,10 +36,10 @@ function UserRow({ profile, currentUserId }: { profile: Profile; currentUserId: 
         size={46}
       />
       <View className="flex-1 ml-3">
-        <Text className="font-semibold text-gray-900">
+        <Text className="font-semibold text-foreground">
           {profile.display_name ?? profile.username}
         </Text>
-        <Text className="text-gray-400 text-sm">@{profile.username}</Text>
+        <Text className="text-muted-foreground text-sm">@{profile.username}</Text>
       </View>
       {!isOwnProfile && (
         <Button
@@ -81,14 +81,14 @@ export default function SearchScreen() {
   });
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50">
+    <SafeAreaView className="flex-1 bg-background" edges={["top"]}>
       {/* Search bar */}
-      <View className="px-4 pt-6 pb-3 bg-white border-b border-gray-100">
-        <Text className="text-2xl font-bold text-gray-900 mb-3">Find Friends</Text>
-        <View className="flex-row items-center bg-gray-100 rounded-xl px-4 py-2.5">
-          <Text className="text-gray-400 mr-2">🔍</Text>
+      <View className="px-4 pt-6 pb-3 bg-card border-b border-border">
+        <Text className="text-2xl font-bold text-foreground mb-3">Find Friends</Text>
+        <View className="flex-row items-center bg-accent rounded-xl px-4 py-2.5">
+          <Text className="text-muted-foreground mr-2">🔍</Text>
           <TextInput
-            className="flex-1 text-base text-gray-900"
+            className="flex-1 text-base text-foreground"
             placeholder="Search by username"
             placeholderTextColor="#9ca3af"
             value={query}
@@ -113,15 +113,15 @@ export default function SearchScreen() {
           ListEmptyComponent={
             query.length > 1 ? (
               <View className="py-16 items-center">
-                <Text className="text-gray-400 text-base">No users found for "{query}"</Text>
+                <Text className="text-muted-foreground text-base">No users found for "{query}"</Text>
               </View>
             ) : (
               <View className="py-16 items-center px-8">
                 <Text className="text-5xl mb-3">👥</Text>
-                <Text className="text-gray-600 font-semibold text-lg text-center">
+                <Text className="text-muted-foreground font-semibold text-lg text-center">
                   Find your drinking crew
                 </Text>
-                <Text className="text-gray-400 text-sm text-center mt-2">
+                <Text className="text-muted-foreground/60 text-sm text-center mt-2">
                   Search for friends by username to see their drinks in your feed.
                 </Text>
               </View>

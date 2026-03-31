@@ -28,19 +28,19 @@ export function PremiumGate({ children, featureName }: PremiumGateProps) {
       </View>
 
       {/* Lock overlay */}
-      <View className="absolute inset-0 items-center justify-center bg-white/60 rounded-2xl px-6">
+      <View className="absolute inset-0 items-center justify-center bg-card/60 backdrop-blur-sm rounded-2xl px-6">
         <Text className="text-2xl mb-2">🔒</Text>
-        <Text className="text-gray-900 font-bold text-base text-center mb-1">
+        <Text className="text-foreground font-bold text-base text-center mb-1">
           {featureName}
         </Text>
-        <Text className="text-gray-500 text-xs text-center mb-4">
+        <Text className="text-muted-foreground text-xs text-center mb-4">
           Unlock with Suds Plus
         </Text>
         <Pressable
-          className="bg-amber-400 rounded-xl px-6 py-2.5"
+          className="bg-primary rounded-xl px-6 py-2.5"
           onPress={() => router.push('/paywall')}
         >
-          <Text className="text-white font-bold text-sm">Upgrade</Text>
+          <Text className="text-primary-foreground font-bold text-sm">Upgrade</Text>
         </Pressable>
       </View>
     </View>

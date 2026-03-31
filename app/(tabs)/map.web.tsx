@@ -153,11 +153,11 @@ export default function MapScreen() {
   }, [logs]);
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-900" edges={['top']}>
+    <SafeAreaView className="flex-1 bg-background" edges={['top']}>
       {/* Tap hint */}
       <View className="absolute bottom-6 left-0 right-0 items-center" style={{ zIndex: 1000, pointerEvents: 'none' }}>
-        <View className="bg-black/60 rounded-full px-4 py-2">
-          <Text className="text-white text-xs">Tap anywhere on the map to log a drink</Text>
+        <View className="bg-card/60 rounded-full px-4 py-2 border border-border/20">
+          <Text className="text-foreground text-xs">Tap anywhere on the map to log a drink</Text>
         </View>
       </View>
 
@@ -167,9 +167,9 @@ export default function MapScreen() {
           <Pressable
             key={f}
             onPress={() => setFilter(f)}
-            className={`px-4 py-2 rounded-full shadow ${filter === f ? 'bg-amber-500' : 'bg-white'}`}
+            className={`px-4 py-2 rounded-full shadow-sm border border-border ${filter === f ? 'bg-primary' : 'bg-card'}`}
           >
-            <Text className={`font-semibold text-sm ${filter === f ? 'text-white' : 'text-gray-700'}`}>
+            <Text className={`font-semibold text-sm ${filter === f ? 'text-primary-foreground' : 'text-muted-foreground'}`}>
               {f === 'mine' ? 'My Drinks' : 'Friends'}
             </Text>
           </Pressable>
@@ -177,7 +177,7 @@ export default function MapScreen() {
       </View>
 
       {!L ? (
-        <View className="flex-1 items-center justify-center bg-gray-100">
+        <View className="flex-1 items-center justify-center bg-background">
           <ActivityIndicator size="large" color="#f59e0b" />
         </View>
       ) : (
@@ -209,8 +209,8 @@ export default function MapScreen() {
               const divIcon =
                 typeof window !== 'undefined'
                   ? (window as any).L?.divIcon({
-                      html: `<div style="background:${info.color};width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;border:2px solid white;box-shadow:0 2px 4px rgba(0,0,0,0.3)"><span class="mdi mdi-${mciName}" style="font-size:20px; line-height: 1"></span></div>`,
-                      className: '',
+                      html: `<div style="background:${info.color};width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;border:2px solid currentColor;box-shadow:0 2px 4px rgba(0,0,0,0.3)"><span class="mdi mdi-${mciName}" style="font-size:20px; line-height: 1"></span></div>`,
+                      className: 'border-card',
                       iconSize: [36, 36],
                       iconAnchor: [18, 18],
                     })
@@ -243,8 +243,8 @@ export default function MapScreen() {
             const clusterIcon =
               typeof window !== 'undefined'
                 ? (window as any).L?.divIcon({
-                    html: `<div style="background:#f59e0b;width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;color:white;border:2px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.35)">${items.length}</div>`,
-                    className: '',
+                    html: `<div style="background:#f59e0b;width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;color:white;border:2px solid currentColor;box-shadow:0 2px 6px rgba(0,0,0,0.35)">${items.length}</div>`,
+                    className: 'border-card',
                     iconSize: [44, 44],
                     iconAnchor: [22, 22],
                   })
@@ -286,10 +286,10 @@ export default function MapScreen() {
 
       {!isLoading && !logs?.length && (
         <View className="absolute inset-0 items-center justify-center" style={{ zIndex: 999 }}>
-          <View className="bg-white rounded-2xl px-8 py-6 mx-8 items-center shadow-lg">
+          <View className="bg-card rounded-2xl px-8 py-6 mx-8 items-center shadow-lg border border-border">
             <Text className="text-3xl mb-2">🗺️</Text>
-            <Text className="text-gray-700 font-semibold text-center">No drinks on the map yet</Text>
-            <Text className="text-gray-400 text-sm text-center mt-1">
+            <Text className="text-foreground font-semibold text-center">No drinks on the map yet</Text>
+            <Text className="text-muted-foreground text-sm text-center mt-1">
               Log a drink with a location to see it here.
             </Text>
           </View>
