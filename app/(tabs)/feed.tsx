@@ -41,6 +41,7 @@ export default function FeedScreen() {
     await startSession({ userId: user.id, title: sessionTitle.trim() || undefined });
     setSessionTitle("");
     setShowStartModal(false);
+    router.push("/(tabs)/log");
   }
 
   const topEdges = activeSession ? [] : ["top" as const];
