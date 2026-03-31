@@ -18,9 +18,9 @@ export function useProfile(userId: string | undefined) {
       if (error) throw error;
 
       return {
-        ...data,
-        followers_count: (data.followers_count as any)?.[0]?.count ?? 0,
-        following_count: (data.following_count as any)?.[0]?.count ?? 0,
+        ...(data as any),
+        followers_count: (data as any)?.followers_count?.[0]?.count ?? 0,
+        following_count: (data as any)?.following_count?.[0]?.count ?? 0,
       } as Profile;
     },
     enabled: !!userId,
@@ -33,7 +33,7 @@ export function useUserStats(userId: string | undefined) {
     queryFn: async () => {
       const { data, error } = await supabase.rpc('get_user_stats', {
         p_user_id: userId!,
-      });
+      } as any);
       if (error) throw error;
       return data as UserStats;
     },
@@ -52,16 +52,16 @@ export function useUpdateProfile() {
       userId: string;
       updates: Partial<Pick<Profile, 'display_name' | 'bio' | 'avatar_url' | 'username'>>;
     }) => {
-      const { data, error } = await supabase
-        .from('profiles')
+      const { data, error } = await (supabase
+        .from('profiles') as any)
         .update(updates)
         .eq('id', userId)
         .select()
         .single();
       if (error) throw error;
-      return data;
+      return data as Profile;
     },
-    onSuccess: (_: unknown, { userId }: { userId: string }) => {
+    onSuccess: (_: unknown, { userId }) => {
       queryClient.invalidateQueries({ queryKey: ['profile', userId] });
     },
   });

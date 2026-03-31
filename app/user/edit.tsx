@@ -107,7 +107,7 @@ export default function EditProfileScreen() {
         },
       });
       if (profile) {
-        setProfile({ ...profile, ...updated });
+        setProfile({ ...profile, ...(updated as Profile) });
       } else {
         setProfile(updated as Profile);
       }
