@@ -169,7 +169,7 @@ export default function MapScreen() {
         ))}
       </View>
 
-      {isLoading || !L ? (
+      {!L ? (
         <View className="flex-1 items-center justify-center bg-gray-100">
           <ActivityIndicator size="large" color="#f59e0b" />
         </View>
@@ -258,6 +258,13 @@ export default function MapScreen() {
             );
           })}
         </L.MapContainer>
+      )}
+
+      {/* Loading overlay — keeps MapContainer mounted so position is preserved */}
+      {isLoading && L && (
+        <View className="absolute inset-0 items-center justify-center bg-black/10" style={{ zIndex: 999 }}>
+          <ActivityIndicator size="large" color="#f59e0b" />
+        </View>
       )}
 
       {!isLoading && !logs?.length && (

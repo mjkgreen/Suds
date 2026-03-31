@@ -1,10 +1,10 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import * as ImagePicker from "expo-image-picker";
-import { useLocalSearchParams, useRouter } from "expo-router";
-import React, { useEffect, useState } from "react";
+import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
+import React, { useCallback, useEffect, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Button } from "@/components/common/Button";
 import { LocationPicker } from "@/components/common/LocationPicker";
@@ -44,7 +44,9 @@ export default function LogScreen() {
   });
 
   const quantity = watch("quantity");
+  const locationName = watch("location_name");
 
+  // Apply map-selected location whenever params arrive (tab may already be mounted)
   useEffect(() => {
     if (params.lat && params.lng) {
       setValue("location_lat", parseFloat(params.lat));
@@ -55,32 +57,53 @@ export default function LogScreen() {
           ? decodeURIComponent(params.name)
           : `${parseFloat(params.lat).toFixed(4)}, ${parseFloat(params.lng).toFixed(4)}`,
       );
-    } else {
-      // Auto-fill with GPS on mount when not pre-filled from map click
-      getCurrentLocation().then((result) => {
-        if (result) {
-          const name = result.name ?? `${result.lat.toFixed(4)}, ${result.lng.toFixed(4)}`;
-          setValue("location_name", name);
-          setValue("location_lat", result.lat);
-          setValue("location_lng", result.lng);
-        }
-      });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [params.lat, params.lng, params.name]);
 
-  async function handlePickPhoto() {
-    const result = await ImagePicker.launchImageLibraryAsync({
+  // Auto-fill GPS on focus only when no location is set and no map params pending
+  useFocusEffect(
+    useCallback(() => {
+      if (!params.lat && !params.lng && !locationName) {
+        getCurrentLocation().then((result) => {
+          if (result) {
+            const name = result.name ?? `${result.lat.toFixed(4)}, ${result.lng.toFixed(4)}`;
+            setValue("location_name", name);
+            setValue("location_lat", result.lat);
+            setValue("location_lng", result.lng);
+          }
+        });
+      }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [params.lat, params.lng, locationName]),
+  );
+
+  async function launchPicker(useCamera: boolean) {
+    const options: ImagePicker.ImagePickerOptions = {
       mediaTypes: ["images"],
       allowsEditing: true,
       aspect: [4, 3],
       quality: 0.8,
       base64: true,
-    });
+    };
+    if (useCamera) {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== "granted") return;
+    }
+    const result = useCamera
+      ? await ImagePicker.launchCameraAsync(options)
+      : await ImagePicker.launchImageLibraryAsync(options);
     if (!result.canceled) {
       setPhotoUri(result.assets[0].uri);
       setPhotoBase64(result.assets[0].base64 ?? null);
     }
+  }
+
+  function handlePickPhoto() {
+    Alert.alert("Add Photo", undefined, [
+      { text: "Take Photo", onPress: () => launchPicker(true) },
+      { text: "Choose from Library", onPress: () => launchPicker(false) },
+      { text: "Cancel", style: "cancel" },
+    ]);
   }
 
   async function onSubmit(data: LogDrinkFormData) {

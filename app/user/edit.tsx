@@ -1,8 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -14,6 +16,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Avatar } from '@/components/common/Avatar';
 import { Button } from '@/components/common/Button';
+import { uploadAvatarPhoto } from '@/lib/storage';
 import { useUpdateProfile } from '@/hooks/useProfile';
 import { useAuthStore } from '@/stores/authStore';
 
@@ -25,6 +28,8 @@ export default function EditProfileScreen() {
   const [displayName, setDisplayName] = useState(profile?.display_name ?? '');
   const [username, setUsername] = useState(profile?.username ?? '');
   const [bio, setBio] = useState(profile?.bio ?? '');
+  const [avatarUri, setAvatarUri] = useState<string | null>(null);
+  const [avatarBase64, setAvatarBase64] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
 
@@ -33,6 +38,35 @@ export default function EditProfileScreen() {
     setUsername(profile?.username ?? '');
     setBio(profile?.bio ?? '');
   }, [profile]);
+
+  async function launchAvatarPicker(useCamera: boolean) {
+    const options: ImagePicker.ImagePickerOptions = {
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+      base64: true,
+    };
+    if (useCamera) {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== 'granted') return;
+    }
+    const result = useCamera
+      ? await ImagePicker.launchCameraAsync(options)
+      : await ImagePicker.launchImageLibraryAsync(options);
+    if (!result.canceled) {
+      setAvatarUri(result.assets[0].uri);
+      setAvatarBase64(result.assets[0].base64 ?? null);
+    }
+  }
+
+  function handlePickAvatar() {
+    Alert.alert('Change Photo', undefined, [
+      { text: 'Take Photo', onPress: () => launchAvatarPicker(true) },
+      { text: 'Choose from Library', onPress: () => launchAvatarPicker(false) },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
+  }
 
   async function handleSave() {
     if (!user) return;
@@ -56,15 +90,20 @@ export default function EditProfileScreen() {
     }
 
     try {
+      let newAvatarUrl: string | null = profile?.avatar_url ?? null;
+      if (avatarUri) {
+        newAvatarUrl = await uploadAvatarPhoto(user.id, avatarUri, avatarBase64);
+      }
+
       const updated = await updateProfile({
         userId: user.id,
         updates: {
           display_name: trimmedName || null,
           username: trimmedUsername,
           bio: bio.trim() || null,
+          avatar_url: newAvatarUrl,
         },
       });
-      // Update local store so header reflects changes immediately
       setProfile({ ...profile!, ...updated });
       setSaved(true);
       setTimeout(() => router.back(), 800);
@@ -73,13 +112,14 @@ export default function EditProfileScreen() {
     }
   }
 
+  const previewUri = avatarUri ?? profile?.avatar_url ?? null;
+
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         className="flex-1"
       >
-        {/* Nav */}
         <View className="flex-row items-center px-4 py-3 bg-white border-b border-gray-100">
           <Pressable onPress={() => router.back()} className="p-2 mr-2">
             <Ionicons name="arrow-back" size={22} color="#374151" />
@@ -93,21 +133,21 @@ export default function EditProfileScreen() {
           contentContainerStyle={{ padding: 24, gap: 20 }}
           keyboardShouldPersistTaps="handled"
         >
-          {/* Avatar */}
           <View className="items-center">
-            <Avatar
-              uri={profile?.avatar_url}
-              name={displayName || username || 'U'}
-              size={88}
-            />
-            <Text className="text-gray-400 text-xs mt-2">Avatar editing coming soon</Text>
+            <Pressable onPress={handlePickAvatar} className="relative">
+              <Avatar uri={previewUri} name={displayName || username || 'U'} size={88} />
+              <View
+                className="absolute bottom-0 right-0 bg-amber-400 rounded-full p-1.5"
+                style={{ borderWidth: 2, borderColor: '#f9fafb' }}
+              >
+                <Ionicons name="camera" size={14} color="#fff" />
+              </View>
+            </Pressable>
+            <Text className="text-gray-400 text-xs mt-2">Tap to change photo</Text>
           </View>
 
-          {/* Display name */}
           <View>
-            <Text className="text-gray-700 font-semibold mb-1.5 text-sm">
-              Display Name
-            </Text>
+            <Text className="text-gray-700 font-semibold mb-1.5 text-sm">Display Name</Text>
             <TextInput
               className="bg-white border border-gray-200 rounded-xl px-4 py-3 text-base text-gray-900"
               placeholder="Your full name or nickname"
@@ -116,12 +156,9 @@ export default function EditProfileScreen() {
               onChangeText={setDisplayName}
               autoCorrect={false}
             />
-            <Text className="text-gray-400 text-xs mt-1">
-              This is what others see in the feed
-            </Text>
+            <Text className="text-gray-400 text-xs mt-1">This is what others see in the feed</Text>
           </View>
 
-          {/* Username */}
           <View>
             <Text className="text-gray-700 font-semibold mb-1.5 text-sm">
               Username <Text className="text-red-400">*</Text>
@@ -138,12 +175,9 @@ export default function EditProfileScreen() {
                 autoCorrect={false}
               />
             </View>
-            <Text className="text-gray-400 text-xs mt-1">
-              Letters, numbers, underscores only
-            </Text>
+            <Text className="text-gray-400 text-xs mt-1">Letters, numbers, underscores only</Text>
           </View>
 
-          {/* Bio */}
           <View>
             <Text className="text-gray-700 font-semibold mb-1.5 text-sm">Bio</Text>
             <TextInput
@@ -171,12 +205,7 @@ export default function EditProfileScreen() {
             </View>
           )}
 
-          <Button
-            label="Save Changes"
-            onPress={handleSave}
-            loading={isPending}
-            size="lg"
-          />
+          <Button label="Save Changes" onPress={handleSave} loading={isPending} size="lg" />
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>

@@ -120,3 +120,53 @@ export async function uploadDrinkPhoto(
   const { data } = supabase.storage.from('drink-photos').getPublicUrl(fileName);
   return data.publicUrl;
 }
+
+export async function uploadAvatarPhoto(
+  userId: string,
+  localUri: string,
+  base64?: string | null
+): Promise<string> {
+  let ext = 'jpg';
+  let mimeType = 'image/jpeg';
+
+  const uriExt = localUri.split('.').pop()?.split('?')[0]?.toLowerCase();
+  if (uriExt) {
+    ext = ['jpeg', 'jpg'].includes(uriExt) ? 'jpg' : uriExt;
+    const map: Record<string, string> = {
+      jpg: 'image/jpeg',
+      png: 'image/png',
+      webp: 'image/webp',
+      heic: 'image/heic',
+      heif: 'image/heif',
+    };
+    mimeType = map[ext] || 'image/jpeg';
+  }
+
+  const fileName = `${userId}.${ext}`;
+
+  let uploadPayload: any;
+  if (Platform.OS === 'web') {
+    const response = await fetch(localUri);
+    uploadPayload = await response.blob();
+  } else if (base64) {
+    uploadPayload = decodeBase64(base64);
+  } else {
+    uploadPayload = await new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.onload = function () { resolve(xhr.response); };
+      xhr.onerror = function () { reject(new Error('Failed to convert local file to blob')); };
+      xhr.responseType = 'blob';
+      xhr.open('GET', localUri, true);
+      xhr.send(null);
+    });
+  }
+
+  const { error } = await supabase.storage
+    .from('avatars')
+    .upload(fileName, uploadPayload, { contentType: mimeType, upsert: true });
+
+  if (error) throw error;
+
+  const { data } = supabase.storage.from('avatars').getPublicUrl(fileName);
+  return data.publicUrl;
+}

@@ -161,21 +161,26 @@ export default function MapScreen() {
         ))}
       </View>
 
-      {isLoading ? (
-        <View className="flex-1 items-center justify-center bg-gray-100">
-          <ActivityIndicator size="large" color="#f59e0b" />
-        </View>
-      ) : (
-        <MapView
-          ref={mapRef}
-          style={{ width, height: height - 84 }}
-          initialRegion={initialRegion}
-          showsUserLocation
-          showsMyLocationButton
-          onMapReady={() => setMapReady(true)}
-          onLongPress={handleLongPress}
-        >
-          {clusters.map(({ lat, lng, items }) => {
+      <MapView
+        ref={mapRef}
+        style={{ width, height: height - 84 }}
+        initialRegion={initialRegion}
+        showsUserLocation
+        showsMyLocationButton
+        onMapReady={() => {
+          setMapReady(true);
+          if (userLocation) {
+            mapRef.current?.animateToRegion({
+              latitude: userLocation.lat,
+              longitude: userLocation.lng,
+              latitudeDelta: 0.0922,
+              longitudeDelta: 0.0421,
+            }, 500);
+          }
+        }}
+        onLongPress={handleLongPress}
+      >
+        {clusters.map(({ lat, lng, items }) => {
             if (items.length === 1) {
               const log = items[0];
               const info = DRINK_TYPE_MAP[log.drink_type as DrinkType] ?? DRINK_TYPE_MAP['other'];
@@ -247,8 +252,14 @@ export default function MapScreen() {
                 </Callout>
               </Marker>
             );
-          })}
-        </MapView>
+        })}
+      </MapView>
+
+      {/* Loading overlay — keeps MapView mounted so position is preserved */}
+      {isLoading && (
+        <View className="absolute inset-0 items-center justify-center bg-black/10">
+          <ActivityIndicator size="large" color="#f59e0b" />
+        </View>
       )}
 
       {/* Empty overlay */}
