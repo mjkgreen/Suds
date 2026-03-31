@@ -9,6 +9,7 @@ import { EmptyState } from "@/components/common/EmptyState";
 import { DrinkCard } from "@/components/drink/DrinkCard";
 import { SessionCard } from "@/components/session/SessionCard";
 import { useFeed } from "@/hooks/useFeed";
+import { useQuickLogDrink } from "@/hooks/useDrinkLog";
 import { useActiveSession, useEndSession, useStartSession } from "@/hooks/useSession";
 import { useAuthStore } from "@/stores/authStore";
 import { FeedEntry } from "@/types/models";
@@ -23,6 +24,7 @@ export default function FeedScreen() {
   const [sessionTitle, setSessionTitle] = useState("");
   const { mutateAsync: startSession, isPending: isStarting } = useStartSession();
   const { mutateAsync: endSession, isPending: isEnding } = useEndSession();
+  const { mutateAsync: quickLogDrink } = useQuickLogDrink();
 
   const { data, isLoading, isError, fetchNextPage, hasNextPage, isFetchingNextPage, refetch, isRefetching } = useFeed(
     user?.id,
@@ -69,9 +71,25 @@ export default function FeedScreen() {
       <FlatList
         data={entries}
         keyExtractor={(entry) => (entry.type === "session" ? `session-${entry.session_id}` : `drink-${entry.item.id}`)}
-        renderItem={({ item: entry }) =>
-          entry.type === "session" ? <SessionCard group={entry} /> : <DrinkCard item={entry.item} />
-        }
+        renderItem={({ item: entry }) => {
+          if (entry.type === "session") {
+            const isActive = !!activeSession && entry.session_id === activeSession.id;
+            return (
+              <SessionCard
+                group={entry}
+                isActive={isActive}
+                onEnd={isActive ? () => endSession(activeSession!.id) : undefined}
+                isEnding={isActive ? isEnding : undefined}
+                onQuickLog={
+                  isActive && user
+                    ? (item) => quickLogDrink({ userId: user.id, item, sessionId: activeSession!.id })
+                    : undefined
+                }
+              />
+            );
+          }
+          return <DrinkCard item={entry.item} />;
+        }}
         ListHeaderComponent={
           <View className="px-4 pt-0 mt-0 pb-3 gap-3">
             <View>
@@ -80,34 +98,7 @@ export default function FeedScreen() {
             </View>
 
             {/* Night out CTA */}
-            {activeSession ? (
-              <View className="bg-primary/10 border border-primary/20 rounded-2xl px-4 py-4 gap-3">
-                <View className="flex-row items-center gap-2">
-                  <View className="w-2.5 h-2.5 rounded-full bg-primary" />
-                  <View className="flex-1">
-                    <Text className="text-primary font-bold text-base">
-                      {activeSession.title ?? "Night Out"} in progress
-                    </Text>
-                    <Text className="text-primary/70 text-xs">All drinks are being grouped together</Text>
-                  </View>
-                </View>
-                <View className="flex-row gap-2">
-                  <Pressable
-                    className="flex-1 bg-primary rounded-xl py-2.5 items-center"
-                    onPress={() => router.push("/(tabs)/log")}
-                  >
-                    <Text className="text-primary-foreground font-semibold text-sm">+ Log a Drink</Text>
-                  </Pressable>
-                  <Pressable
-                    className="flex-1 bg-card border border-primary/30 rounded-xl py-2.5 items-center"
-                    onPress={() => endSession(activeSession.id)}
-                    disabled={isEnding}
-                  >
-                    <Text className="text-primary font-semibold text-sm">{isEnding ? "Ending…" : "End Night Out"}</Text>
-                  </Pressable>
-                </View>
-              </View>
-            ) : (
+            {!activeSession && (
               <Pressable
                 className="bg-primary rounded-2xl px-4 py-3 flex-row items-center justify-between"
                 onPress={() => setShowStartModal(true)}

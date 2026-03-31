@@ -1,7 +1,8 @@
+import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React from 'react';
-import { Text, View } from 'react-native';
+import React, { useState } from 'react';
+import { ActivityIndicator, Platform, Pressable, Text, View } from 'react-native';
 import { Avatar } from '@/components/common/Avatar';
 import { PressableCard } from '@/components/common/Card';
 import { RemoteImage } from '@/components/common/RemoteImage';
@@ -14,11 +15,30 @@ import { getDisplayName, getUsername } from '@/utils/profileHelpers';
 
 interface DrinkCardProps {
   item: FeedItem;
+  onQuickLog?: () => Promise<void>;
 }
 
-export function DrinkCard({ item }: DrinkCardProps) {
+export function DrinkCard({ item, onQuickLog }: DrinkCardProps) {
   const router = useRouter();
   const drinkInfo = DRINK_TYPE_MAP[item.drink_type] ?? DRINK_TYPE_MAP['other'];
+  const [isLogging, setIsLogging] = useState(false);
+  const [didLog, setDidLog] = useState(false);
+
+  async function handleQuickLog(e: { stopPropagation: () => void }) {
+    e.stopPropagation();
+    if (!onQuickLog || isLogging) return;
+    setIsLogging(true);
+    try {
+      await onQuickLog();
+      if (Platform.OS !== 'web') {
+        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      }
+      setDidLog(true);
+      setTimeout(() => setDidLog(false), 1500);
+    } finally {
+      setIsLogging(false);
+    }
+  }
 
   return (
     <PressableCard
@@ -87,6 +107,28 @@ export function DrinkCard({ item }: DrinkCardProps) {
           style={{ marginTop: 10 }}
         />
       ) : null}
+
+      {/* Quick log */}
+      {onQuickLog && (
+        <View className="flex-row justify-end mt-3 pt-2 border-t border-border/50">
+          <Pressable
+            onPress={handleQuickLog}
+            disabled={isLogging}
+            className="flex-row items-center gap-1.5 bg-primary/10 border border-primary/25 rounded-full px-3 py-1.5"
+          >
+            {isLogging ? (
+              <ActivityIndicator size="small" color="#f59e0b" />
+            ) : didLog ? (
+              <Ionicons name="checkmark" size={14} color="#f59e0b" />
+            ) : (
+              <Ionicons name="add" size={14} color="#f59e0b" />
+            )}
+            <Text className="text-primary text-xs font-semibold">
+              {didLog ? 'Added!' : '+1'}
+            </Text>
+          </Pressable>
+        </View>
+      )}
     </PressableCard>
   );
 }

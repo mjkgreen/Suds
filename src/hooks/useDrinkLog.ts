@@ -131,6 +131,48 @@ export function useUpdateDrinkLog() {
   });
 }
 
+export function useQuickLogDrink() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      userId,
+      item,
+      sessionId,
+    }: {
+      userId: string;
+      item: Pick<DrinkLog, 'drink_type' | 'drink_name' | 'brand' | 'quantity' | 'location_name' | 'location_lat' | 'location_lng'>;
+      sessionId: string;
+    }) => {
+      const { data, error } = await (supabase.from('drink_logs') as any)
+        .insert({
+          user_id: userId,
+          drink_type: item.drink_type,
+          drink_name: item.drink_name || null,
+          brand: item.brand || null,
+          quantity: item.quantity,
+          location_name: item.location_name || null,
+          location_lat: item.location_lat ?? null,
+          location_lng: item.location_lng ?? null,
+          notes: null,
+          photo_url: null,
+          rating: null,
+          logged_at: new Date().toISOString(),
+          session_id: sessionId,
+        })
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (_data, { userId }) => {
+      queryClient.invalidateQueries({ queryKey: ['drinkLogs', userId] });
+      queryClient.invalidateQueries({ queryKey: ['feed', userId] });
+      queryClient.invalidateQueries({ queryKey: ['userStats', userId] });
+    },
+  });
+}
+
 export function useDeleteDrinkLog() {
   const queryClient = useQueryClient();
 
