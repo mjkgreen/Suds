@@ -37,8 +37,8 @@ export function DrinkTypePicker({ value, onChange }: DrinkTypePickerProps) {
               <DrinkIcon type={type.value} size={28} color={type.color} />
             </View>
             <Text
-              style={{ color: isSelected ? type.color : undefined }}
-              className={`text-xs font-semibold ${isSelected ? "" : "text-muted-foreground"}`}
+              style={{ color: isSelected ? type.color : "gray" }}
+              className={`text-xs font-semibold  ${isSelected ? "" : "text-muted-foreground"}`}
             >
               {type.label}
             </Text>

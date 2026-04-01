@@ -8,6 +8,7 @@ import { DrinkBadge } from "@/components/drink/DrinkBadge";
 import { PremiumGate } from "@/components/common/PremiumGate";
 import { AdvancedStatsCard } from "@/components/profile/AdvancedStatsCard";
 import { BACEstimator } from "@/components/profile/BACEstimator";
+import { AdvancedStatsPreview, BACEstimatorPreview, TopDrinksPreview } from "@/components/profile/PremiumPreviews";
 import { GoalCard } from "@/components/profile/GoalCard";
 import { MilestoneBanner } from "@/components/profile/MilestoneBanner";
 import { StreakCard } from "@/components/profile/StreakCard";
@@ -29,6 +30,126 @@ import { usePrefsStore } from "@/stores/prefsStore";
 import { useColorScheme } from "nativewind";
 
 type Tab = "progress" | "activities";
+
+const Y_LABEL_W = 22;
+const CHART_H = 60;
+
+function formatAxisDate(dateStr: string) {
+  const d = new Date(dateStr + "T00:00:00");
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+function TrendLine({ data, isDark }: { data: Array<{ date: string; count: number }>; isDark: boolean }) {
+  const [containerWidth, setContainerWidth] = useState(0);
+  const chartWidth = Math.max(containerWidth - Y_LABEL_W, 0);
+  const maxCount = Math.max(...data.map((d) => d.count), 1);
+  const n = data.length;
+  const mutedColor = isDark ? "#6b7280" : "#9ca3af";
+  const baselineColor = isDark ? "#374151" : "#e5e7eb";
+
+  const points = data.map((d, i) => ({
+    x: n > 1 ? (i / (n - 1)) * chartWidth : chartWidth / 2,
+    y: CHART_H - Math.max((d.count / maxCount) * CHART_H * 0.82, d.count > 0 ? 6 : 0) - 2,
+    count: d.count,
+  }));
+
+  // X-axis: first, middle, last
+  const xLabelIndices = Array.from(new Set([0, Math.floor((n - 1) / 2), n - 1]));
+
+  return (
+    <View onLayout={(e) => setContainerWidth(e.nativeEvent.layout.width)}>
+      <View style={{ flexDirection: "row" }}>
+        {/* Y-axis */}
+        <View
+          style={{
+            width: Y_LABEL_W,
+            height: CHART_H,
+            justifyContent: "space-between",
+            alignItems: "flex-end",
+            paddingRight: 4,
+            paddingBottom: 1,
+          }}
+        >
+          <Text style={{ fontSize: 9, color: mutedColor, lineHeight: 12 }}>{maxCount}</Text>
+          <Text style={{ fontSize: 9, color: mutedColor, lineHeight: 12 }}>0</Text>
+        </View>
+
+        {/* Chart area */}
+        <View style={{ flex: 1, height: CHART_H }}>
+          {/* Baseline */}
+          <View
+            style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 1, backgroundColor: baselineColor }}
+          />
+
+          {/* Line segments */}
+          {chartWidth > 0 &&
+            points.slice(0, -1).map((p, i) => {
+              const next = points[i + 1];
+              const dx = next.x - p.x;
+              const dy = next.y - p.y;
+              const length = Math.sqrt(dx * dx + dy * dy);
+              const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+              return (
+                <View
+                  key={`seg-${i}`}
+                  style={{
+                    position: "absolute",
+                    left: (p.x + next.x) / 2 - length / 2,
+                    top: (p.y + next.y) / 2 - 1.5,
+                    width: length,
+                    height: 3,
+                    backgroundColor: "#f59e0b",
+                    borderRadius: 2,
+                    transform: [{ rotate: `${angle}deg` }],
+                  }}
+                />
+              );
+            })}
+
+          {/* Dots */}
+          {chartWidth > 0 &&
+            points.map((p, i) => (
+              <View
+                key={`dot-${i}`}
+                style={{
+                  position: "absolute",
+                  left: p.x - 4,
+                  top: p.y - 4,
+                  width: 8,
+                  height: 8,
+                  borderRadius: 4,
+                  backgroundColor: data[i].count > 0 ? "#f59e0b" : isDark ? "#374151" : "#e5e7eb",
+                  borderWidth: data[i].count > 0 ? 2 : 1,
+                  borderColor: data[i].count > 0 ? (isDark ? "#92400e" : "#fcd34d") : baselineColor,
+                }}
+              />
+            ))}
+        </View>
+      </View>
+
+      {/* X-axis labels */}
+      {chartWidth > 0 && (
+        <View style={{ flexDirection: "row", marginLeft: Y_LABEL_W, height: 16 }}>
+          {xLabelIndices.map((idx, pos) => (
+            <Text
+              key={idx}
+              style={{
+                position: "absolute",
+                left: points[idx].x - (pos === 2 ? 32 : pos === 1 ? 16 : 0),
+                fontSize: 9,
+                color: mutedColor,
+                textAlign: pos === 0 ? "left" : pos === 1 ? "center" : "right",
+                width: 36,
+              }}
+            >
+              {formatAxisDate(data[idx].date)}
+            </Text>
+          ))}
+        </View>
+      )}
+    </View>
+  );
+}
 
 function StatBlock({ label, value }: { label: string; value: string | number }) {
   return (
@@ -71,7 +192,9 @@ function TabBar({ active, onChange }: { active: Tab; onChange: (t: Tab) => void 
     <View className="flex-row bg-card border-b border-border px-6">
       {(["progress", "activities"] as Tab[]).map((tab) => (
         <Pressable key={tab} onPress={() => onChange(tab)} className="mr-6 py-3">
-          <Text className={active === tab ? "font-bold text-primary text-sm" : "font-medium text-muted-foreground text-sm"}>
+          <Text
+            className={active === tab ? "font-bold text-primary text-sm" : "font-medium text-muted-foreground text-sm"}
+          >
             {tab === "progress" ? "Progress" : "Activities"}
           </Text>
           {active === tab && <View className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-full" />}
@@ -156,34 +279,30 @@ export default function ProfileScreen() {
               className="flex-row items-center gap-1.5 bg-accent rounded-full px-3 py-1.5"
             >
               <Ionicons
-                name={locationEnabled ? 'location' : 'location-outline'}
+                name={locationEnabled ? "location" : "location-outline"}
                 size={14}
-                color={locationEnabled ? '#f59e0b' : 'hsl(var(--muted-foreground))'}
+                color={locationEnabled ? "#f59e0b" : "hsl(var(--muted-foreground))"}
               />
-              <Text className={`text-xs font-bold ${locationEnabled ? 'text-primary' : 'text-muted-foreground'}`}>
+              <Text className={`text-xs font-bold ${locationEnabled ? "text-primary" : "text-muted-foreground"}`}>
                 Location
               </Text>
             </Pressable>
 
             <Pressable
               onPress={() => {
-                const options: ('light' | 'dark' | 'system')[] = ['light', 'dark', 'system'];
+                const options: ("light" | "dark" | "system")[] = ["light", "dark", "system"];
                 const nextIndex = (options.indexOf(themePreference) + 1) % options.length;
                 setThemePreference(options[nextIndex]);
               }}
               className="flex-row items-center gap-1.5 bg-accent rounded-full px-3 py-1.5"
             >
               <Ionicons
-                name={
-                  themePreference === 'light' ? 'sunny' :
-                  themePreference === 'dark' ? 'moon' :
-                  'contrast'
-                }
+                name={themePreference === "light" ? "sunny" : themePreference === "dark" ? "moon" : "contrast"}
                 size={14}
                 color="hsl(var(--foreground))"
               />
               <Text className="text-foreground text-xs font-bold capitalize">
-                {themePreference === 'system' ? 'System' : themePreference}
+                {themePreference === "system" ? "System" : themePreference}
               </Text>
             </Pressable>
           </View>
@@ -212,7 +331,7 @@ export default function ProfileScreen() {
           {stats && user?.id && <GoalCard userId={user.id} stats={stats} />}
 
           {stats && (
-            <View className="bg-card mx-4 mt-4 rounded-2xl border border-border p-4 gap-4">
+            <View className="bg-card mx-4 mt-4 rounded-2xl p-4 gap-4">
               <View className="flex-row">
                 <StatBlock label="Total Drinks" value={stats.total_drinks} />
                 <View className="w-px bg-border" />
@@ -221,74 +340,70 @@ export default function ProfileScreen() {
                 <StatBlock label="This Month" value={stats.drinks_this_month} />
               </View>
 
-              {stats.activity_by_day?.length > 0 && <ActivityCalendar activityByDay={stats.activity_by_day} />}
-
-              {stats.activity_by_day?.length > 0 &&
-                (() => {
-                  const last14 = stats.activity_by_day.slice(-14);
-                  const maxCount = Math.max(...last14.map((d) => d.count), 1);
-                  return (
-                    <View>
-                      <Text className="text-xs text-gray-400 mb-2 font-medium uppercase tracking-wide">
-                        Last 14 Days
-                      </Text>
-                      <View className="flex-row items-end gap-1 h-12">
-                        {last14.map((d) => (
-                          <View key={d.date} className="flex-1 items-center">
-                            <View
-                              style={{
-                                width: "100%",
-                                height: `${Math.max((d.count / maxCount) * 100, d.count > 0 ? 10 : 0)}%`,
-                                backgroundColor: d.count > 0 ? "#f59e0b" : "#f3f4f6",
-                                borderRadius: 3,
-                                minHeight: d.count > 0 ? 4 : 2,
-                              }}
-                            />
-                          </View>
-                        ))}
-                      </View>
-                    </View>
-                  );
-                })()}
-
-              {stats.favorite_drink_types?.length > 0 && (
-                <View>
-                  <Text className="text-xs text-gray-400 mb-2 font-medium uppercase tracking-wide">Top Drinks</Text>
-                  <View className="gap-2">
-                    {stats.favorite_drink_types.slice(0, 3).map((d) => {
-                      const info = DRINK_TYPE_MAP[d.drink_type as DrinkType] ?? DRINK_TYPE_MAP["other"];
-                      const pct = stats.total_drinks > 0 ? (d.count / stats.total_drinks) * 100 : 0;
-                      return (
-                        <View key={d.drink_type} className="flex-row items-center gap-2">
-                          <DrinkIcon type={d.drink_type as DrinkType} size={16} color={info.color} />
-                          <View className="flex-1">
-                            <View className="flex-row items-center justify-between mb-0.5">
-                              <Text className="text-xs text-gray-600 font-medium">{info.label}</Text>
-                              <Text className="text-xs text-gray-400">{d.count}</Text>
-                            </View>
-                            <View className="bg-gray-100 rounded-full h-1.5">
-                              <View
-                                style={{ width: `${pct}%`, backgroundColor: info.color }}
-                                className="h-1.5 rounded-full"
-                              />
-                            </View>
-                          </View>
-                        </View>
-                      );
-                    })}
-                  </View>
+              {stats.activity_by_day?.length > 0 && (
+                <View className="pt-2">
+                  <Text className="text-xs text-muted-foreground mb-2 font-medium uppercase tracking-wide">
+                    Last 14 Days
+                  </Text>
+                  <TrendLine data={stats.activity_by_day.slice(-14)} isDark={colorScheme === "dark"} />
                 </View>
               )}
+
+              <View className="pt-2">
+                {stats.activity_by_day?.length > 0 && <ActivityCalendar activityByDay={stats.activity_by_day} />}
+              </View>
             </View>
           )}
 
+          <PremiumGate featureName="Top Drinks" preview={<TopDrinksPreview />}>
+            {stats?.favorite_drink_types &&
+              stats.favorite_drink_types.length > 0 &&
+              (() => {
+                const topDrinks = stats.favorite_drink_types;
+                const total = stats.total_drinks;
+                return (
+                  <View className="bg-card mx-4 mt-4 rounded-2xl border border-gray-400 p-4 gap-4">
+                    <View className="flex-row items-center justify-between">
+                      <Text className="text-xs text-gray-400 font-medium uppercase tracking-wide">Top Drinks</Text>
+                      <Text className="text-xs bg-amber-100 text-amber-600 font-bold px-2 py-0.5 rounded-full">
+                        Plus
+                      </Text>
+                    </View>
+                    <View className="gap-2">
+                      {topDrinks.slice(0, 5).map((d) => {
+                        const info = DRINK_TYPE_MAP[d.drink_type as DrinkType] ?? DRINK_TYPE_MAP["other"];
+                        const pct = total > 0 ? (d.count / total) * 100 : 0;
+                        return (
+                          <View key={d.drink_type} className="flex-row items-center gap-2">
+                            <DrinkIcon type={d.drink_type as DrinkType} size={16} color={info.color} />
+                            <View className="flex-1">
+                              <View className="flex-row items-center justify-between mb-0.5">
+                                <Text className="text-xs text-gray-600 font-medium">{info.label}</Text>
+                                <Text className="text-xs text-gray-400">{d.count}</Text>
+                              </View>
+                              <View className="bg-gray-100 rounded-full h-1.5">
+                                <View
+                                  style={{ width: `${pct}%`, backgroundColor: info.color }}
+                                  className="h-1.5 rounded-full"
+                                />
+                              </View>
+                            </View>
+                          </View>
+                        );
+                      })}
+                    </View>
+                  </View>
+                );
+              })()}
+          </PremiumGate>
+
           {user?.id && (
-            <PremiumGate featureName="Advanced Analytics">
+            <PremiumGate featureName="Advanced Analytics" preview={<AdvancedStatsPreview />}>
               <AdvancedStatsCard userId={user.id} />
             </PremiumGate>
           )}
 
-          <PremiumGate featureName="BAC Estimator">
+          <PremiumGate featureName="BAC Estimator" preview={<BACEstimatorPreview />}>
             <BACEstimator />
           </PremiumGate>
         </ScrollView>
