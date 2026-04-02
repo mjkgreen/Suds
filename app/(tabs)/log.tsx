@@ -202,6 +202,7 @@ export default function LogScreen() {
               onRemovePhoto={() => setPhotoUri(null)}
               onClearLocation={() => setLocationClearedByUser(true)}
               error={error}
+              isInSession={!!activeSession}
             />
           </ScrollView>
 

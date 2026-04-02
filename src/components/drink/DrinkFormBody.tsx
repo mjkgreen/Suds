@@ -24,6 +24,8 @@ interface DrinkFormBodyProps {
   onReplacePhoto?: () => void;
   onClearLocation?: () => void;
   error?: string | null;
+  /** When true, the event name field is hidden (already in an active session) */
+  isInSession?: boolean;
 }
 
 export function DrinkFormBody({
@@ -36,6 +38,7 @@ export function DrinkFormBody({
   onReplacePhoto,
   onClearLocation,
   error,
+  isInSession = false,
 }: DrinkFormBodyProps) {
   const [ratingPickerVisible, setRatingPickerVisible] = useState(false);
   const [quantityPickerVisible, setQuantityPickerVisible] = useState(false);
@@ -48,6 +51,29 @@ export function DrinkFormBody({
 
   return (
     <>
+      {/* Event Name — hidden when already in an active session */}
+      {!isInSession && (
+        <View className="px-6 mt-4 mb-2">
+          <Text className="text-foreground font-semibold mb-2">Event / Occasion (optional)</Text>
+          <Controller
+            control={control}
+            name="event_name"
+            render={({ field: { value, onChange, onBlur } }) => (
+              <TextInput
+                className="bg-card border border-border rounded-xl px-4 py-3 text-base text-foreground"
+                placeholder="e.g. Birthday party, Game night…"
+                placeholderTextColor="hsl(var(--muted-foreground))"
+                value={value}
+                onChangeText={onChange}
+                onBlur={onBlur}
+                returnKeyType="done"
+                submitBehavior="blurAndSubmit"
+              />
+            )}
+          />
+        </View>
+      )}
+
       {/* Drink Type */}
       <View className="mt-4 mb-6">
         <Text className="text-foreground font-semibold px-6 mb-3">Type</Text>

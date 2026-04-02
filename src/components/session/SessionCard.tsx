@@ -1,15 +1,15 @@
-import * as Haptics from 'expo-haptics';
-import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
-import { ActivityIndicator, Platform, Pressable, Text, View } from 'react-native';
-import { Avatar } from '@/components/common/Avatar';
-import { PressableCard } from '@/components/common/Card';
-import { DrinkIcon } from '@/components/icons/DrinkIcon';
-import { DRINK_TYPE_MAP } from '@/lib/constants';
-import { DrinkType, FeedItem, SessionFeedGroup } from '@/types/models';
-import { formatDateTime, formatDuration } from '@/utils/dateHelpers';
-import { getDisplayName, getUsername } from '@/utils/profileHelpers';
+import * as Haptics from "expo-haptics";
+import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import React, { useState } from "react";
+import { ActivityIndicator, Platform, Pressable, Text, View } from "react-native";
+import { Avatar } from "@/components/common/Avatar";
+import { PressableCard } from "@/components/common/Card";
+import { DrinkIcon } from "@/components/icons/DrinkIcon";
+import { DRINK_TYPE_MAP } from "@/lib/constants";
+import { DrinkType, FeedItem, SessionFeedGroup } from "@/types/models";
+import { formatDateTime, formatDuration } from "@/utils/dateHelpers";
+import { getDisplayName, getUsername } from "@/utils/profileHelpers";
 
 interface SessionCardProps {
   group: SessionFeedGroup;
@@ -31,7 +31,7 @@ export function SessionCard({ group, isActive, onEnd, isEnding, onQuickLog }: Se
     setLoggingId(item.id);
     try {
       await onQuickLog(item);
-      if (Platform.OS !== 'web') {
+      if (Platform.OS !== "web") {
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       }
       setLoggedId(item.id);
@@ -45,19 +45,13 @@ export function SessionCard({ group, isActive, onEnd, isEnding, onQuickLog }: Se
   const locations = [...new Set(group.items.map((i) => i.location_name).filter(Boolean))];
   const drinkTypes = [...new Set(group.items.map((i) => i.drink_type))];
   const duration = formatDuration(group.started_at, group.ended_at ?? undefined);
-  const hoursElapsed = (
+  const hoursElapsed =
     ((group.ended_at ? new Date(group.ended_at) : new Date()).getTime() - new Date(group.started_at).getTime()) /
-    (1000 * 60 * 60)
-  );
-  const drinksPerHour = hoursElapsed >= 0.25 && totalQuantity > 0
-    ? (totalQuantity / hoursElapsed).toFixed(1)
-    : '—';
+    (1000 * 60 * 60);
+  const drinksPerHour = hoursElapsed >= 0.25 && totalQuantity > 0 ? (totalQuantity / hoursElapsed).toFixed(1) : "—";
 
   return (
-    <PressableCard
-      className="mx-4 my-2 p-4"
-      onPress={isActive ? undefined : () => setExpanded((v) => !v)}
-    >
+    <PressableCard className="mx-4 my-2 p-4" onPress={isActive ? undefined : () => setExpanded((v) => !v)}>
       {/* Active in-progress banner */}
       {isActive && (
         <View className="flex-row items-center gap-2 mb-3">
@@ -68,11 +62,7 @@ export function SessionCard({ group, isActive, onEnd, isEnding, onQuickLog }: Se
 
       {/* Header */}
       <View className="flex-row items-center mb-3">
-        <Avatar
-          uri={group.profile.avatar_url}
-          name={getDisplayName(group.profile)}
-          size={40}
-        />
+        <Avatar uri={group.profile.avatar_url} name={getDisplayName(group.profile)} size={40} />
         <View className="ml-3 flex-1">
           <Text
             className="font-semibold text-foreground text-base"
@@ -93,9 +83,7 @@ export function SessionCard({ group, isActive, onEnd, isEnding, onQuickLog }: Se
       </View>
 
       {/* Session title */}
-      <Text className="text-foreground font-bold text-base mb-2">
-        {group.session_title ?? 'Night Out'}
-      </Text>
+      <Text className="text-foreground font-bold text-base mb-2">{group.session_title ?? "Night Out"}</Text>
 
       {/* Stats row */}
       <View className="flex-row gap-4 mb-3">
@@ -118,9 +106,7 @@ export function SessionCard({ group, isActive, onEnd, isEnding, onQuickLog }: Se
         {locations.length > 0 && (
           <View className="items-center">
             <Text className="text-xl font-bold text-primary">{locations.length}</Text>
-            <Text className="text-xs text-muted-foreground">
-              {locations.length === 1 ? 'spot' : 'spots'}
-            </Text>
+            <Text className="text-xs text-muted-foreground">{locations.length === 1 ? "spot" : "spots"}</Text>
           </View>
         )}
       </View>
@@ -128,7 +114,7 @@ export function SessionCard({ group, isActive, onEnd, isEnding, onQuickLog }: Se
       {/* Drink type emojis */}
       <View className="flex-row gap-1 mb-2">
         {drinkTypes.map((type) => {
-          const info = DRINK_TYPE_MAP[type as DrinkType] ?? DRINK_TYPE_MAP['other'];
+          const info = DRINK_TYPE_MAP[type as DrinkType] ?? DRINK_TYPE_MAP["other"];
           const count = group.items.filter((i) => i.drink_type === type).length;
           return (
             <View key={type} className="flex-row items-center bg-accent rounded-full px-2 py-1 gap-1">
@@ -142,9 +128,9 @@ export function SessionCard({ group, isActive, onEnd, isEnding, onQuickLog }: Se
       {/* Locations */}
       {locations.length > 0 && (
         <View className="flex-row items-center gap-1">
-          <Ionicons name="location-outline" size={12} color="hsl(var(--muted-foreground))" />
+          <Ionicons name="location-outline" size={12} color="gray" />
           <Text className="text-muted-foreground text-xs" numberOfLines={1}>
-            {locations.join(' → ')}
+            {locations.join(" → ")}
           </Text>
         </View>
       )}
@@ -153,7 +139,7 @@ export function SessionCard({ group, isActive, onEnd, isEnding, onQuickLog }: Se
       {(isActive || expanded) && (
         <View className="mt-3 border-t border-border pt-3 gap-2">
           {group.items.map((item) => {
-            const info = DRINK_TYPE_MAP[item.drink_type as DrinkType] ?? DRINK_TYPE_MAP['other'];
+            const info = DRINK_TYPE_MAP[item.drink_type as DrinkType] ?? DRINK_TYPE_MAP["other"];
             const isLogging = loggingId === item.id;
             const didLog = loggedId === item.id;
             return (
@@ -184,9 +170,7 @@ export function SessionCard({ group, isActive, onEnd, isEnding, onQuickLog }: Se
                         ) : (
                           <Ionicons name="add" size={11} color="#f59e0b" />
                         )}
-                        <Text className="text-primary text-xs font-semibold">
-                          {didLog ? 'Added!' : '+1'}
-                        </Text>
+                        <Text className="text-primary text-xs font-semibold">{didLog ? "Added!" : "+1"}</Text>
                       </Pressable>
                     )}
                   </View>
@@ -207,13 +191,9 @@ export function SessionCard({ group, isActive, onEnd, isEnding, onQuickLog }: Se
       {/* Expand/collapse hint — past sessions only */}
       {!isActive && (
         <View className="flex-row items-center justify-center gap-1 mt-2">
-          <Ionicons
-            name={expanded ? 'chevron-up' : 'chevron-down'}
-            size={14}
-            color="hsl(var(--primary))"
-          />
+          <Ionicons name={expanded ? "chevron-up" : "chevron-down"} size={14} color="hsl(var(--primary))" />
           <Text className="text-primary text-xs font-medium">
-            {expanded ? 'Show less' : `Show all ${group.items.length} drinks`}
+            {expanded ? "Show less" : `Show all ${group.items.length} drinks`}
           </Text>
         </View>
       )}
@@ -223,7 +203,7 @@ export function SessionCard({ group, isActive, onEnd, isEnding, onQuickLog }: Se
         <View className="flex-row gap-2 mt-3 pt-3 border-t border-border/50">
           <Pressable
             className="flex-1 bg-primary rounded-xl py-2.5 items-center"
-            onPress={() => router.push('/(tabs)/log')}
+            onPress={() => router.push("/(tabs)/log")}
           >
             <Text className="text-primary-foreground font-semibold text-sm">+ Log a Drink</Text>
           </Pressable>
@@ -232,9 +212,7 @@ export function SessionCard({ group, isActive, onEnd, isEnding, onQuickLog }: Se
             onPress={onEnd}
             disabled={isEnding}
           >
-            <Text className="text-primary font-semibold text-sm">
-              {isEnding ? 'Ending…' : 'End Night Out'}
-            </Text>
+            <Text className="text-primary font-semibold text-sm">{isEnding ? "Ending…" : "End Night Out"}</Text>
           </Pressable>
         </View>
       )}

@@ -37,6 +37,8 @@ export interface DrinkLog {
   notes: string | null;
   photo_url: string | null;
   rating: number | null;
+  event_name: string | null;
+  session_id: string | null;
   logged_at: string;
   created_at: string;
   // Joined
@@ -158,6 +160,7 @@ export interface AdvancedStats {
 }
 
 export type LogDrinkFormData = {
+  event_name?: string;
   drink_type: DrinkType;
   drink_name: string;
   brand: string;

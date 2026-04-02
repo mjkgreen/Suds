@@ -1,27 +1,20 @@
-import { Ionicons } from '@expo/vector-icons';
-import { useQuery } from '@tanstack/react-query';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import React from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  Pressable,
-  ScrollView,
-  Text,
-  View,
-} from 'react-native';
-import { useColorScheme } from 'nativewind';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Avatar } from '@/components/common/Avatar';
-import { RemoteImage } from '@/components/common/RemoteImage';
-import { DrinkBadge } from '@/components/drink/DrinkBadge';
-import { DrinkIcon } from '@/components/icons/DrinkIcon';
-import { useDeleteDrinkLog } from '@/hooks/useDrinkLog';
-import { supabase } from '@/lib/supabase';
-import { DRINK_TYPE_MAP } from '@/lib/constants';
-import { useAuthStore } from '@/stores/authStore';
-import { DrinkLog, DrinkType, Profile } from '@/types/models';
-import { formatDateTime } from '@/utils/dateHelpers';
+import { Ionicons } from "@expo/vector-icons";
+import { useQuery } from "@tanstack/react-query";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import React from "react";
+import { ActivityIndicator, Alert, Pressable, ScrollView, Text, View } from "react-native";
+import { useColorScheme } from "nativewind";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Avatar } from "@/components/common/Avatar";
+import { RemoteImage } from "@/components/common/RemoteImage";
+import { DrinkBadge } from "@/components/drink/DrinkBadge";
+import { DrinkIcon } from "@/components/icons/DrinkIcon";
+import { useDeleteDrinkLog } from "@/hooks/useDrinkLog";
+import { supabase } from "@/lib/supabase";
+import { DRINK_TYPE_MAP } from "@/lib/constants";
+import { useAuthStore } from "@/stores/authStore";
+import { DrinkLog, DrinkType, Profile } from "@/types/models";
+import { formatDateTime } from "@/utils/dateHelpers";
 
 export default function DrinkDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -29,24 +22,20 @@ export default function DrinkDetailScreen() {
   const { user } = useAuthStore();
   const { mutateAsync: deleteDrink } = useDeleteDrinkLog();
   const { colorScheme } = useColorScheme();
-  const isDark = colorScheme === 'dark';
+  const isDark = colorScheme === "dark";
 
   const { data, isLoading } = useQuery({
-    queryKey: ['drinkDetail', id],
+    queryKey: ["drinkDetail", id],
     queryFn: async () => {
-      const { data: log, error: logError } = await supabase
-        .from('drink_logs')
-        .select('*')
-        .eq('id', id!)
-        .single();
+      const { data: log, error: logError } = await supabase.from("drink_logs").select("*").eq("id", id!).single();
       if (logError) throw logError;
 
       const drinkLog = log as unknown as DrinkLog;
 
       const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', drinkLog.user_id)
+        .from("profiles")
+        .select("*")
+        .eq("id", drinkLog.user_id)
         .single();
       if (profileError) throw profileError;
 
@@ -57,14 +46,14 @@ export default function DrinkDetailScreen() {
 
   async function handleDelete() {
     if (!data || !user) return;
-    Alert.alert('Delete Drink?', 'This cannot be undone.', [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert("Delete Drink?", "This cannot be undone.", [
+      { text: "Cancel", style: "cancel" },
       {
-        text: 'Delete',
-        style: 'destructive',
+        text: "Delete",
+        style: "destructive",
         onPress: async () => {
           await deleteDrink({ id: data.id, userId: user.id });
-          router.replace('/(tabs)/feed');
+          router.replace("/(tabs)/feed");
         },
       },
     ]);
@@ -72,7 +61,7 @@ export default function DrinkDetailScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView className={`flex-1 bg-background items-center justify-center ${isDark ? 'dark' : ''}`}>
+      <SafeAreaView className={`flex-1 bg-background items-center justify-center ${isDark ? "dark" : ""}`}>
         <ActivityIndicator size="large" color="#f59e0b" />
       </SafeAreaView>
     );
@@ -80,11 +69,11 @@ export default function DrinkDetailScreen() {
 
   if (!data) return null;
 
-  const info = DRINK_TYPE_MAP[data.drink_type as DrinkType] ?? DRINK_TYPE_MAP['other'];
+  const info = DRINK_TYPE_MAP[data.drink_type as DrinkType] ?? DRINK_TYPE_MAP["other"];
   const isOwner = user?.id === data.user_id;
 
   return (
-    <SafeAreaView className={`flex-1 bg-background ${isDark ? 'dark' : ''}`}>
+    <SafeAreaView className={`flex-1 bg-background ${isDark ? "dark" : ""}`}>
       {/* Nav bar */}
       <View className="flex-row items-center justify-between px-4 py-3 border-b border-border">
         <Pressable onPress={() => router.back()} className="p-2">
@@ -108,47 +97,44 @@ export default function DrinkDetailScreen() {
       <ScrollView contentContainerStyle={{ padding: 24 }}>
         {/* Photo */}
         {data.photo_url && (
-          <RemoteImage
-            uri={data.photo_url}
-            height={220}
-            borderRadius={16}
-            style={{ marginBottom: 20 }}
-          />
+          <RemoteImage uri={data.photo_url} height={220} borderRadius={16} style={{ marginBottom: 20 }} />
         )}
 
         {/* Drink */}
         <View className="flex-row items-center mb-4">
           <View
-            style={{ backgroundColor: info.color + '15' }}
+            style={{ backgroundColor: info.color + "15" }}
             className="w-16 h-16 rounded-2xl items-center justify-center mr-4"
           >
             <DrinkIcon type={data.drink_type as DrinkType} size={36} color={info.color} />
           </View>
           <View className="flex-1">
-            <Text className="text-2xl font-bold text-foreground">
-              {data.drink_name || info.label}
-            </Text>
-            {data.brand ? (
-              <Text className="text-muted-foreground text-sm mt-0.5">{data.brand}</Text>
+            <Text className="text-2xl font-bold text-foreground">{data.event_name || info.label}</Text>
+            {data.brand ? <Text className="text-muted-foreground text-lg mt-0.5">{data.brand}</Text> : null}
+          </View>
+          <View>
+            {data.rating ? (
+              <View className="flex-row items-center">
+                <Text className="text-foreground font-bold">{data.rating}/10 </Text>
+              </View>
             ) : null}
-            <View className="mt-1">
-              <DrinkBadge type={data.drink_type as DrinkType} />
-            </View>
           </View>
         </View>
 
         {/* Meta */}
-        <View className="bg-card rounded-2xl p-4 gap-3 mb-4">
+        <View className="bg-card  rounded-2xl p-4 gap-3 mb-4">
           <View className="flex-row items-center">
-            <Ionicons name="beaker-outline" size={18} color="hsl(var(--muted-foreground))" />
-            <Text className="text-muted-foreground ml-2">
-              <Text className="font-semibold text-foreground">{data.quantity}</Text> standard drink
-              {data.quantity !== 1 ? 's' : ''}
-            </Text>
-          </View>
-          <View className="flex-row items-center">
-            <Ionicons name="time-outline" size={18} color="hsl(var(--muted-foreground))" />
-            <Text className="text-muted-foreground ml-2">{formatDateTime(data.logged_at)}</Text>
+            <View className="flex-row items-center">
+              <Ionicons name="beaker-outline" size={18} color="hsl(var(--muted-foreground))" />
+              <Text className="text-muted-foreground ml-2">
+                <Text className="font-semibold text-foreground">{data.quantity}</Text> standard drink
+                {data.quantity !== 1 ? "s" : ""}
+              </Text>
+            </View>
+            <View className="flex-row items-center">
+              <Ionicons name="time-outline" size={18} color="hsl(var(--muted-foreground))" />
+              <Text className="text-muted-foreground ml-2">{formatDateTime(data.logged_at)}</Text>
+            </View>
           </View>
           {data.location_name && (
             <View className="flex-row items-center">
@@ -161,9 +147,7 @@ export default function DrinkDetailScreen() {
         {/* Notes */}
         {data.notes && (
           <View className="mb-4">
-            <Text className="text-muted-foreground text-xs font-semibold uppercase tracking-wide mb-1">
-              Notes
-            </Text>
+            <Text className="text-muted-foreground text-xs font-semibold uppercase tracking-wide mb-1">Notes</Text>
             <Text className="text-foreground text-base">{data.notes}</Text>
           </View>
         )}
@@ -174,18 +158,19 @@ export default function DrinkDetailScreen() {
             className="flex-row items-center mt-2 p-3 bg-card rounded-2xl"
             onPress={() => router.push(`/user/${data.profile?.id}`)}
           >
-            <Avatar
-              uri={data.profile.avatar_url}
-              name={data.profile.display_name ?? data.profile.username}
-              size={38}
-            />
+            <Avatar uri={data.profile.avatar_url} name={data.profile.display_name ?? data.profile.username} size={38} />
             <View className="ml-3">
               <Text className="font-semibold text-foreground">
                 {data.profile.display_name ?? data.profile.username}
               </Text>
               <Text className="text-muted-foreground text-xs">@{data.profile.username}</Text>
             </View>
-            <Ionicons name="chevron-forward" size={18} color="hsl(var(--muted-foreground))" style={{ marginLeft: 'auto' }} />
+            <Ionicons
+              name="chevron-forward"
+              size={18}
+              color="hsl(var(--muted-foreground))"
+              style={{ marginLeft: "auto" }}
+            />
           </Pressable>
         )}
       </ScrollView>

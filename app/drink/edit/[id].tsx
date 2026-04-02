@@ -65,6 +65,7 @@ export default function EditDrinkScreen() {
   useEffect(() => {
     if (!drink) return;
     reset({
+      event_name: drink.event_name ?? '',
       drink_type: drink.drink_type as DrinkType,
       drink_name: drink.drink_name ?? '',
       brand: drink.brand ?? '',
@@ -97,6 +98,7 @@ export default function EditDrinkScreen() {
     if (!user || !drink) return;
     setError(null);
     try {
+
       await updateDrink({
         id: drink.id,
         userId: user.id,

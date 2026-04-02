@@ -168,5 +168,5 @@ export async function uploadAvatarPhoto(
   if (error) throw error;
 
   const { data } = supabase.storage.from('avatars').getPublicUrl(fileName);
-  return data.publicUrl;
+  return `${data.publicUrl}?v=${Date.now()}`;
 }
