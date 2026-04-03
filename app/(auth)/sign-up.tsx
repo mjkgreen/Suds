@@ -12,9 +12,10 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '@/components/common/Button';
 import { useAuth } from '@/hooks/useAuth';
+import * as AppleAuthentication from 'expo-apple-authentication';
 
 export default function SignUpScreen() {
-  const { signUpWithEmail } = useAuth();
+  const { signUpWithEmail, signInWithApple } = useAuth();
   const [email, setEmail] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -50,6 +51,20 @@ export default function SignUpScreen() {
       setSuccess(true);
     } catch (err: any) {
       setError(err.message ?? 'Something went wrong.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleAppleSignUp() {
+    setError(null);
+    setLoading(true);
+    try {
+      await signInWithApple();
+    } catch (err: any) {
+      if (err.code !== 'ERR_REQUEST_CANCELED') {
+        setError(err.message ?? 'Apple sign-up failed.');
+      }
     } finally {
       setLoading(false);
     }
@@ -142,6 +157,24 @@ export default function SignUpScreen() {
                 size="lg"
                 className="mt-2"
               />
+
+              {Platform.OS === 'ios' && !success && (
+                <>
+                  <View className="flex-row items-center justify-center mt-2 mb-2">
+                    <View className="flex-1 h-[1px] bg-gray-200" />
+                    <Text className="text-gray-400 px-4 font-medium text-sm">Or</Text>
+                    <View className="flex-1 h-[1px] bg-gray-200" />
+                  </View>
+
+                  <AppleAuthentication.AppleAuthenticationButton
+                    buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_UP}
+                    buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
+                    cornerRadius={12}
+                    style={{ width: '100%', height: 56 }}
+                    onPress={handleAppleSignUp}
+                  />
+                </>
+              )}
             </View>
 
             {/* Footer */}

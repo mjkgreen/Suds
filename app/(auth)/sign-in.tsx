@@ -12,9 +12,10 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '@/components/common/Button';
 import { useAuth } from '@/hooks/useAuth';
+import * as AppleAuthentication from 'expo-apple-authentication';
 
 export default function SignInScreen() {
-  const { signInWithEmail } = useAuth();
+  const { signInWithEmail, signInWithApple } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -31,6 +32,20 @@ export default function SignInScreen() {
       await signInWithEmail(email.trim().toLowerCase(), password);
     } catch (err: any) {
       setError(err.message ?? 'Something went wrong.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleAppleSignIn() {
+    setError(null);
+    setLoading(true);
+    try {
+      await signInWithApple();
+    } catch (err: any) {
+      if (err.code !== 'ERR_REQUEST_CANCELED') {
+        setError(err.message ?? 'Apple sign-in failed.');
+      }
     } finally {
       setLoading(false);
     }
@@ -96,6 +111,24 @@ export default function SignInScreen() {
                 size="lg"
                 className="mt-2"
               />
+
+              {Platform.OS === 'ios' && (
+                <>
+                  <View className="flex-row items-center justify-center mt-2 mb-2">
+                    <View className="flex-1 h-[1px] bg-gray-200" />
+                    <Text className="text-gray-400 px-4 font-medium text-sm">Or</Text>
+                    <View className="flex-1 h-[1px] bg-gray-200" />
+                  </View>
+
+                  <AppleAuthentication.AppleAuthenticationButton
+                    buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
+                    buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
+                    cornerRadius={12}
+                    style={{ width: '100%', height: 56 }}
+                    onPress={handleAppleSignIn}
+                  />
+                </>
+              )}
             </View>
 
             {/* Footer */}
