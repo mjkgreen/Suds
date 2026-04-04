@@ -1,7 +1,6 @@
 import { Link } from 'expo-router';
 import React, { useState } from 'react';
 import {
-  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -10,11 +9,11 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '@/components/common/Button';
 import { useAuth } from '@/hooks/useAuth';
 import * as AppleAuthentication from 'expo-apple-authentication';
-import { AntDesign } from '@expo/vector-icons';
 
 export default function SignInScreen() {
   const { signInWithEmail, signInWithApple, signInWithGoogle } = useAuth();
@@ -66,9 +65,12 @@ export default function SignInScreen() {
           <View className="flex-1 px-6 pt-16 pb-10">
             {/* Header */}
             <View className="items-center mb-12">
-              <Text className="text-6xl mb-3">🍺</Text>
-              <Text className="text-4xl font-bold text-amber-600">Suds</Text>
-              <Text className="text-gray-500 text-base mt-1">Strava for your drinking</Text>
+              <Image
+                source={require('../../assets/Suds.png')}
+                style={{ width: 180, height: 80 }}
+                contentFit="contain"
+              />
+              <Text className="text-gray-500 text-base mt-2">Strava for your drinking</Text>
             </View>
 
             {/* Form */}
@@ -143,8 +145,9 @@ export default function SignInScreen() {
                   }
                 }}
                 disabled={loading}
-                variant="secondary"
+                variant="google"
                 size="lg"
+                icon={<Image source={require('../../assets/google-logo.svg')} style={{ width: 20, height: 20 }} contentFit="contain" />}
               />
             </View>
 
