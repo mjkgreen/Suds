@@ -1,6 +1,7 @@
 import { Link } from 'expo-router';
 import React, { useState } from 'react';
 import {
+  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -13,9 +14,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '@/components/common/Button';
 import { useAuth } from '@/hooks/useAuth';
 import * as AppleAuthentication from 'expo-apple-authentication';
+import { AntDesign } from '@expo/vector-icons';
 
 export default function SignInScreen() {
-  const { signInWithEmail, signInWithApple } = useAuth();
+  const { signInWithEmail, signInWithApple, signInWithGoogle } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -112,23 +114,38 @@ export default function SignInScreen() {
                 className="mt-2"
               />
 
-              {Platform.OS === 'ios' && (
-                <>
-                  <View className="flex-row items-center justify-center mt-2 mb-2">
-                    <View className="flex-1 h-[1px] bg-gray-200" />
-                    <Text className="text-gray-400 px-4 font-medium text-sm">Or</Text>
-                    <View className="flex-1 h-[1px] bg-gray-200" />
-                  </View>
+              <View className="flex-row items-center justify-center mt-2 mb-2">
+                <View className="flex-1 h-[1px] bg-gray-200" />
+                <Text className="text-gray-400 px-4 font-medium text-sm">Or</Text>
+                <View className="flex-1 h-[1px] bg-gray-200" />
+              </View>
 
-                  <AppleAuthentication.AppleAuthenticationButton
-                    buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
-                    buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
-                    cornerRadius={12}
-                    style={{ width: '100%', height: 56 }}
-                    onPress={handleAppleSignIn}
-                  />
-                </>
+              {Platform.OS === 'ios' && (
+                <AppleAuthentication.AppleAuthenticationButton
+                  buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
+                  buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
+                  cornerRadius={12}
+                  style={{ width: '100%', height: 56, marginBottom: 12 }}
+                  onPress={handleAppleSignIn}
+                />
               )}
+
+              <Button
+                label="Sign in with Google"
+                onPress={async () => {
+                  setLoading(true);
+                  try {
+                    await signInWithGoogle();
+                  } catch (err: any) {
+                    setError(err.message ?? 'Google sign-in failed.');
+                  } finally {
+                    setLoading(false);
+                  }
+                }}
+                disabled={loading}
+                variant="secondary"
+                size="lg"
+              />
             </View>
 
             {/* Footer */}

@@ -51,7 +51,13 @@
           "photosPermission": "Allow Suds to access your photos."
         }
       ],
-      "expo-font"
+      "expo-font",
+      [
+        "@react-native-google-signin/google-signin",
+        {
+          "iosUrlScheme": "com.googleusercontent.apps.213568095545-pmv2qmc5j2po98r8u4j1k936k50mif93"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

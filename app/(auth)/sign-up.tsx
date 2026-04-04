@@ -15,7 +15,7 @@ import { useAuth } from '@/hooks/useAuth';
 import * as AppleAuthentication from 'expo-apple-authentication';
 
 export default function SignUpScreen() {
-  const { signUpWithEmail, signInWithApple } = useAuth();
+  const { signUpWithEmail, signInWithApple, signInWithGoogle } = useAuth();
   const [email, setEmail] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -158,22 +158,39 @@ export default function SignUpScreen() {
                 className="mt-2"
               />
 
-              {Platform.OS === 'ios' && !success && (
-                <>
-                  <View className="flex-row items-center justify-center mt-2 mb-2">
-                    <View className="flex-1 h-[1px] bg-gray-200" />
-                    <Text className="text-gray-400 px-4 font-medium text-sm">Or</Text>
-                    <View className="flex-1 h-[1px] bg-gray-200" />
-                  </View>
+              <View className="flex-row items-center justify-center mt-2 mb-2">
+                <View className="flex-1 h-[1px] bg-gray-200" />
+                <Text className="text-gray-400 px-4 font-medium text-sm">Or</Text>
+                <View className="flex-1 h-[1px] bg-gray-200" />
+              </View>
 
-                  <AppleAuthentication.AppleAuthenticationButton
-                    buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_UP}
-                    buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
-                    cornerRadius={12}
-                    style={{ width: '100%', height: 56 }}
-                    onPress={handleAppleSignUp}
-                  />
-                </>
+              {Platform.OS === 'ios' && !success && (
+                <AppleAuthentication.AppleAuthenticationButton
+                  buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_UP}
+                  buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
+                  cornerRadius={12}
+                  style={{ width: '100%', height: 56, marginBottom: 12 }}
+                  onPress={handleAppleSignUp}
+                />
+              )}
+
+              {!success && (
+                <Button
+                  label="Sign up with Google"
+                  onPress={async () => {
+                    setLoading(true);
+                    try {
+                      await signInWithGoogle();
+                    } catch (err: any) {
+                      setError(err.message ?? 'Google sign-up failed.');
+                    } finally {
+                      setLoading(false);
+                    }
+                  }}
+                  disabled={loading}
+                  variant="secondary"
+                  size="lg"
+                />
               )}
             </View>
 

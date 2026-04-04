@@ -258,7 +258,7 @@ $$ LANGUAGE plpgsql STABLE SECURITY DEFINER;
 -- ============================================================
 -- PROFILE COUNTS VIEW (follower/following counts)
 -- ============================================================
-CREATE OR REPLACE VIEW public.profile_counts AS
+CREATE OR REPLACE VIEW public.profile_counts WITH (security_invoker = true) AS
 SELECT
   p.id,
   p.username,

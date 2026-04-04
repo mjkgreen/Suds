@@ -4,6 +4,19 @@ import { useAuthStore } from '@/stores/authStore';
 import { Profile } from '@/types/models';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import * as Crypto from 'expo-crypto';
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
+
+// Initialize Google Sign-in if we have either the web or ios client ID
+const webClientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
+const iosClientId = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID;
+
+if (webClientId || iosClientId) {
+  GoogleSignin.configure({
+    webClientId: webClientId,
+    iosClientId: iosClientId,
+    scopes: ['profile', 'email'],
+  });
+}
 
 export function useAuth() {
   const { session, user, profile, isLoading, setSession, setProfile, setLoading, signOut } =
@@ -103,6 +116,32 @@ export function useAuth() {
     }
   }
 
+  async function signInWithGoogle() {
+    try {
+      await GoogleSignin.hasPlayServices();
+      const response = await GoogleSignin.signIn();
+      const idToken = response.data?.idToken;
+
+      if (!idToken) {
+        throw new Error('No ID token present!');
+      }
+
+      const { error } = await supabase.auth.signInWithIdToken({
+        provider: 'google',
+        token: idToken,
+      });
+
+      if (error) {
+        throw error;
+      }
+    } catch (error: any) {
+      if (error.code === 'SIGN_IN_CANCELLED') {
+        return;
+      }
+      throw error;
+    }
+  }
+
   return {
     session,
     user,
@@ -111,6 +150,7 @@ export function useAuth() {
     signInWithEmail,
     signUpWithEmail,
     signInWithApple,
+    signInWithGoogle,
     signOut: handleSignOut,
   };
 }

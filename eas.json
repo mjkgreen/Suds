@@ -14,8 +14,10 @@
     "production": {
       "autoIncrement": true,
       "env": {
-        "EXPO_PUBLIC_SUPABASE_URL": "https://uhoindopfhqjtesnhjvf.supabase.co",
-        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_FacL7un_d79DQ1zxcUnesw_vDqUIR6X"
+        "EXPO_PUBLIC_SUPABASE_URL": "https://gbenibgytweskljxneup.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_D8CpBizTY011eE0KYQkIig_wRSf4hDZ",
+        "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID": "213568095545-pmv2qmc5j2po98r8u4j1k936k50mif93.apps.googleusercontent.com",
+        "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "213568095545-hgsekaqeeeu4s3iordh7tb8bbit0lmi0.apps.googleusercontent.com"
       }
     }
   },
