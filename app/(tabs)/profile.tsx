@@ -187,7 +187,7 @@ export default function ProfileScreen() {
   const topEdges = activeSession ? [] : ["top" as const];
   const { signOut } = useAuth();
   const { mutateAsync: endSession, isPending: isEnding } = useEndSession();
-  const [activeTab, setActiveTab] = useState<Tab>("activities");
+  const [activeTab, setActiveTab] = useState<Tab>("progress");
 
   const { themePreference, setThemePreference } = useThemeStore();
   const { locationEnabled, setLocationEnabled } = usePrefsStore();
