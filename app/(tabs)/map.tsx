@@ -105,7 +105,7 @@ export default function MapScreen() {
         .not('location_lng', 'is', null)
         .in('user_id', allIds)
         .order('logged_at', { ascending: false })
-        .limit(300);
+        .limit(1000);
 
       if (error) throw error;
       return data as (DrinkLog & { profile: any })[];

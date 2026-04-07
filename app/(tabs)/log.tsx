@@ -174,7 +174,7 @@ export default function LogScreen() {
           <ScrollView
             className="flex-1"
             contentContainerStyle={{ paddingBottom: 150 }}
-            keyboardShouldPersistTaps="handled"
+            keyboardShouldPersistTaps="always"
           >
             {/* Session Banner */}
             <View className="px-6 pt-4 pb-0">

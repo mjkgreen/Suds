@@ -66,14 +66,18 @@ function parseFeedRows(data: any[]): FeedEntry[] {
   return entries;
 }
 
-async function fetchFeedPage(userId: string, offset: number): Promise<FeedEntry[]> {
+async function fetchFeedPage(userId: string, offset: number): Promise<{ entries: FeedEntry[], rawCount: number }> {
   const { data, error } = await (supabase.rpc as any)('get_feed', {
     p_user_id: userId,
     p_limit: FEED_PAGE_SIZE,
     p_offset: offset,
   });
   if (error) throw error;
-  return parseFeedRows(data ?? []);
+  const rawData = data ?? [];
+  return { 
+    entries: parseFeedRows(rawData),
+    rawCount: rawData.length 
+  };
 }
 
 export function useFeed(userId: string | undefined) {
@@ -81,7 +85,7 @@ export function useFeed(userId: string | undefined) {
     queryKey: ['feed', userId],
     queryFn: ({ pageParam = 0 }) => fetchFeedPage(userId!, pageParam),
     getNextPageParam: (lastPage, allPages) =>
-      lastPage.length === FEED_PAGE_SIZE
+      lastPage.rawCount === FEED_PAGE_SIZE
         ? allPages.length * FEED_PAGE_SIZE
         : undefined,
     initialPageParam: 0,
@@ -91,26 +95,32 @@ export function useFeed(userId: string | undefined) {
 
 /**
  * Fetches ALL of the current user's own drink/session history as feed cards.
- * Fetches pages of 100 raw rows, filters to own user_id, and keeps paginating
- * until an empty page is returned — so no artificial date cap.
+ * Uses a direct table query for efficiency instead of filtering the global feed.
  */
 export function useMyFeed(userId: string | undefined) {
+  const PAGE_SIZE = 100;
+
   return useInfiniteQuery({
     queryKey: ['my-feed', userId],
     queryFn: async ({ pageParam = 0 }) => {
       const { data, error } = await (supabase.rpc as any)('get_feed', {
         p_user_id: userId!,
-        p_limit: 100,
+        p_limit: PAGE_SIZE,
         p_offset: pageParam,
       });
+
       if (error) throw error;
-      // Keep only the current user's rows before grouping
-      const own = (data ?? []).filter((row: any) => row.user_id === userId);
-      return parseFeedRows(own);
+      
+      const rawData = data ?? [];
+      const own = rawData.filter((row: any) => row.user_id === userId);
+
+      return {
+        entries: parseFeedRows(own),
+        rawCount: rawData.length
+      };
     },
-    // Keep fetching until we get an empty page back from the server
-    getNextPageParam: (lastPage, allPages) =>
-      lastPage.length > 0 ? allPages.length * 100 : undefined,
+    getNextPageParam: (lastPage: any, allPages: any) =>
+      lastPage.rawCount === PAGE_SIZE ? allPages.length * PAGE_SIZE : undefined,
     initialPageParam: 0,
     enabled: !!userId,
   });

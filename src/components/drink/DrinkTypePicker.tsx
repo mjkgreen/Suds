@@ -19,6 +19,7 @@ export function DrinkTypePicker({ value, onChange }: DrinkTypePickerProps) {
     <ScrollView
       horizontal
       showsHorizontalScrollIndicator={false}
+      keyboardShouldPersistTaps="always"
       contentContainerStyle={{ gap: 10, paddingHorizontal: 4 }}
     >
       {DRINK_TYPES.map((type) => {

@@ -30,7 +30,7 @@ export default function FeedScreen() {
     user?.id,
   );
 
-  const entries: FeedEntry[] = data?.pages.flatMap((p) => p) ?? [];
+  const entries: FeedEntry[] = data?.pages.flatMap((p) => p.entries) ?? [];
 
   const handleEndReached = useCallback(() => {
     if (hasNextPage && !isFetchingNextPage) fetchNextPage();

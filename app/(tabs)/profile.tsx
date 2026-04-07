@@ -208,7 +208,7 @@ export default function ProfileScreen() {
     refetch: refetchFeed,
   } = useMyFeed(user?.id);
 
-  const myEntries: FeedEntry[] = feedData?.pages.flatMap((p) => p) ?? [];
+  const myEntries: FeedEntry[] = feedData?.pages.flatMap((p) => p.entries) ?? [];
 
   const handleEndReached = useCallback(() => {
     if (hasNextPage && !isFetchingNextPage) fetchNextPage();

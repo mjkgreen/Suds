@@ -66,9 +66,13 @@ export function CombinedDrinkInput({
         onChangeText={handleTextChange}
         onFocus={() => setFocused(true)}
         onBlur={() => {
-          setTimeout(() => setFocused(false), 150);
+          // Increased timeout slightly to ensure suggestions aren't dismissed before the tap registers
+          setTimeout(() => setFocused(false), 200);
         }}
+        autoCorrect={false}
+        spellCheck={false}
         returnKeyType="done"
+        autoCapitalize="sentences"
         blurOnSubmit
       />
       {showDropdown && (
