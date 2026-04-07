@@ -20,6 +20,12 @@ export interface Database {
           display_name: string | null;
           avatar_url: string | null;
           bio: string | null;
+          height: number | null;
+          height_unit: string | null;
+          weight: number | null;
+          weight_unit: string | null;
+          age: number | null;
+          onboarded: boolean;
           created_at: string;
           updated_at: string;
         };
@@ -29,6 +35,12 @@ export interface Database {
           display_name?: string | null;
           avatar_url?: string | null;
           bio?: string | null;
+          height?: number | null;
+          height_unit?: string | null;
+          weight?: number | null;
+          weight_unit?: string | null;
+          age?: number | null;
+          onboarded?: boolean;
           created_at?: string;
           updated_at?: string;
         };
@@ -37,6 +49,12 @@ export interface Database {
           display_name?: string | null;
           avatar_url?: string | null;
           bio?: string | null;
+          height?: number | null;
+          height_unit?: string | null;
+          weight?: number | null;
+          weight_unit?: string | null;
+          age?: number | null;
+          onboarded?: boolean;
           updated_at?: string;
         };
       };
@@ -54,6 +72,7 @@ export interface Database {
           photo_url: string | null;
           session_id: string | null;
           logged_at: string;
+          ended_at: string | null;
           created_at: string;
         };
         Insert: {
@@ -69,6 +88,7 @@ export interface Database {
           photo_url?: string | null;
           session_id?: string | null;
           logged_at?: string;
+          ended_at?: string | null;
           created_at?: string;
         };
         Update: {
@@ -82,6 +102,7 @@ export interface Database {
           photo_url?: string | null;
           session_id?: string | null;
           logged_at?: string;
+          ended_at?: string | null;
         };
       };
       follows: {
@@ -102,12 +123,29 @@ export interface Database {
     Functions: {
       get_feed: {
         Args: { p_user_id: string; p_limit: number; p_offset: number };
-        Returns: (Database['public']['Tables']['drink_logs']['Row'] & {
+        Returns: {
+          id: string;
+          user_id: string;
+          drink_type: string;
+          drink_name: string | null;
+          brand: string | null;
+          quantity: number;
+          location_name: string | null;
+          location_lat: number | null;
+          location_lng: number | null;
+          notes: string | null;
+          photo_url: string | null;
+          rating: number | null;
+          event_name: string | null;
+          logged_at: string;
+          ended_at: string | null;
+          created_at: string;
           username: string;
           display_name: string | null;
           avatar_url: string | null;
+          session_id: string | null;
           session_title: string | null;
-        })[];
+        }[];
       };
       get_user_stats: {
         Args: { p_user_id: string };

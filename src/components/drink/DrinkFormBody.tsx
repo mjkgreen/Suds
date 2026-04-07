@@ -137,17 +137,58 @@ export function DrinkFormBody({
           </View>
         </View>
 
-        {/* When */}
-        <View>
-          <Text className="text-foreground font-semibold mb-2">When</Text>
-          <Controller
-            control={control}
-            name="logged_at"
-            render={({ field: { value, onChange } }) => (
-              <SimpleDateTimePicker value={value || new Date().toISOString()} onChange={onChange} />
+        {/* Times Row */}
+        <View className="flex-row gap-4">
+          <View className="flex-1">
+            <Text className="text-foreground font-semibold mb-2">Started At</Text>
+            <Controller
+              control={control}
+              name="logged_at"
+              render={({ field: { value, onChange } }) => (
+                <SimpleDateTimePicker value={value || new Date().toISOString()} onChange={onChange} />
+              )}
+            />
+          </View>
+
+          {/* Ended At */}
+          <View className="flex-1">
+            <View className="flex-row items-center justify-between mb-2">
+              <Text className="text-foreground font-semibold">Ended At</Text>
+              {watch("ended_at") && (
+                <Pressable onPress={() => setValue("ended_at", undefined)}>
+                  <Text className="text-destructive text-xs">Clear</Text>
+                </Pressable>
+              )}
+            </View>
+            {watch("ended_at") ? (
+              <Controller
+                control={control}
+                name="ended_at"
+                render={({ field: { value, onChange } }) => (
+                  <SimpleDateTimePicker
+                    value={value || ""}
+                    onChange={onChange}
+                    label="End Time"
+                  />
+                )}
+              />
+            ) : (
+              <Pressable
+                onPress={() => {
+                  const baseTime = watch("logged_at") ? new Date(watch("logged_at")!) : new Date();
+                  baseTime.setHours(baseTime.getHours() + 2);
+                  setValue("ended_at", baseTime.toISOString());
+                }}
+                className="bg-card border border-border border-dashed rounded-xl px-4 py-3 items-center justify-center"
+              >
+                <Text className="text-muted-foreground text-sm font-medium">+ Add Time</Text>
+              </Pressable>
             )}
-          />
+          </View>
         </View>
+        <Text className="text-muted-foreground text-[10px] mt-1 italic">
+          Optional: Specify if these drinks were consumed over a period.
+        </Text>
 
         {/* Location */}
         <View>
@@ -160,8 +201,8 @@ export function DrinkFormBody({
                 value={value}
                 onChange={(name, lat, lng) => {
                   setValue("location_name", name);
-                  if (lat !== undefined) setValue("location_lat", lat);
-                  if (lng !== undefined) setValue("location_lng", lng);
+                  setValue("location_lat", lat);
+                  setValue("location_lng", lng);
                 }}
                 onClear={onClearLocation}
               />

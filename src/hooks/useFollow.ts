@@ -22,7 +22,7 @@ export function useFollow(currentUserId: string | undefined) {
 
   const followMutation = useMutation({
     mutationFn: async (targetUserId: string) => {
-      const { error } = await supabase.from('follows').insert({
+      const { error } = await (supabase.from('follows') as any).insert({
         follower_id: currentUserId!,
         following_id: targetUserId,
       });
@@ -54,4 +54,42 @@ export function useFollow(currentUserId: string | undefined) {
   });
 
   return { follow: followMutation, unfollow: unfollowMutation };
+}
+
+export function useFollowers(userId: string | undefined) {
+  return useQuery({
+    queryKey: ['followers', userId],
+    queryFn: async () => {
+      const { data, error } = await (supabase
+        .from('follows')
+        .select(`
+          follower_id,
+          profile:profiles!follower_id(*)
+        `)
+        .eq('following_id', userId!) as any);
+      if (error) throw error;
+      // return an array of profiles
+      // ignore rows where profile might be missing due to referential integrity issues though they shouldn't occur
+      return data.map((row: any) => row.profile).filter(Boolean);
+    },
+    enabled: !!userId,
+  });
+}
+
+export function useFollowing(userId: string | undefined) {
+  return useQuery({
+    queryKey: ['following', userId],
+    queryFn: async () => {
+      const { data, error } = await (supabase
+        .from('follows')
+        .select(`
+          following_id,
+          profile:profiles!following_id(*)
+        `)
+        .eq('follower_id', userId!) as any);
+      if (error) throw error;
+      return data.map((row: any) => row.profile).filter(Boolean);
+    },
+    enabled: !!userId,
+  });
 }

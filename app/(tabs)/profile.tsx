@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import React, { useState } from "react";
+import React, { useCallback, useState } from "react";
 import { ActivityIndicator, FlatList, Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Avatar } from "@/components/common/Avatar";
@@ -14,15 +14,16 @@ import { MilestoneBanner } from "@/components/profile/MilestoneBanner";
 import { StreakCard } from "@/components/profile/StreakCard";
 import { ActivityCalendar } from "@/components/profile/ActivityCalendar";
 import { useAuth } from "@/hooks/useAuth";
-import { useMyDrinkLogs } from "@/hooks/useDrinkLog";
+import { useMyFeed } from "@/hooks/useFeed";
 import { useMilestones } from "@/hooks/useMilestones";
 import { useProfile, useUserStats } from "@/hooks/useProfile";
 import { useStreaks } from "@/hooks/useStreaks";
 import { useAuthStore } from "@/stores/authStore";
-import { useActiveSession } from "@/hooks/useSession";
-import { DrinkLog, DrinkType } from "@/types/models";
-import { formatDateTime } from "@/utils/dateHelpers";
+import { useActiveSession, useEndSession } from "@/hooks/useSession";
+import { DrinkType, FeedEntry } from "@/types/models";
 import { getDisplayName, getUsername } from "@/utils/profileHelpers";
+import { DrinkCard } from "@/components/drink/DrinkCard";
+import { SessionCard } from "@/components/session/SessionCard";
 import { DrinkIcon } from "@/components/icons/DrinkIcon";
 import { DRINK_TYPE_MAP } from "@/lib/constants";
 import { useThemeStore } from "@/stores/themeStore";
@@ -160,32 +161,7 @@ function StatBlock({ label, value }: { label: string; value: string | number }) 
   );
 }
 
-function DrinkLogRow({ item }: { item: DrinkLog }) {
-  const info = DRINK_TYPE_MAP[item.drink_type as DrinkType] ?? DRINK_TYPE_MAP["other"];
-  return (
-    <View className="flex-row items-center px-6 py-3 border-b border-border">
-      <View
-        style={{ backgroundColor: info.color + "15" }}
-        className="w-9 h-9 rounded-xl items-center justify-center mr-3"
-      >
-        <DrinkIcon type={item.drink_type as DrinkType} size={18} color={info.color} />
-      </View>
-      <View className="flex-1">
-        <Text className="text-foreground font-medium">
-          {item.drink_name || info.label}
-          {item.quantity !== 1 && <Text className="text-muted-foreground font-normal"> × {item.quantity}</Text>}
-        </Text>
-        {item.location_name && (
-          <View className="flex-row items-center gap-1">
-            <Ionicons name="location-outline" size={11} color="#9ca3af" />
-            <Text className="text-muted-foreground text-xs">{item.location_name}</Text>
-          </View>
-        )}
-      </View>
-      <Text className="text-muted-foreground text-xs">{formatDateTime(item.logged_at)}</Text>
-    </View>
-  );
-}
+
 
 function TabBar({ active, onChange }: { active: Tab; onChange: (t: Tab) => void }) {
   return (
@@ -210,6 +186,7 @@ export default function ProfileScreen() {
   const activeSession = useActiveSession();
   const topEdges = activeSession ? [] : ["top" as const];
   const { signOut } = useAuth();
+  const { mutateAsync: endSession, isPending: isEnding } = useEndSession();
   const [activeTab, setActiveTab] = useState<Tab>("activities");
 
   const { themePreference, setThemePreference } = useThemeStore();
@@ -218,11 +195,26 @@ export default function ProfileScreen() {
 
   const { data: profile, isLoading: profileLoading, refetch: refetchProfile } = useProfile(user?.id);
   const { data: stats, refetch: refetchStats } = useUserStats(user?.id);
-  const { data: logs, isLoading: logsLoading, refetch: refetchLogs } = useMyDrinkLogs(user?.id);
   const { data: streaks } = useStreaks(user?.id);
   const { data: milestones } = useMilestones(user?.id);
 
-  const isLoading = profileLoading || logsLoading;
+  // My feed — all of the current user's own drinks & nights out, no cap
+  const {
+    data: feedData,
+    isLoading: feedLoading,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    refetch: refetchFeed,
+  } = useMyFeed(user?.id);
+
+  const myEntries: FeedEntry[] = feedData?.pages.flatMap((p) => p) ?? [];
+
+  const handleEndReached = useCallback(() => {
+    if (hasNextPage && !isFetchingNextPage) fetchNextPage();
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+  const isLoading = profileLoading || feedLoading;
 
   if (isLoading) {
     return (
@@ -250,8 +242,11 @@ export default function ProfileScreen() {
                 <Text className="text-primary-foreground font-bold text-sm">Upgrade</Text>
               </Pressable>
             )}
-            <Pressable className="bg-accent rounded-xl px-4 py-2" onPress={() => router.push("/user/edit")}>
-              <Text className="text-accent-foreground font-medium text-sm">Edit</Text>
+            <Pressable className="bg-accent rounded-xl p-2" onPress={() => router.push("/user/edit")}>
+              <Ionicons name="pencil-sharp" size={20} color="#6b7280" />
+            </Pressable>
+            <Pressable className="bg-accent rounded-xl p-2" onPress={() => router.push("/user/settings")}>
+              <Ionicons name="settings-outline" size={20} color="#6b7280" />
             </Pressable>
             <Pressable className="bg-accent rounded-xl p-2" onPress={signOut}>
               <Ionicons name="log-out-outline" size={20} color="#6b7280" />
@@ -265,47 +260,19 @@ export default function ProfileScreen() {
 
         <View className="flex-row items-center justify-between mt-3">
           <View className="flex-row gap-6">
-            <Text className="text-muted-foreground text-sm">
-              <Text className="font-bold text-foreground">{profile?.followers_count ?? 0}</Text> Followers
-            </Text>
-            <Text className="text-muted-foreground text-sm">
-              <Text className="font-bold text-foreground">{profile?.following_count ?? 0}</Text> Following
-            </Text>
-          </View>
-
-          <View className="flex-row gap-2">
-            <Pressable
-              onPress={() => setLocationEnabled(!locationEnabled)}
-              className="flex-row items-center gap-1.5 bg-accent rounded-full px-3 py-1.5"
-            >
-              <Ionicons
-                name={locationEnabled ? "location" : "location-outline"}
-                size={14}
-                color={locationEnabled ? "#f59e0b" : "hsl(var(--muted-foreground))"}
-              />
-              <Text className={`text-xs font-bold ${locationEnabled ? "text-primary" : "text-muted-foreground"}`}>
-                Location
+            <Pressable onPress={() => user?.id && router.push(`/user/${user.id}/followers`)}>
+              <Text className="text-muted-foreground text-sm">
+                <Text className="font-bold text-foreground">{profile?.followers_count ?? 0}</Text> Followers
               </Text>
             </Pressable>
-
-            <Pressable
-              onPress={() => {
-                const options: ("light" | "dark" | "system")[] = ["light", "dark", "system"];
-                const nextIndex = (options.indexOf(themePreference) + 1) % options.length;
-                setThemePreference(options[nextIndex]);
-              }}
-              className="flex-row items-center gap-1.5 bg-accent rounded-full px-3 py-1.5"
-            >
-              <Ionicons
-                name={themePreference === "light" ? "sunny" : themePreference === "dark" ? "moon" : "contrast"}
-                size={14}
-                color="hsl(var(--foreground))"
-              />
-              <Text className="text-foreground text-xs font-bold capitalize">
-                {themePreference === "system" ? "System" : themePreference}
+            <Pressable onPress={() => user?.id && router.push(`/user/${user.id}/following`)}>
+              <Text className="text-muted-foreground text-sm">
+                <Text className="font-bold text-foreground">{profile?.following_count ?? 0}</Text> Following
               </Text>
             </Pressable>
           </View>
+
+
         </View>
       </View>
     );
@@ -313,7 +280,7 @@ export default function ProfileScreen() {
 
   function onRefresh() {
     refetchProfile();
-    refetchLogs();
+    refetchFeed();
     refetchStats();
   }
 
@@ -354,6 +321,36 @@ export default function ProfileScreen() {
               </View>
             </View>
           )}
+
+          {/* {profile && (
+            <View className="bg-card mx-4 mt-4 rounded-2xl p-4">
+              <Text className="text-xs text-muted-foreground mb-3 font-medium uppercase tracking-wide">
+                Personal Info
+              </Text>
+              <View className="flex-row justify-between">
+                <View className="flex-1">
+                  <Text className="text-foreground font-bold text-lg">{profile.age ?? "—"}</Text>
+                  <Text className="text-xs text-muted-foreground">Age</Text>
+                </View>
+                <View className="flex-1">
+                  <Text className="text-foreground font-bold text-lg">
+                    {profile.height 
+                      ? profile.height_unit === 'in' 
+                        ? `${Math.floor(profile.height / 12)}'${profile.height % 12}"`
+                        : `${profile.height} cm`
+                      : "—"}
+                  </Text>
+                  <Text className="text-xs text-muted-foreground">Height</Text>
+                </View>
+                <View className="flex-1">
+                  <Text className="text-foreground font-bold text-lg">
+                    {profile.weight ? `${profile.weight} ${profile.weight_unit}` : "—"}
+                  </Text>
+                  <Text className="text-xs text-muted-foreground">Weight</Text>
+                </View>
+              </View>
+            </View>
+          )} */}
 
           <PremiumGate featureName="Top Drinks" preview={<TopDrinksPreview />}>
             {stats?.favorite_drink_types &&
@@ -414,17 +411,29 @@ export default function ProfileScreen() {
   return (
     <SafeAreaView className="flex-1 bg-background" edges={topEdges}>
       <FlatList
-        data={logs ?? []}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => <DrinkLogRow item={item} />}
+        data={myEntries}
+        keyExtractor={(entry) =>
+          entry.type === "session" ? `session-${entry.session_id}` : `drink-${entry.item.id}`
+        }
+        renderItem={({ item: entry }) => {
+          if (entry.type === "session") {
+            const isActive = !!activeSession && entry.session_id === activeSession.id;
+            return (
+              <SessionCard
+                group={entry}
+                isActive={isActive}
+                onEnd={isActive ? () => endSession(activeSession!.id) : undefined}
+                isEnding={isActive ? isEnding : undefined}
+              />
+            );
+          }
+          return <DrinkCard item={entry.item} />;
+        }}
         refreshControl={<RefreshControl refreshing={false} onRefresh={onRefresh} tintColor="#f59e0b" />}
         ListHeaderComponent={
           <View>
             <ProfileHeader />
             <TabBar active={activeTab} onChange={setActiveTab} />
-            <View className="px-6 pt-5 pb-2">
-              <Text className="text-base font-bold text-muted-foreground">Drink History</Text>
-            </View>
           </View>
         }
         ListEmptyComponent={
@@ -433,6 +442,15 @@ export default function ProfileScreen() {
             <Text className="text-muted-foreground text-center">No drinks logged yet. Crack one open!</Text>
           </View>
         }
+        ListFooterComponent={
+          isFetchingNextPage ? (
+            <View className="py-4 items-center">
+              <ActivityIndicator color="#f59e0b" />
+            </View>
+          ) : null
+        }
+        onEndReached={handleEndReached}
+        onEndReachedThreshold={0.4}
         contentContainerStyle={{ paddingBottom: 24 }}
       />
     </SafeAreaView>

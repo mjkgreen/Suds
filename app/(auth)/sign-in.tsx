@@ -70,7 +70,7 @@ export default function SignInScreen() {
                 style={{ width: 180, height: 80 }}
                 contentFit="contain"
               />
-              <Text className="text-gray-500 text-base mt-2">Strava for your drinking</Text>
+              <Text className="text-gray-500 text-base mt-2">Social drinking tracker</Text>
             </View>
 
             {/* Form */}

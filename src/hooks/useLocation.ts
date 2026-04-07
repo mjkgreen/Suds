@@ -5,6 +5,7 @@ interface LocationResult {
   lat: number;
   lng: number;
   name?: string;
+  address?: Location.LocationGeocodedAddress;
 }
 
 export function useLocation() {
@@ -31,7 +32,7 @@ export function useLocation() {
         ? [address.name, address.street, address.city].filter(Boolean).join(', ')
         : undefined;
 
-      return { lat, lng, name };
+      return { lat, lng, name, address };
     } catch (err) {
       setError('Could not get location.');
       return null;

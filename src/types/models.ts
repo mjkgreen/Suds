@@ -15,6 +15,12 @@ export interface Profile {
   display_name: string | null;
   avatar_url: string | null;
   bio: string | null;
+  height: number | null;
+  height_unit: 'cm' | 'in' | null;
+  weight: number | null;
+  weight_unit: 'kg' | 'lb' | null;
+  age: number | null;
+  onboarded: boolean;
   subscription_tier: SubscriptionTier;
   created_at: string;
   updated_at: string;
@@ -40,6 +46,7 @@ export interface DrinkLog {
   event_name: string | null;
   session_id: string | null;
   logged_at: string;
+  ended_at: string | null;
   created_at: string;
   // Joined
   profile?: Profile;
@@ -72,7 +79,7 @@ export interface UserStats {
 
 export interface FeedItem extends DrinkLog {
   profile: Profile;
-  session_id?: string | null;
+  session_id: string | null;
   session_title?: string | null;
 }
 
@@ -172,4 +179,5 @@ export type LogDrinkFormData = {
   rating: number;
   photo_url?: string;
   logged_at?: string;
+  ended_at?: string;
 };

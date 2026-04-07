@@ -12,6 +12,7 @@ import { useLocation } from "@/hooks/useLocation";
 import { useActiveSession, useEndSession } from "@/hooks/useSession";
 import { useAuthStore } from "@/stores/authStore";
 import { usePrefsStore } from "@/stores/prefsStore";
+import { sanitizeGPSResult } from "@/utils/locationPrivacy";
 import { LogDrinkFormData } from "@/types/models";
 
 const DEFAULT_VALUES: LogDrinkFormData = {
@@ -33,7 +34,7 @@ export default function LogScreen() {
   const activeSession = useActiveSession();
   const { mutateAsync: endSession, isPending: isEnding } = useEndSession();
 
-  const { locationEnabled } = usePrefsStore();
+  const { locationEnabled, hideAddresses } = usePrefsStore();
 
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [photoBase64, setPhotoBase64] = useState<string | null>(null);
@@ -78,14 +79,21 @@ export default function LogScreen() {
       if (locationEnabled && !locationClearedByUser && !params.lat && !params.lng && !locationName) {
         getCurrentLocation().then((result) => {
           if (result) {
-            const name = result.name ?? `${result.lat.toFixed(4)}, ${result.lng.toFixed(4)}`;
+            const { name, lat, lng } = hideAddresses
+              ? sanitizeGPSResult(result.lat, result.lng, result.address)
+              : {
+                  name: result.name ?? `${result.lat.toFixed(4)}, ${result.lng.toFixed(4)}`,
+                  lat: result.lat,
+                  lng: result.lng,
+                };
+
             setValue("location_name", name);
-            setValue("location_lat", result.lat);
-            setValue("location_lng", result.lng);
+            setValue("location_lat", lat);
+            setValue("location_lng", lng);
           }
         });
       }
-    }, [locationEnabled, locationClearedByUser, params.lat, params.lng, locationName]),
+    }, [locationEnabled, hideAddresses, locationClearedByUser, params.lat, params.lng, locationName]),
   );
 
   async function handlePickPhoto() {

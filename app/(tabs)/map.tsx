@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import * as Location from 'expo-location';
 import { useRouter } from 'expo-router';
@@ -87,58 +87,50 @@ export default function MapScreen() {
   }
 
   const { data: logs, isLoading } = useQuery({
-    queryKey: ['mapLogs', user?.id, filter],
+    queryKey: ['mapLogs', user?.id],
     queryFn: async () => {
       if (!user) return [];
 
-      let query = supabase
+      const { data: follows } = await supabase
+        .from('follows')
+        .select('following_id')
+        .eq('follower_id', user.id);
+      const ids = (follows as { following_id: string }[] | null ?? []).map((f) => f.following_id);
+      const allIds = [user.id, ...ids];
+
+      const { data, error } = await supabase
         .from('drink_logs')
         .select('*, profile:profiles(id, username, display_name, avatar_url)')
         .not('location_lat', 'is', null)
         .not('location_lng', 'is', null)
+        .in('user_id', allIds)
         .order('logged_at', { ascending: false })
-        .limit(200);
+        .limit(300);
 
-      if (filter === 'friends') {
-        const { data: follows } = await supabase
-          .from('follows')
-          .select('following_id')
-          .eq('follower_id', user.id);
-        const ids = (follows as { following_id: string }[] | null ?? []).map((f) => f.following_id);
-        if (ids.length === 0) return [];
-        query = query.in('user_id', ids);
-      } else {
-        query = query.eq('user_id', user.id);
-      }
-
-      const { data, error } = await query;
       if (error) throw error;
       return data as (DrinkLog & { profile: any })[];
     },
     enabled: !!user,
   });
 
-  const initialRegion = useMemo(() => {
-    if (!logs?.length) return INITIAL_REGION;
-    const avgLat = logs.reduce((s, l) => s + (l.location_lat ?? 0), 0) / logs.length;
-    const avgLng = logs.reduce((s, l) => s + (l.location_lng ?? 0), 0) / logs.length;
-    return { latitude: avgLat, longitude: avgLng, latitudeDelta: 0.1, longitudeDelta: 0.1 };
-  }, [logs]);
+
 
   // Group nearby logs into clusters (~100m radius via 3-decimal rounding)
   const clusters = useMemo(() => {
-    const groups = new Map<string, (DrinkLog & { profile: any })[]>();
+    const groups = new Map<string, { items: (DrinkLog & { profile: any })[], isMine: boolean }>();
     for (const log of logs ?? []) {
       if (!log.location_lat || !log.location_lng) continue;
-      const key = `${log.location_lat.toFixed(3)},${log.location_lng.toFixed(3)}`;
-      const existing = groups.get(key) ?? [];
-      groups.set(key, [...existing, log]);
+      const isMine = log.user_id === user?.id;
+      const key = `${isMine ? 'mine' : 'friend'}-${log.location_lat.toFixed(3)},${log.location_lng.toFixed(3)}`;
+      const existing = groups.get(key) ?? { items: [], isMine };
+      groups.set(key, { ...existing, items: [...existing.items, log] });
     }
-    return Array.from(groups.entries()).map(([key, items]) => {
-      const [lat, lng] = key.split(',').map(Number);
-      return { lat, lng, items };
+    return Array.from(groups.entries()).map(([key, data]) => {
+      const coordsPart = key.slice(key.indexOf('-') + 1);
+      const [lat, lng] = coordsPart.split(',').map(Number);
+      return { lat, lng, items: data.items, isMine: data.isMine };
     });
-  }, [logs]);
+  }, [logs, user?.id]);
 
   return (
     <SafeAreaView className="flex-1 bg-background" edges={topEdges}>
@@ -169,7 +161,7 @@ export default function MapScreen() {
       <MapView
         ref={mapRef}
         style={{ width, height: height - 84 }}
-        initialRegion={initialRegion}
+        initialRegion={INITIAL_REGION}
         showsUserLocation
         showsMyLocationButton
         onMapReady={() => {
@@ -185,7 +177,11 @@ export default function MapScreen() {
         }}
         onLongPress={handleLongPress}
       >
-        {clusters.map(({ lat, lng, items }) => {
+        {clusters.map(({ lat, lng, items, isMine }) => {
+            const isVisible = filter === 'mine' ? isMine : !isMine;
+            const opacity = isVisible ? 1 : 0;
+            const pointerEvents = isVisible ? 'auto' : 'none';
+
             if (items.length === 1) {
               const log = items[0];
               const info = DRINK_TYPE_MAP[log.drink_type as DrinkType] ?? DRINK_TYPE_MAP['other'];
@@ -194,8 +190,10 @@ export default function MapScreen() {
                   key={log.id}
                   coordinate={{ latitude: lat, longitude: lng }}
                   title={log.drink_name || info.label}
+                  opacity={opacity}
                 >
                   <View
+                    pointerEvents={pointerEvents as any}
                     style={{ backgroundColor: info.color }}
                     className="w-9 h-9 rounded-full items-center justify-center shadow border-2 border-card"
                   >
@@ -227,10 +225,11 @@ export default function MapScreen() {
             const preview = items.slice(0, 3);
             return (
               <Marker
-                key={`cluster-${lat}-${lng}`}
+                key={`cluster-${lat}-${lng}-${isMine ? 'mine' : 'friend'}`}
                 coordinate={{ latitude: lat, longitude: lng }}
+                opacity={opacity}
               >
-                <View className="items-center justify-center">
+                <View className="items-center justify-center" pointerEvents={pointerEvents as any}>
                   <View className="w-11 h-11 rounded-full bg-primary items-center justify-center shadow border-2 border-card">
                     <Text className="text-primary-foreground font-bold text-sm">{items.length}</Text>
                   </View>

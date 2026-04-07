@@ -1,6 +1,6 @@
 # Suds 🍺
 
-**Suds** is the "Strava for drinking" — a social iOS and Android app for logging alcoholic beverages, following friends, and tracking your personal stats and streaks.
+**Suds** is the social app for logging alcoholic beverages, following friends, and tracking your personal stats and streaks.
 
 Built with **Expo**, **Supabase**, and **RevenueCat**, Suds combines habit tracking with a social layer to help you stay mindful and share your recreational drinking journey with friends.
 

@@ -10,12 +10,8 @@ import {
 } from 'react-native';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useLocation } from '@/hooks/useLocation';
-
-interface LocationResult {
-  lat: number;
-  lng: number;
-  name: string;
-}
+import { usePrefsStore } from '@/stores/prefsStore';
+import { NominatimAddress, sanitizeGPSResult, sanitizeNominatimResult } from '@/utils/locationPrivacy';
 
 interface LocationPickerProps {
   value: string;
@@ -28,6 +24,7 @@ interface NominatimResult {
   display_name: string;
   lat: string;
   lon: string;
+  address?: NominatimAddress;
 }
 
 async function searchPlaces(query: string): Promise<NominatimResult[]> {
@@ -44,6 +41,7 @@ export function LocationPicker({ value, onChange, onClear }: LocationPickerProps
   const [searching, setSearching] = useState(false);
   const debouncedQuery = useDebounce(query, 400);
   const { getCurrentLocation, isLoading: isGettingGPS } = useLocation();
+  const { hideAddresses } = usePrefsStore();
   const suppressSearch = useRef(false);
 
   useEffect(() => {
@@ -73,22 +71,47 @@ export function LocationPicker({ value, onChange, onClear }: LocationPickerProps
   }, [debouncedQuery]);
 
   function handleSelect(result: NominatimResult) {
-    const name = result.display_name.split(',').slice(0, 2).join(', ');
+    const rawLat = parseFloat(result.lat);
+    const rawLng = parseFloat(result.lon);
+
+    const { name, lat, lng } = hideAddresses
+      ? sanitizeNominatimResult(result.display_name, rawLat, rawLng, result.address)
+      : { name: result.display_name.split(', ').slice(0, 2).join(', '), lat: rawLat, lng: rawLng };
+
     suppressSearch.current = true;
     setQuery(name);
     setShowSuggestions(false);
-    onChange(name, parseFloat(result.lat), parseFloat(result.lon));
+    onChange(name, lat, lng);
   }
 
   async function handleGPS() {
     const result = await getCurrentLocation();
-    if (result) {
-      const name = result.name ?? `${result.lat.toFixed(4)}, ${result.lng.toFixed(4)}`;
-      suppressSearch.current = true;
-      setQuery(name);
-      setShowSuggestions(false);
-      onChange(name, result.lat, result.lng);
-    }
+    if (!result) return;
+
+    const { name, lat, lng } = hideAddresses
+      ? sanitizeGPSResult(result.lat, result.lng, result.address)
+      : {
+          name: result.name ?? `${result.lat.toFixed(4)}, ${result.lng.toFixed(4)}`,
+          lat: result.lat,
+          lng: result.lng,
+        };
+
+    suppressSearch.current = true;
+    setQuery(name);
+    setShowSuggestions(false);
+    onChange(name, lat, lng);
+  }
+
+  // For the suggestion list display: show privacy indicator if the result will be sanitized
+  function willSanitize(result: NominatimResult): boolean {
+    if (!hideAddresses || !result.address) return false;
+    const { lat: sanitizedLat } = sanitizeNominatimResult(
+      result.display_name,
+      parseFloat(result.lat),
+      parseFloat(result.lon),
+      result.address
+    );
+    return sanitizedLat === undefined;
   }
 
   return (
@@ -152,15 +175,21 @@ export function LocationPicker({ value, onChange, onClear }: LocationPickerProps
               const parts = r.display_name.split(', ');
               const primary = parts.slice(0, 2).join(', ');
               const secondary = parts.slice(2, 4).join(', ');
+              const sanitized = willSanitize(r);
               return (
                 <Pressable
                   key={r.place_id}
                   className="px-4 py-3 border-b border-border/50 active:bg-accent"
                   onPress={() => handleSelect(r)}
                 >
-                  <Text className="text-foreground text-sm font-medium" numberOfLines={1}>
-                    {primary}
-                  </Text>
+                  <View className="flex-row items-center gap-1.5">
+                    <Text className="text-foreground text-sm font-medium flex-1" numberOfLines={1}>
+                      {primary}
+                    </Text>
+                    {sanitized && (
+                      <Ionicons name="shield-checkmark" size={13} color="#f59e0b" />
+                    )}
+                  </View>
                   {secondary ? (
                     <Text className="text-muted-foreground text-xs mt-0.5" numberOfLines={1}>
                       {secondary}

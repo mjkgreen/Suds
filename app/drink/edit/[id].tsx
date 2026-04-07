@@ -59,6 +59,7 @@ export default function EditDrinkScreen() {
       location_name: '',
       notes: '',
       logged_at: new Date().toISOString(),
+      ended_at: undefined,
     },
   });
 
@@ -76,6 +77,7 @@ export default function EditDrinkScreen() {
       location_lng: drink.location_lng ?? undefined,
       notes: drink.notes ?? '',
       logged_at: drink.logged_at,
+      ended_at: drink.ended_at ?? undefined,
     });
   }, [drink]);
 

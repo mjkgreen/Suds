@@ -53,6 +53,7 @@ export function useLogDrink() {
           rating: formData.rating || null,
           event_name: formData.event_name?.trim() || null,
           logged_at: formData.logged_at ?? new Date().toISOString(),
+          ended_at: formData.ended_at || null,
           session_id: sessionId ?? null,
         })
         .select()
@@ -62,6 +63,7 @@ export function useLogDrink() {
     },
     onSuccess: (_data, { userId }) => {
       queryClient.invalidateQueries({ queryKey: ['drinkLogs', userId] });
+      queryClient.invalidateQueries({ queryKey: ['mapLogs', userId] });
       queryClient.invalidateQueries({ queryKey: ['feed', userId] });
       queryClient.invalidateQueries({ queryKey: ['userStats', userId] });
     },
@@ -117,6 +119,7 @@ export function useUpdateDrinkLog() {
           rating: formData.rating || null,
           event_name: formData.event_name?.trim() || null,
           logged_at: formData.logged_at ?? new Date().toISOString(),
+          ended_at: formData.ended_at || null,
         })
         .eq('id', id)
         .select()
@@ -126,6 +129,7 @@ export function useUpdateDrinkLog() {
     },
     onSuccess: (_data, { userId, id }) => {
       queryClient.invalidateQueries({ queryKey: ['drinkLogs', userId] });
+      queryClient.invalidateQueries({ queryKey: ['mapLogs', userId] });
       queryClient.invalidateQueries({ queryKey: ['drinkDetail', id] });
       queryClient.invalidateQueries({ queryKey: ['feed', userId] });
       queryClient.invalidateQueries({ queryKey: ['userStats', userId] });
@@ -169,6 +173,7 @@ export function useQuickLogDrink() {
     },
     onSuccess: (_data, { userId }) => {
       queryClient.invalidateQueries({ queryKey: ['drinkLogs', userId] });
+      queryClient.invalidateQueries({ queryKey: ['mapLogs', userId] });
       queryClient.invalidateQueries({ queryKey: ['feed', userId] });
       queryClient.invalidateQueries({ queryKey: ['userStats', userId] });
     },
@@ -189,6 +194,7 @@ export function useDeleteDrinkLog() {
     },
     onSuccess: (_data, { userId }) => {
       queryClient.invalidateQueries({ queryKey: ['drinkLogs', userId] });
+      queryClient.invalidateQueries({ queryKey: ['mapLogs', userId] });
       queryClient.invalidateQueries({ queryKey: ['feed', userId] });
       queryClient.invalidateQueries({ queryKey: ['userStats', userId] });
     },

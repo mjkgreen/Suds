@@ -11,6 +11,7 @@ import {
   ScrollView,
   Text,
   TextInput,
+  TouchableOpacity,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -30,6 +31,20 @@ export default function EditProfileScreen() {
   const [displayName, setDisplayName] = useState(profile?.display_name ?? "");
   const [username, setUsername] = useState(profile?.username ?? "");
   const [bio, setBio] = useState(profile?.bio ?? "");
+  
+  // Height State
+  const [heightUnit, setHeightUnit] = useState<'in' | 'cm'>(profile?.height_unit || 'in');
+  const [heightFt, setHeightFt] = useState('');
+  const [heightIn, setHeightIn] = useState('');
+  const [heightCm, setHeightCm] = useState('');
+
+  // Weight State
+  const [weightValue, setWeightValue] = useState(profile?.weight?.toString() ?? "");
+  const [weightUnit, setWeightUnit] = useState<'lb' | 'kg'>(profile?.weight_unit || 'lb');
+
+  // Age State
+  const [age, setAge] = useState(profile?.age?.toString() ?? "");
+
   const [avatarUri, setAvatarUri] = useState<string | null>(null);
   const [avatarBase64, setAvatarBase64] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -39,6 +54,19 @@ export default function EditProfileScreen() {
     setDisplayName(profile?.display_name ?? "");
     setUsername(profile?.username ?? "");
     setBio(profile?.bio ?? "");
+    setAge(profile?.age?.toString() ?? "");
+    setHeightUnit(profile?.height_unit || 'in');
+    setWeightUnit(profile?.weight_unit || 'lb');
+    setWeightValue(profile?.weight?.toString() ?? "");
+
+    if (profile?.height) {
+      if (profile.height_unit === 'in') {
+        setHeightFt(Math.floor(profile.height / 12).toString());
+        setHeightIn((profile.height % 12).toString());
+      } else {
+        setHeightCm(profile.height.toString());
+      }
+    }
   }, [profile]);
 
   async function launchAvatarPicker(useCamera: boolean) {
@@ -82,16 +110,17 @@ export default function EditProfileScreen() {
       setError("Username is required.");
       return;
     }
-    if (trimmedUsername.length < 3) {
-      setError("Username must be at least 3 characters.");
-      return;
-    }
-    if (!/^[a-z0-9_]+$/.test(trimmedUsername)) {
-      setError("Username can only contain letters, numbers, and underscores.");
-      return;
-    }
 
     try {
+      let finalHeight: number | null = null;
+      if (heightUnit === 'in') {
+        if (heightFt || heightIn) {
+          finalHeight = (parseInt(heightFt || '0', 10) * 12) + parseInt(heightIn || '0', 10);
+        }
+      } else if (heightCm) {
+        finalHeight = parseFloat(heightCm);
+      }
+
       let newAvatarUrl: string | null = profile?.avatar_url ?? null;
       if (avatarUri) {
         newAvatarUrl = await uploadAvatarPhoto(user.id, avatarUri, avatarBase64);
@@ -104,8 +133,14 @@ export default function EditProfileScreen() {
           username: trimmedUsername,
           bio: bio.trim() || null,
           avatar_url: newAvatarUrl,
+          height: finalHeight,
+          height_unit: heightUnit,
+          weight: weightValue ? parseFloat(weightValue) : null,
+          weight_unit: weightUnit,
+          age: age ? parseInt(age, 10) : null,
         },
       });
+      
       if (profile) {
         setProfile({ ...profile, ...(updated as Profile) });
       } else {
@@ -118,8 +153,31 @@ export default function EditProfileScreen() {
     }
   }
 
-  const previewUri = avatarUri ?? profile?.avatar_url ?? null;
+  const UnitToggle = ({ 
+    options, 
+    value, 
+    onChange 
+  }: { 
+    options: { label: string, value: string }[], 
+    value: string, 
+    onChange: (v: any) => void 
+  }) => (
+    <View className="flex-row bg-muted rounded-lg p-1 mb-2">
+      {options.map((opt) => (
+        <TouchableOpacity
+          key={opt.value}
+          onPress={() => onChange(opt.value)}
+          className={`flex-1 py-1.5 rounded items-center ${value === opt.value ? 'bg-card shadow-sm' : ''}`}
+        >
+          <Text className={`text-xs font-medium ${value === opt.value ? 'text-primary' : 'text-muted-foreground'}`}>
+            {opt.label}
+          </Text>
+        </TouchableOpacity>
+      ))}
+    </View>
+  );
 
+  const previewUri = avatarUri ?? profile?.avatar_url ?? null;
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === "dark";
 
@@ -149,39 +207,32 @@ export default function EditProfileScreen() {
                 <Ionicons name="camera" size={14} color="#fff" />
               </View>
             </Pressable>
-            <Text className="text-muted-foreground text-xs mt-2">Tap to change photo</Text>
           </View>
 
           <View>
             <Text className="text-foreground font-semibold mb-1.5 text-sm">Display Name</Text>
             <TextInput
               className="bg-card border border-border rounded-xl px-4 py-3 text-base text-foreground"
-              placeholder="Your full name or nickname"
+              placeholder="Your name"
               placeholderTextColor="hsl(var(--muted-foreground))"
               value={displayName}
               onChangeText={setDisplayName}
-              autoCorrect={false}
             />
-            <Text className="text-muted-foreground text-xs mt-1">This is what others see in the feed</Text>
           </View>
 
           <View>
-            <Text className="text-foreground font-semibold mb-1.5 text-sm">
-              Username <Text className="text-destructive">*</Text>
-            </Text>
+            <Text className="text-foreground font-semibold mb-1.5 text-sm">Username</Text>
             <View className="flex-row items-center bg-card border border-border rounded-xl px-4 py-3">
               <Text className="text-muted-foreground text-base mr-0.5">@</Text>
               <TextInput
                 className="flex-1 text-base text-foreground"
-                placeholder="your_handle"
+                placeholder="username"
                 placeholderTextColor="hsl(var(--muted-foreground))"
                 value={username}
                 onChangeText={(t) => setUsername(t.toLowerCase())}
                 autoCapitalize="none"
-                autoCorrect={false}
               />
             </View>
-            <Text className="text-muted-foreground text-xs mt-1">Letters, numbers, underscores only</Text>
           </View>
 
           <View>
@@ -194,8 +245,76 @@ export default function EditProfileScreen() {
               onChangeText={setBio}
               multiline
               numberOfLines={3}
-              textAlignVertical="top"
               style={{ minHeight: 80 }}
+            />
+          </View>
+
+          <View className="flex-row gap-4">
+            <View className="flex-1">
+              <Text className="text-foreground font-semibold mb-1.5 text-sm">Age</Text>
+              <TextInput
+                className="bg-card border border-border rounded-xl px-4 py-3 text-base text-foreground"
+                placeholder="21"
+                placeholderTextColor="hsl(var(--muted-foreground))"
+                value={age}
+                onChangeText={setAge}
+                keyboardType="numeric"
+              />
+            </View>
+          </View>
+
+          <View>
+            <Text className="text-foreground font-semibold mb-1.5 text-sm">Height</Text>
+            <UnitToggle 
+              value={heightUnit} 
+              onChange={setHeightUnit} 
+              options={[{ label: 'Imperial (ft/in)', value: 'in' }, { label: 'Metric (cm)', value: 'cm' }]} 
+            />
+            {heightUnit === 'in' ? (
+              <View className="flex-row gap-2">
+                <TextInput
+                  className="flex-1 bg-card border border-border rounded-xl px-4 py-3 text-base text-foreground"
+                  placeholder="ft"
+                  placeholderTextColor="hsl(var(--muted-foreground))"
+                  value={heightFt}
+                  onChangeText={setHeightFt}
+                  keyboardType="numeric"
+                />
+                <TextInput
+                  className="flex-1 bg-card border border-border rounded-xl px-4 py-3 text-base text-foreground"
+                  placeholder="in"
+                  placeholderTextColor="hsl(var(--muted-foreground))"
+                  value={heightIn}
+                  onChangeText={setHeightIn}
+                  keyboardType="numeric"
+                />
+              </View>
+            ) : (
+              <TextInput
+                className="bg-card border border-border rounded-xl px-4 py-3 text-base text-foreground"
+                placeholder="cm"
+                placeholderTextColor="hsl(var(--muted-foreground))"
+                value={heightCm}
+                onChangeText={setHeightCm}
+                keyboardType="numeric"
+              />
+            )}
+          </View>
+
+          <View>
+            <Text className="text-foreground font-semibold mb-1.5 text-sm">Weight</Text>
+            <UnitToggle 
+              value={weightUnit} 
+              onChange={setWeightUnit} 
+              options={[{ label: 'lbs', value: 'lb' }, { label: 'kg', value: 'kg' }]} 
+            />
+            <TextInput
+              className="bg-card border border-border rounded-xl px-4 py-3 text-base text-foreground"
+              placeholder={`Weight in ${weightUnit}`}
+              placeholderTextColor="hsl(var(--muted-foreground))"
+              value={weightValue}
+              onChangeText={setWeightValue}
+              keyboardType="numeric"
             />
           </View>
 

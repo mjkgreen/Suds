@@ -9,7 +9,12 @@ export function formatDate(dateString: string): string {
 }
 
 export function formatTime(dateString: string): string {
-  return format(parseISO(dateString), 'h:mm a');
+  const date = typeof dateString === 'string' ? parseISO(dateString) : dateString;
+  return format(date, 'h:mm a');
+}
+
+export function formatTimeRange(start: string, end: string): string {
+  return `${formatTime(start)} – ${formatTime(end)}`;
 }
 
 export function formatDateTime(dateString: string): string {

@@ -13,10 +13,11 @@ Core social and tracking features, always free:
 
 | Feature | Description |
 |---|---|
-| Drink logging | Log any drink (beer, wine, cocktail, spirit, cider, seltzer, other) with quantity, notes, and GPS location |
-| Social feed | Follow friends, see their activity in a real-time feed |
-| User search | Find and follow other users |
-| Heatmap | Map of all your drink locations |
+| Drink logging | Log drinks with quantity, notes, **end times**, and GPS location. Automatic **DPH (Drinks Per Hour)** calculation on cards. |
+| Social feed | Real-time activities feed for users and followers that mimics the existing feed experience. |
+| User search | Find users by name/username and perform **follower/following lookups**. |
+| Heatmap | Map of your and friends' drink locations with **stabilized filter switching**. |
+| Privacy Mode | Enable to **disable exact street address locations** for sensitive areas (e.g., home). |
 | Streaks | Drink streaks and sober streaks |
 | Milestones | Gamification badges (1st, 10th, 25th, 50th, 100th drink, etc.) |
 | Weekly goal | Set a weekly drink limit to stay accountable |
@@ -135,6 +136,7 @@ suds/
 │   │
 │   └── utils/
 │       ├── dateHelpers.ts
+│       ├── locationPrivacy.ts   # Sanitizes residential addresses for Privacy Mode
 │       └── profileHelpers.ts
 │
 ├── supabase/
@@ -160,8 +162,8 @@ suds/
 
 | Table | Purpose |
 |---|---|
-| `profiles` | One row per user. Extends Supabase auth. Includes `subscription_tier` (free/premium), avatar, bio, display name |
-| `drink_logs` | Every drink ever logged. Foreign key to `profiles`. Has `drink_type`, `quantity`, `notes`, `location` (PostGIS point), `session_id`, `logged_at` |
+| `profiles` | One row per user. Extends Supabase auth. Includes `subscription_tier`, avatar, bio, display name, **username**, **height**, **weight**, **age**, and **privacy_mode**. |
+| `drink_logs` | Every drink ever logged. Foreign key to `profiles`. Has `drink_type`, `quantity`, `notes`, `location` (PostGIS point), `session_id`, `logged_at`, and **`ended_at`**. |
 | `follows` | Follower → followee edges |
 | `sessions` | A named drinking session. References `profile_id`, has start/end times |
 | `goals` | One row per user (unique). Stores `weekly_limit` |
@@ -203,7 +205,7 @@ Premium gating uses `PremiumGate` component: wraps premium UI, checks `useSubscr
 ## Setup Checklist
 
 1. Create a Supabase project at supabase.com
-2. Run migrations in order: `001` → `006` (or `combined.sql`)
+2. Run all migrations in `supabase/migrations/` in order (or `combined.sql`)
 3. Enable PostGIS extension in Supabase dashboard
 4. Create Supabase Storage bucket `avatars` (public)
 5. Fill `.env`:

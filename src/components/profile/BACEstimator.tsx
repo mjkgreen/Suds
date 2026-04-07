@@ -13,6 +13,7 @@
 
 import React, { useMemo, useState } from "react";
 import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import { useAuthStore } from "@/stores/authStore";
 
 type Sex = "male" | "female";
 
@@ -43,18 +44,27 @@ function BACBar({ bac }: { bac: number }) {
 }
 
 export function BACEstimator() {
+  const { profile } = useAuthStore();
   const [drinks, setDrinks] = useState("2");
-  const [weightLbs, setWeightLbs] = useState("160");
+  
+  const initialWeight = profile?.weight?.toString() ?? "160";
+  const initialWeightUnit = profile?.weight_unit ?? "lb";
+  
+  const [weight, setWeight] = useState(initialWeight);
+  const [weightUnit, setWeightUnit] = useState<'lb' | 'kg'>(initialWeightUnit);
   const [sex, setSex] = useState<Sex>("male");
   const [hours, setHours] = useState("1");
 
   const bac = useMemo(() => {
     const d = parseFloat(drinks);
-    const w = parseFloat(weightLbs) * 0.453592; // lbs → kg
+    let w = parseFloat(weight);
+    if (weightUnit === 'lb') {
+      w = w * 0.453592; // lbs → kg
+    }
     const h = parseFloat(hours);
     if (!d || !w || isNaN(h)) return null;
     return computeBAC(d, w, sex, h);
-  }, [drinks, weightLbs, sex, hours]);
+  }, [drinks, weight, weightUnit, sex, hours]);
 
   const statusText =
     bac === null
@@ -103,12 +113,12 @@ export function BACEstimator() {
           />
         </View>
         <View className="items-center">
-          <Text className="text-xs text-gray-400 mb-1">Weight (lbs)</Text>
+          <Text className="text-xs text-gray-400 mb-1">Weight ({weightUnit})</Text>
           <TextInput
             className="bg-gray-100 rounded-xl px-3 py-2 text-center text-gray-900 w-20"
             keyboardType="decimal-pad"
-            value={weightLbs}
-            onChangeText={setWeightLbs}
+            value={weight}
+            onChangeText={setWeight}
           />
         </View>
         <View className="items-center">

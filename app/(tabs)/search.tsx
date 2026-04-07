@@ -75,7 +75,7 @@ export default function SearchScreen() {
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
-        .ilike('username', `%${debouncedQuery}%`)
+        .or(`username.ilike.%${debouncedQuery}%,display_name.ilike.%${debouncedQuery}%`)
         .limit(20);
       if (error) throw error;
       return data as Profile[];
@@ -92,7 +92,7 @@ export default function SearchScreen() {
           <Text className="text-muted-foreground mr-2">🔍</Text>
           <TextInput
             className="flex-1 text-base text-foreground"
-            placeholder="Search by username"
+            placeholder="Search by name or username"
             placeholderTextColor="#9ca3af"
             value={query}
             onChangeText={setQuery}
@@ -125,7 +125,7 @@ export default function SearchScreen() {
                   Find your drinking crew
                 </Text>
                 <Text className="text-muted-foreground/60 text-sm text-center mt-2">
-                  Search for friends by username to see their drinks in your feed.
+                  Search for friends by name or username to see their drinks in your feed.
                 </Text>
               </View>
             )

@@ -10,7 +10,7 @@ import { DrinkBadge } from "@/components/drink/DrinkBadge";
 import { DrinkIcon } from "@/components/icons/DrinkIcon";
 import { DRINK_TYPE_MAP } from "@/lib/constants";
 import { FeedItem } from "@/types/models";
-import { relativeTime } from "@/utils/dateHelpers";
+import { relativeTime, formatTime } from "@/utils/dateHelpers";
 import { getDisplayName, getUsername } from "@/utils/profileHelpers";
 
 interface DrinkCardProps {
@@ -40,6 +40,16 @@ export function DrinkCard({ item, onQuickLog }: DrinkCardProps) {
     }
   }
 
+  let drinksPerHour: string | null = null;
+  if (item.ended_at && item.quantity > 0) {
+    const hoursElapsed =
+      (new Date(item.ended_at).getTime() - new Date(item.logged_at).getTime()) /
+      (1000 * 60 * 60);
+    if (hoursElapsed >= 0.25) {
+      drinksPerHour = (item.quantity / hoursElapsed).toFixed(1);
+    }
+  }
+
   return (
     <PressableCard className="mx-4 my-2 p-4" onPress={() => router.push(`/drink/${item.id}`)}>
       {/* Header */}
@@ -53,7 +63,7 @@ export function DrinkCard({ item, onQuickLog }: DrinkCardProps) {
             {getDisplayName(item.profile)}
           </Text>
           <Text className="text-muted-foreground text-xs">
-            @{getUsername(item.profile)} · {relativeTime(item.logged_at)}
+            @{getUsername(item.profile)} · {item.ended_at ? `${formatTime(item.logged_at)} – ${formatTime(item.ended_at)}` : relativeTime(item.logged_at)}
           </Text>
         </View>
         <DrinkBadge type={item.drink_type} size="sm" />
@@ -78,6 +88,12 @@ export function DrinkCard({ item, onQuickLog }: DrinkCardProps) {
               <View className="items-center mb-3">
                 <Text className="text-xl font-bold text-primary">{item.rating}/10</Text>
                 <Text className="text-xs text-muted-foreground">rating</Text>
+              </View>
+            )}
+            {drinksPerHour && (
+              <View className="items-center mb-3">
+                <Text className="text-xl font-bold text-primary">{drinksPerHour}</Text>
+                <Text className="text-xs text-muted-foreground">per hour</Text>
               </View>
             )}
           </View>

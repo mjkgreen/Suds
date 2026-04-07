@@ -30,7 +30,7 @@ function ThemeSync() {
 
 function AuthGuard() {
   const { session, isLoading } = useAuth();
-  const { user } = useAuthStore();
+  const { user, profile } = useAuthStore();
   const segments = useSegments();
   const router = useRouter();
 
@@ -44,14 +44,25 @@ function AuthGuard() {
   useEffect(() => {
     if (isLoading) return;
 
-    const inAuthGroup = segments[0] === '(auth)';
+    const segs = segments as string[];
+    const inAuthGroup = segs[0] === '(auth)';
+    const isOnboarding = segs[0] === '(auth)' && segs[1] === 'onboarding';
 
     if (!session && !inAuthGroup) {
       router.replace('/(auth)/sign-in');
-    } else if (session && inAuthGroup) {
-      router.replace('/(tabs)/feed');
+    } else if (session) {
+      if (profile && !profile.onboarded) {
+        if (!isOnboarding) {
+          // @ts-ignore
+          router.replace('/(auth)/onboarding');
+        }
+      } else if (profile && profile.onboarded && inAuthGroup) {
+        // @ts-ignore
+        router.replace('/(tabs)/feed');
+      }
+      // If we have a session but no profile yet, wait for profile to fetch
     }
-  }, [session, isLoading, segments]);
+  }, [session, profile, isLoading, segments]);
 
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
