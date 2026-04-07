@@ -11,21 +11,23 @@ import { BACEstimator } from "@/components/profile/BACEstimator";
 import { AdvancedStatsPreview, BACEstimatorPreview, TopDrinksPreview } from "@/components/profile/PremiumPreviews";
 import { GoalCard } from "@/components/profile/GoalCard";
 import { MilestoneBanner } from "@/components/profile/MilestoneBanner";
+import { BadgePicker } from "@/components/profile/BadgePicker";
 import { StreakCard } from "@/components/profile/StreakCard";
 import { ActivityCalendar } from "@/components/profile/ActivityCalendar";
 import { useAuth } from "@/hooks/useAuth";
 import { useMyFeed } from "@/hooks/useFeed";
 import { useMilestones } from "@/hooks/useMilestones";
-import { useProfile, useUserStats } from "@/hooks/useProfile";
+import { useProfile, useUserStats, useUpdateProfile } from "@/hooks/useProfile";
 import { useStreaks } from "@/hooks/useStreaks";
 import { useAuthStore } from "@/stores/authStore";
 import { useActiveSession, useEndSession } from "@/hooks/useSession";
 import { DrinkType, FeedEntry } from "@/types/models";
 import { getDisplayName, getUsername } from "@/utils/profileHelpers";
+import { getEarnedBadges, findBadgeById, UserBadge, TIER_COLORS } from "@/utils/badgeHelpers";
 import { DrinkCard } from "@/components/drink/DrinkCard";
 import { SessionCard } from "@/components/session/SessionCard";
 import { DrinkIcon } from "@/components/icons/DrinkIcon";
-import { DRINK_TYPE_MAP } from "@/lib/constants";
+import { DRINK_TYPE_MAP, MILESTONE_EMOJI } from "@/lib/constants";
 import { useThemeStore } from "@/stores/themeStore";
 import { usePrefsStore } from "@/stores/prefsStore";
 import { useColorScheme } from "nativewind";
@@ -161,8 +163,6 @@ function StatBlock({ label, value }: { label: string; value: string | number }) 
   );
 }
 
-
-
 function TabBar({ active, onChange }: { active: Tab; onChange: (t: Tab) => void }) {
   return (
     <View className="flex-row bg-card border-b border-border px-6">
@@ -188,6 +188,7 @@ export default function ProfileScreen() {
   const { signOut } = useAuth();
   const { mutateAsync: endSession, isPending: isEnding } = useEndSession();
   const [activeTab, setActiveTab] = useState<Tab>("progress");
+  const [badgePickerVisible, setBadgePickerVisible] = useState(false);
 
   const { themePreference, setThemePreference } = useThemeStore();
   const { locationEnabled, setLocationEnabled } = usePrefsStore();
@@ -197,8 +198,8 @@ export default function ProfileScreen() {
   const { data: stats, refetch: refetchStats } = useUserStats(user?.id);
   const { data: streaks } = useStreaks(user?.id);
   const { data: milestones } = useMilestones(user?.id);
+  const { mutate: updateProfile } = useUpdateProfile();
 
-  // My feed — all of the current user's own drinks & nights out, no cap
   const {
     data: feedData,
     isLoading: feedLoading,
@@ -210,9 +211,19 @@ export default function ProfileScreen() {
 
   const myEntries: FeedEntry[] = feedData?.pages.flatMap((p) => p.entries) ?? [];
 
+  const earnedBadges = getEarnedBadges(milestones, streaks, stats);
+  const selectedBadgeIds = profile?.displayed_badges ?? (milestones?.latest_milestone ? [`milestone-${milestones.latest_milestone}`] : []);
+  const selectedBadges = selectedBadgeIds.map(findBadgeById).filter(Boolean) as UserBadge[];
+
   const handleEndReached = useCallback(() => {
     if (hasNextPage && !isFetchingNextPage) fetchNextPage();
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+  const onRefresh = useCallback(() => {
+    refetchProfile();
+    refetchFeed();
+    refetchStats();
+  }, [refetchProfile, refetchFeed, refetchStats]);
 
   const isLoading = profileLoading || feedLoading;
 
@@ -272,28 +283,65 @@ export default function ProfileScreen() {
             </Pressable>
           </View>
 
-
+          <Pressable 
+            className="flex-row items-center gap-1.5"
+            onPress={() => setBadgePickerVisible(true)}
+          >
+            {selectedBadges.map((b) => (
+              <View 
+                key={b.id} 
+                className="w-8 h-10 items-center justify-center border-2 border-card shadow-sm -ml-2 first:ml-0"
+                style={{ 
+                    backgroundColor: TIER_COLORS[b.tier] + '40', 
+                    borderColor: TIER_COLORS[b.tier],
+                    borderTopLeftRadius: 4,
+                    borderTopRightRadius: 4,
+                    borderBottomLeftRadius: 16,
+                    borderBottomRightRadius: 16,
+                }}
+              >
+                <Text className="text-sm">{b.emoji}</Text>
+              </View>
+            ))}
+            {selectedBadges.length === 0 && (
+              <View 
+                className="w-8 h-10 items-center justify-center border-2 border-dashed border-muted-foreground/30"
+                style={{
+                    borderTopLeftRadius: 4,
+                    borderTopRightRadius: 4,
+                    borderBottomLeftRadius: 16,
+                    borderBottomRightRadius: 16,
+                }}
+              >
+                <Ionicons name="add" size={16} color="#6b7280" />
+              </View>
+            )}
+          </Pressable>
         </View>
       </View>
     );
   }
 
-  function onRefresh() {
-    refetchProfile();
-    refetchFeed();
-    refetchStats();
-  }
+  const badgePicker = (
+    <BadgePicker
+      isVisible={badgePickerVisible}
+      onClose={() => setBadgePickerVisible(false)}
+      earnedBadges={earnedBadges}
+      selectedBadgeIds={selectedBadgeIds}
+      onSelect={(ids) => user?.id && updateProfile({ userId: user.id, updates: { displayed_badges: ids } })}
+    />
+  );
 
   if (activeTab === "progress") {
     return (
       <SafeAreaView className="flex-1 bg-background" edges={topEdges}>
         <ProfileHeader />
+        {badgePicker}
         <TabBar active={activeTab} onChange={setActiveTab} />
         <ScrollView
           contentContainerStyle={{ paddingBottom: 24 }}
           refreshControl={<RefreshControl refreshing={false} onRefresh={onRefresh} tintColor="#f59e0b" />}
         >
-          {milestones && <MilestoneBanner milestones={milestones} />}
           {streaks && <StreakCard streaks={streaks} />}
           {stats && user?.id && <GoalCard userId={user.id} stats={stats} />}
 
@@ -321,36 +369,6 @@ export default function ProfileScreen() {
               </View>
             </View>
           )}
-
-          {/* {profile && (
-            <View className="bg-card mx-4 mt-4 rounded-2xl p-4">
-              <Text className="text-xs text-muted-foreground mb-3 font-medium uppercase tracking-wide">
-                Personal Info
-              </Text>
-              <View className="flex-row justify-between">
-                <View className="flex-1">
-                  <Text className="text-foreground font-bold text-lg">{profile.age ?? "—"}</Text>
-                  <Text className="text-xs text-muted-foreground">Age</Text>
-                </View>
-                <View className="flex-1">
-                  <Text className="text-foreground font-bold text-lg">
-                    {profile.height 
-                      ? profile.height_unit === 'in' 
-                        ? `${Math.floor(profile.height / 12)}'${profile.height % 12}"`
-                        : `${profile.height} cm`
-                      : "—"}
-                  </Text>
-                  <Text className="text-xs text-muted-foreground">Height</Text>
-                </View>
-                <View className="flex-1">
-                  <Text className="text-foreground font-bold text-lg">
-                    {profile.weight ? `${profile.weight} ${profile.weight_unit}` : "—"}
-                  </Text>
-                  <Text className="text-xs text-muted-foreground">Weight</Text>
-                </View>
-              </View>
-            </View>
-          )} */}
 
           <PremiumGate featureName="Top Drinks" preview={<TopDrinksPreview />}>
             {stats?.favorite_drink_types &&
@@ -410,6 +428,9 @@ export default function ProfileScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-background" edges={topEdges}>
+      <ProfileHeader />
+      {badgePicker}
+      <TabBar active={activeTab} onChange={setActiveTab} />
       <FlatList
         data={myEntries}
         keyExtractor={(entry) =>
@@ -430,12 +451,6 @@ export default function ProfileScreen() {
           return <DrinkCard item={entry.item} />;
         }}
         refreshControl={<RefreshControl refreshing={false} onRefresh={onRefresh} tintColor="#f59e0b" />}
-        ListHeaderComponent={
-          <View>
-            <ProfileHeader />
-            <TabBar active={activeTab} onChange={setActiveTab} />
-          </View>
-        }
         ListEmptyComponent={
           <View className="px-6 py-10 items-center">
             <Text className="text-3xl mb-2">🍺</Text>

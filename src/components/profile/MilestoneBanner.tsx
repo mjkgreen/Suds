@@ -1,24 +1,11 @@
 import React from 'react';
 import { Text, View } from 'react-native';
 import { MilestoneData } from '@/types/models';
+import { MILESTONE_EMOJI } from '@/lib/constants';
 
 interface MilestoneBannerProps {
   milestones: MilestoneData;
 }
-
-const MILESTONE_EMOJI: Record<number, string> = {
-  1: '🎉',
-  10: '🍺',
-  25: '🥂',
-  50: '🏅',
-  100: '💯',
-  200: '🌟',
-  300: '🏆',
-  400: '🔥',
-  500: '💎',
-  750: '👑',
-  1000: '🫡',
-};
 
 export function MilestoneBanner({ milestones }: MilestoneBannerProps) {
   if (!milestones.latest_milestone) return null;

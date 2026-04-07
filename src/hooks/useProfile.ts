@@ -50,7 +50,7 @@ export function useUpdateProfile() {
       updates,
     }: {
       userId: string;
-      updates: Partial<Pick<Profile, 'display_name' | 'bio' | 'avatar_url' | 'username' | 'height' | 'height_unit' | 'weight' | 'weight_unit' | 'age'>>;
+      updates: Partial<Pick<Profile, 'display_name' | 'bio' | 'avatar_url' | 'username' | 'height' | 'height_unit' | 'weight' | 'weight_unit' | 'age' | 'displayed_badges'>>;
     }) => {
       const { data, error } = await (supabase
         .from('profiles') as any)

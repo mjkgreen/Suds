@@ -22,6 +22,7 @@ export interface Profile {
   age: number | null;
   onboarded: boolean;
   subscription_tier: SubscriptionTier;
+  displayed_badges?: string[]; // IDs like "milestone-100", "sober-7"
   created_at: string;
   updated_at: string;
   // Computed at query time
@@ -75,6 +76,10 @@ export interface UserStats {
   drinks_this_week: number;
   drinks_this_month: number;
   activity_by_day: ActivityDay[];
+  happy_hour_count: number;
+  last_call_count: number;
+  early_bird_count: number;
+  unique_countries_count: number;
 }
 
 export interface FeedItem extends DrinkLog {
