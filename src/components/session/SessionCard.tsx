@@ -10,6 +10,7 @@ import { DRINK_TYPE_MAP } from "@/lib/constants";
 import { DrinkType, FeedItem, SessionFeedGroup } from "@/types/models";
 import { formatDateTime, formatDuration } from "@/utils/dateHelpers";
 import { getDisplayName, getUsername } from "@/utils/profileHelpers";
+import { findBadgeById, TIER_COLORS } from "@/utils/badgeHelpers";
 
 interface SessionCardProps {
   group: SessionFeedGroup;
@@ -64,12 +65,36 @@ export function SessionCard({ group, isActive, onEnd, isEnding, onQuickLog }: Se
       <View className="flex-row items-center mb-3">
         <Avatar uri={group.profile.avatar_url} name={getDisplayName(group.profile)} size={40} />
         <View className="ml-3 flex-1">
-          <Text
-            className="font-semibold text-foreground text-base"
-            onPress={() => router.push(`/user/${group.profile.id}`)}
-          >
-            {getDisplayName(group.profile)}
-          </Text>
+          <View className="flex-row items-center">
+            <Text
+              className="font-semibold text-foreground text-base"
+              onPress={() => router.push(`/user/${group.profile.id}`)}
+            >
+              {getDisplayName(group.profile)}
+            </Text>
+            <View className="flex-row items-center ml-1.5 mt-0.5">
+              {(group.profile.displayed_badges ?? []).map((id) => {
+                const b = findBadgeById(id);
+                if (!b) return null;
+                return (
+                  <View 
+                    key={id} 
+                    className="w-4 h-5 items-center justify-center border border-card -ml-1 first:ml-0 shadow-sm"
+                    style={{ 
+                        backgroundColor: TIER_COLORS[b.tier] + '40', 
+                        borderColor: TIER_COLORS[b.tier],
+                        borderTopLeftRadius: 2,
+                        borderTopRightRadius: 2,
+                        borderBottomLeftRadius: 8,
+                        borderBottomRightRadius: 8,
+                    }}
+                  >
+                    <Text style={{ fontSize: 8 }}>{b.emoji}</Text>
+                  </View>
+                );
+              })}
+            </View>
+          </View>
           <Text className="text-muted-foreground text-xs">
             @{getUsername(group.profile)} · {formatDateTime(group.started_at)}
           </Text>

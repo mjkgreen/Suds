@@ -36,6 +36,7 @@ function parseFeedRows(data: any[]): FeedEntry[] {
       age: null,
       onboarded: true,
       subscription_tier: 'free' as const,
+      displayed_badges: row.displayed_badges,
       created_at: '',
       updated_at: '',
     },

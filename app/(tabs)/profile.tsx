@@ -1,4 +1,4 @@
-import { Ionicons } from "@expo/vector-icons";
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useCallback, useState } from "react";
 import { ActivityIndicator, FlatList, Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
@@ -24,6 +24,7 @@ import { useActiveSession, useEndSession } from "@/hooks/useSession";
 import { DrinkType, FeedEntry } from "@/types/models";
 import { getDisplayName, getUsername } from "@/utils/profileHelpers";
 import { getEarnedBadges, findBadgeById, UserBadge, TIER_COLORS } from "@/utils/badgeHelpers";
+import { BadgeInfoModal } from "@/components/profile/BadgeInfoModal";
 import { DrinkCard } from "@/components/drink/DrinkCard";
 import { SessionCard } from "@/components/session/SessionCard";
 import { DrinkIcon } from "@/components/icons/DrinkIcon";
@@ -189,6 +190,7 @@ export default function ProfileScreen() {
   const { mutateAsync: endSession, isPending: isEnding } = useEndSession();
   const [activeTab, setActiveTab] = useState<Tab>("progress");
   const [badgePickerVisible, setBadgePickerVisible] = useState(false);
+  const [badgeInfoVisible, setBadgeInfoVisible] = useState(false);
 
   const { themePreference, setThemePreference } = useThemeStore();
   const { locationEnabled, setLocationEnabled } = usePrefsStore();
@@ -285,7 +287,7 @@ export default function ProfileScreen() {
 
           <Pressable 
             className="flex-row items-center gap-1.5"
-            onPress={() => setBadgePickerVisible(true)}
+            onPress={() => setBadgeInfoVisible(true)}
           >
             {selectedBadges.map((b) => (
               <View 
@@ -300,7 +302,7 @@ export default function ProfileScreen() {
                     borderBottomRightRadius: 16,
                 }}
               >
-                <Text className="text-sm">{b.emoji}</Text>
+                <MaterialCommunityIcons name={b.icon as any} size={14} color={TIER_COLORS[b.tier]} />
               </View>
             ))}
             {selectedBadges.length === 0 && (
@@ -323,13 +325,24 @@ export default function ProfileScreen() {
   }
 
   const badgePicker = (
-    <BadgePicker
-      isVisible={badgePickerVisible}
-      onClose={() => setBadgePickerVisible(false)}
-      earnedBadges={earnedBadges}
-      selectedBadgeIds={selectedBadgeIds}
-      onSelect={(ids) => user?.id && updateProfile({ userId: user.id, updates: { displayed_badges: ids } })}
-    />
+    <>
+      <BadgePicker
+        isVisible={badgePickerVisible}
+        onClose={() => setBadgePickerVisible(false)}
+        earnedBadges={earnedBadges}
+        selectedBadgeIds={selectedBadgeIds}
+        onSelect={(ids) => user?.id && updateProfile({ userId: user.id, updates: { displayed_badges: ids } })}
+      />
+      <BadgeInfoModal
+        badges={selectedBadges}
+        isVisible={badgeInfoVisible}
+        onClose={() => setBadgeInfoVisible(false)}
+        onEdit={() => {
+          setBadgeInfoVisible(false);
+          setBadgePickerVisible(true);
+        }}
+      />
+    </>
   );
 
   if (activeTab === "progress") {

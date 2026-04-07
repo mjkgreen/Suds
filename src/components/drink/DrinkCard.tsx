@@ -1,5 +1,5 @@
 import * as Haptics from "expo-haptics";
-import { Ionicons } from "@expo/vector-icons";
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import { ActivityIndicator, Platform, Pressable, Text, View } from "react-native";
@@ -12,6 +12,7 @@ import { DRINK_TYPE_MAP } from "@/lib/constants";
 import { FeedItem } from "@/types/models";
 import { relativeTime, formatTime } from "@/utils/dateHelpers";
 import { getDisplayName, getUsername } from "@/utils/profileHelpers";
+import { findBadgeById, TIER_COLORS } from "@/utils/badgeHelpers";
 
 interface DrinkCardProps {
   item: FeedItem;
@@ -56,12 +57,36 @@ export function DrinkCard({ item, onQuickLog }: DrinkCardProps) {
       <View className="flex-row items-center mb-3">
         <Avatar uri={item.profile.avatar_url} name={getDisplayName(item.profile)} size={40} />
         <View className="ml-3 flex-1">
-          <Text
-            className="font-semibold text-foreground text-base"
-            onPress={() => router.push(`/user/${item.profile.id}`)}
-          >
-            {getDisplayName(item.profile)}
-          </Text>
+          <View className="flex-row items-center">
+            <Text
+              className="font-semibold text-foreground text-base"
+              onPress={() => router.push(`/user/${item.profile.id}`)}
+            >
+              {getDisplayName(item.profile)}
+            </Text>
+            <View className="flex-row items-center ml-1.5 mt-0.5">
+              {(item.profile.displayed_badges ?? []).map((id) => {
+                const b = findBadgeById(id);
+                if (!b) return null;
+                return (
+                  <View 
+                    key={id} 
+                    className="w-4 h-5 items-center justify-center border border-card -ml-1 first:ml-0 shadow-sm"
+                    style={{ 
+                        backgroundColor: TIER_COLORS[b.tier] + '40', 
+                        borderColor: TIER_COLORS[b.tier],
+                        borderTopLeftRadius: 2,
+                        borderTopRightRadius: 2,
+                        borderBottomLeftRadius: 8,
+                        borderBottomRightRadius: 8,
+                    }}
+                  >
+                    <MaterialCommunityIcons name={b.icon as any} size={8} color={TIER_COLORS[b.tier]} />
+                  </View>
+                );
+              })}
+            </View>
+          </View>
           <Text className="text-muted-foreground text-xs">
             @{getUsername(item.profile)} · {item.ended_at ? `${formatTime(item.logged_at)} – ${formatTime(item.ended_at)}` : relativeTime(item.logged_at)}
           </Text>

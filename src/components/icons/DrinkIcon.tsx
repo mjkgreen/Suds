@@ -1,6 +1,7 @@
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import React from 'react';
 import { DrinkType } from '@/types/models';
+import { DRINK_TYPE_MAP } from '@/lib/constants';
 
 interface DrinkIconProps {
   type: DrinkType;
@@ -8,22 +9,11 @@ interface DrinkIconProps {
   color: string;
 }
 
-const MCIIcons: Partial<Record<DrinkType, string>> = {
-  beer: 'beer',
-  wine: 'glass-wine',
-  cocktail: 'glass-cocktail',
-  spirit: 'liquor',
-  cider: 'bottle-wine',
-  seltzer: 'bottle-soda',
-};
-
 export function DrinkIcon({ type, size, color }: DrinkIconProps) {
-  if (type === 'other') {
-    return <Ionicons name="help-circle-outline" size={size} color={color} />;
-  }
+  const info = DRINK_TYPE_MAP[type] || DRINK_TYPE_MAP['other'];
+  const iconName = info.icon;
 
-  const iconName = MCIIcons[type];
-  if (!iconName) {
+  if (type === 'other' || !iconName) {
     return <Ionicons name="help-circle-outline" size={size} color={color} />;
   }
 

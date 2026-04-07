@@ -25,25 +25,29 @@ export function DrinkTypePicker({ value, onChange }: DrinkTypePickerProps) {
       {DRINK_TYPES.map((type) => {
         const isSelected = value === type.value;
         return (
-          <Pressable
-            key={type.value}
-            onPress={() => onChange(type.value)}
-            style={{
-              borderColor: isSelected ? type.color : unselectedBorder,
-              backgroundColor: isSelected ? type.color + "15" : undefined,
-            }}
-            className="items-center py-3 px-4 rounded-2xl border-2 min-w-[72px] bg-card"
-          >
-            <View style={{ marginBottom: 4 }}>
-              <DrinkIcon type={type.value} size={28} color={type.color} />
-            </View>
-            <Text
-              style={{ color: isSelected ? type.color : "gray" }}
-              className={`text-xs font-semibold  ${isSelected ? "" : "text-muted-foreground"}`}
+          <React.Fragment key={type.value}>
+            <Pressable
+              onPress={() => onChange(type.value)}
+              style={{
+                borderColor: isSelected ? type.color : unselectedBorder,
+                backgroundColor: isSelected ? type.color + "15" : undefined,
+              }}
+              className="items-center py-3 px-4 rounded-2xl border-2 min-w-[72px] bg-card"
             >
-              {type.label}
-            </Text>
-          </Pressable>
+              <View style={{ marginBottom: 4 }}>
+                <DrinkIcon type={type.value} size={28} color={type.color} />
+              </View>
+              <Text
+                style={{ color: isSelected ? type.color : "gray" }}
+                className={`text-xs font-semibold  ${isSelected ? "" : "text-muted-foreground"}`}
+              >
+                {type.label}
+              </Text>
+            </Pressable>
+            {type.value === "water" && (
+              <View className="w-px h-[70%] self-center bg-border mx-1" />
+            )}
+          </React.Fragment>
         );
       })}
     </ScrollView>

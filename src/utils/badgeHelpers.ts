@@ -1,7 +1,7 @@
 import { MilestoneData, StreakData, UserStats, DrinkType } from '@/types/models';
 import { MILESTONE_EMOJI, DRINK_TYPE_MAP } from '@/lib/constants';
 
-export type BadgeCategory = 'milestone' | 'sober_streak' | 'drink_streak' | 'session_count' | 'under_limit_streak' | 'drink_type' | 'global_entry' | 'happy_hour' | 'last_call' | 'early_bird' | 'weekend_warrior' | 'school_night';
+export type BadgeCategory = 'milestone' | 'sober_streak' | 'drink_streak' | 'session_count' | 'under_limit_streak' | 'drink_type' | 'global_entry' | 'happy_hour' | 'last_call' | 'early_bird' | 'weekend_warrior' | 'school_night' | 'keeping_pace' | 'hydrated' | 'consistency_king';
 
 export type BadgeTier = 1 | 2 | 3 | 4 | 5 | 6 | 7;
 
@@ -10,7 +10,7 @@ export interface UserBadge {
   category: BadgeCategory;
   value: number;
   label: string;
-  emoji: string;
+  icon: string;
   tier: BadgeTier;
   targetValue?: number; // the value that earned this tier
 }
@@ -36,6 +36,8 @@ const THRESHOLDS: Record<string, number[]> = {
   early_bird: [5, 10, 25, 50, 100, 250, 500],
   weekend_warrior: [1, 2, 4, 8, 12, 26, 52],
   school_night: [1, 2, 4, 8, 12, 26, 52],
+  under_limit_streak: [1, 2, 4, 8, 12, 26, 52],
+  water_streak: [1, 3, 7, 14, 30, 60, 90],
 };
 
 function getTier(value: number, thresholds: number[]): BadgeTier {
@@ -72,7 +74,7 @@ export function getEarnedBadges(
           value: currentVal,
           targetValue: t,
           label: `${t} Total Drinks`,
-          emoji: '🏆',
+          icon: 'trophy',
           tier: (index + 1) as BadgeTier,
         });
       }
@@ -92,7 +94,7 @@ export function getEarnedBadges(
             value: dt.count,
             targetValue: t,
             label: `${t} ${info.label}s`,
-            emoji: info.emoji || '🍺',
+            icon: info.icon || 'beer',
             tier: (index + 1) as BadgeTier,
           });
         }
@@ -111,7 +113,7 @@ export function getEarnedBadges(
           value: streaks.sober_streak,
           targetValue: t,
           label: `${t} Day Sober Streak`,
-          emoji: '🧊',
+          icon: 'snowflake',
           tier: (index + 1) as BadgeTier,
         });
       }
@@ -129,7 +131,7 @@ export function getEarnedBadges(
           value: streaks.drink_streak,
           targetValue: t,
           label: `${t} Night Run`,
-          emoji: '🔥',
+          icon: 'fire',
           tier: (index + 1) as BadgeTier,
         });
       }
@@ -147,7 +149,7 @@ export function getEarnedBadges(
           value: stats.unique_countries_count,
           targetValue: t,
           label: `${t} ${t === 1 ? 'Country' : 'Countries'}`,
-          emoji: '🌍',
+          icon: 'earth',
           tier: (index + 1) as BadgeTier,
         });
       }
@@ -165,7 +167,7 @@ export function getEarnedBadges(
           value: stats.happy_hour_count,
           targetValue: t,
           label: `Happy Hour x${t}`,
-          emoji: '🕔',
+          icon: 'clock',
           tier: (index + 1) as BadgeTier,
         });
       }
@@ -183,7 +185,7 @@ export function getEarnedBadges(
           value: stats.last_call_count,
           targetValue: t,
           label: `Last Call x${t}`,
-          emoji: '🕛',
+          icon: 'clock-check',
           tier: (index + 1) as BadgeTier,
         });
       }
@@ -201,7 +203,7 @@ export function getEarnedBadges(
           value: stats.early_bird_count,
           targetValue: t,
           label: `Early Bird x${t}`,
-          emoji: '☀️',
+          icon: 'weather-sunny',
           tier: (index + 1) as BadgeTier,
         });
       }
@@ -227,12 +229,21 @@ export function getEarnedBadges(
     let currentSchoolNightStreak = 0;
     let currentWeekendWarriorStreak = 0;
 
+    const userCreatedDate = stats.user_created_at ? new Date(stats.user_created_at) : new Date(0);
+
     // Check last 52 weeks
     for (let i = 0; i < 52; i++) {
       const checkDate = new Date();
       checkDate.setDate(checkDate.getDate() - (i * 7 + checkDate.getDay()));
       const weekKey = checkDate.toISOString().split('T')[0];
       const weekData = weeks[weekKey];
+
+      // Don't count weeks before account creation
+      if (checkDate < userCreatedDate) {
+        // If the user joined in the middle of this week, we check if they've been good since joining
+        // But for simplicity, we just break here to fix the "Broken" logic
+        break;
+      }
 
       // School Night Pro: No drinks Mon-Thu (1, 2, 3, 4)
       const isSchoolNightSober = !weekData || (!weekData.days.has(1) && !weekData.days.has(2) && !weekData.days.has(3) && !weekData.days.has(4));
@@ -264,7 +275,7 @@ export function getEarnedBadges(
           value: schoolNightStreak,
           targetValue: t,
           label: `School Night Pro x${t} Week${t > 1 ? 's' : ''}`,
-          emoji: '📚',
+          icon: 'book-open-variant',
           tier: (index + 1) as BadgeTier,
         });
       }
@@ -279,7 +290,153 @@ export function getEarnedBadges(
           value: weekendWarriorStreak,
           targetValue: t,
           label: `Weekend Warrior x${t} Week${t > 1 ? 's' : ''}`,
-          emoji: '🤺',
+          icon: 'sword',
+          tier: (index + 1) as BadgeTier,
+        });
+      }
+    });
+  }
+
+  // 10. Weekly Limit Hero
+  if (stats && stats.weekly_limit > 0 && stats.activity_by_day && stats.activity_by_day.length > 0) {
+    const weeklyTotals: Record<string, number> = {};
+    stats.activity_by_day.forEach((d) => {
+      const dt = new Date(d.date + 'T12:00:00');
+      const startOfWeek = new Date(dt);
+      startOfWeek.setDate(dt.getDate() - dt.getDay());
+      const weekKey = startOfWeek.toISOString().split('T')[0];
+      weeklyTotals[weekKey] = (weeklyTotals[weekKey] || 0) + d.count;
+    });
+
+    let underLimitStreak = 0;
+    let currentUnderLimitStreak = 0;
+
+    for (let i = 0; i < 52; i++) {
+      const checkDate = new Date();
+      checkDate.setDate(checkDate.getDate() - (i * 7 + checkDate.getDay()));
+      const weekKey = checkDate.toISOString().split('T')[0];
+      const weekTotal = weeklyTotals[weekKey] || 0;
+
+      if (weekTotal <= stats.weekly_limit) {
+        currentUnderLimitStreak++;
+      } else {
+        underLimitStreak = Math.max(underLimitStreak, currentUnderLimitStreak);
+        currentUnderLimitStreak = 0;
+      }
+    }
+    underLimitStreak = Math.max(underLimitStreak, currentUnderLimitStreak);
+
+    const ulThresholds = THRESHOLDS.under_limit_streak;
+    ulThresholds.forEach((t, index) => {
+      if (underLimitStreak >= t) {
+        badges.push({
+          id: `underlimit-${t}`,
+          category: 'under_limit_streak',
+          value: underLimitStreak,
+          targetValue: t,
+          label: `Weekly Limit Hero x${t}`,
+          icon: 'shield-check',
+          tier: (index + 1) as BadgeTier,
+        });
+      }
+    });
+  }
+
+  // 11. Hydration: Keeping Pace & Hydrated
+  if (stats?.activity_by_day && stats.activity_by_day.length > 0) {
+    let keepingPaceCount = 0;
+    let hydratedStreak = 0;
+    let currentHydratedStreak = 0;
+
+    stats.activity_by_day.forEach((d) => {
+      const isKeepingPace = d.water_count >= d.alcohol_count && d.alcohol_count > 0;
+      if (isKeepingPace) {
+        keepingPaceCount++;
+        currentHydratedStreak++;
+      } else {
+        hydratedStreak = Math.max(hydratedStreak, currentHydratedStreak);
+        currentHydratedStreak = 0;
+      }
+    });
+    hydratedStreak = Math.max(hydratedStreak, currentHydratedStreak);
+
+    const thresholds = THRESHOLDS.water_streak;
+    
+    // Keeping Pace (Total)
+    thresholds.forEach((t, index) => {
+      if (keepingPaceCount >= t) {
+        badges.push({
+          id: `keepingpace-${t}`,
+          category: 'keeping_pace',
+          value: keepingPaceCount,
+          targetValue: t,
+          label: `Keeping Pace x${t}`,
+          icon: 'cup-water',
+          tier: (index + 1) as BadgeTier,
+        });
+      }
+    });
+
+    // Hydrated (Consecutive)
+    thresholds.forEach((t, index) => {
+      if (hydratedStreak >= t) {
+        badges.push({
+          id: `hydrated-${t}`,
+          category: 'hydrated',
+          value: hydratedStreak,
+          targetValue: t,
+          label: `Hydrated x${t}`,
+          icon: 'water-check',
+          tier: (index + 1) as BadgeTier,
+        });
+      }
+    });
+  }
+
+  // 12. Consistency King
+  if (stats && stats.weekly_limit > 0 && stats.activity_by_day && stats.activity_by_day.length > 0) {
+    const weeklyTotals: Record<string, number> = {};
+    stats.activity_by_day.forEach((d) => {
+      const dt = new Date(d.date + 'T12:00:00');
+      const startOfWeek = new Date(dt);
+      startOfWeek.setDate(dt.getDate() - dt.getDay());
+      const weekKey = startOfWeek.toISOString().split('T')[0];
+      weeklyTotals[weekKey] = (weeklyTotals[weekKey] || 0) + d.count;
+    });
+
+    let consistencyStreak = 0;
+    let currentConsistencyStreak = 0;
+    const goalUpdatedDate = stats.goal_updated_at ? new Date(stats.goal_updated_at) : new Date(0);
+
+    for (let i = 0; i < 52; i++) {
+      const checkDate = new Date();
+      checkDate.setDate(checkDate.getDate() - (i * 7 + checkDate.getDay()));
+      
+      // Streak resets if we go before the last goal update
+      if (checkDate < goalUpdatedDate) break;
+
+      const weekKey = checkDate.toISOString().split('T')[0];
+      const weekTotal = weeklyTotals[weekKey] || 0;
+
+      if (weekTotal <= stats.weekly_limit) {
+        currentConsistencyStreak++;
+      } else {
+        consistencyStreak = Math.max(consistencyStreak, currentConsistencyStreak);
+        currentConsistencyStreak = 0;
+      }
+    }
+    consistencyStreak = Math.max(consistencyStreak, currentConsistencyStreak);
+
+    const thresholds = THRESHOLDS.under_limit_streak; // Same thresholds
+    thresholds.forEach((t, index) => {
+      if (consistencyStreak >= t) {
+        badges.push({
+          id: `consistency-${t}`,
+          category: 'consistency_king',
+          value: consistencyStreak,
+          targetValue: t,
+          label: `Consistency King x${t}`,
+          icon: 'crown',
           tier: (index + 1) as BadgeTier,
         });
       }
@@ -290,70 +447,87 @@ export function getEarnedBadges(
 }
 
 export function findBadgeById(id: string): UserBadge | null {
-  // This is useful for reconstructing badges from stored IDs
-  // We should probably store more info or recalculate properly
-  // For now, let's just make it return the correct tier based on ID suffix
   const parts = id.split('-');
   const category = parts[0];
   const val = parseInt(parts[parts.length - 1]);
 
   let label = '';
-  let emoji = '';
+  let icon = '';
   let thresholds: number[] = [];
   let cat: BadgeCategory = 'milestone';
 
   if (category === 'milestone') {
     label = `${val} Total Drinks`;
-    emoji = '🏆';
+    icon = 'trophy';
     thresholds = THRESHOLDS.milestone;
     cat = 'milestone';
   } else if (category === 'drink') {
     const type = parts[1] as DrinkType;
     const info = DRINK_TYPE_MAP[type] ?? DRINK_TYPE_MAP['other'];
     label = `${val} ${info.label}s`;
-    emoji = info.emoji || '🍺';
+    icon = info.icon || 'beer';
     thresholds = THRESHOLDS.drink_type;
     cat = 'drink_type';
   } else if (category === 'sober') {
     label = `${val} Day Sober Streak`;
-    emoji = '🧊';
+    icon = 'snowflake';
     thresholds = THRESHOLDS.sober_streak;
     cat = 'sober_streak';
   } else if (category === 'streak') {
     label = `${val} Night Run`;
-    emoji = '🔥';
+    icon = 'fire';
     thresholds = THRESHOLDS.drink_streak;
     cat = 'drink_streak';
   } else if (category === 'global') {
     label = `${val} ${val === 1 ? 'Country' : 'Countries'}`;
-    emoji = '🌍';
+    icon = 'earth';
     thresholds = THRESHOLDS.global_entry;
     cat = 'global_entry';
   } else if (category === 'happyhour') {
     label = `Happy Hour x${val}`;
-    emoji = '🕔';
+    icon = 'clock';
     thresholds = THRESHOLDS.happy_hour;
     cat = 'happy_hour';
   } else if (category === 'lastcall') {
     label = `Last Call x${val}`;
-    emoji = '🕛';
+    icon = 'clock-check';
     thresholds = THRESHOLDS.last_call;
     cat = 'last_call';
   } else if (category === 'earlybird') {
     label = `Early Bird x${val}`;
-    emoji = '☀️';
+    icon = 'weather-sunny';
     thresholds = THRESHOLDS.early_bird;
     cat = 'early_bird';
   } else if (category === 'weekendwarrior') {
     label = `Weekend Warrior x${val} Week${val > 1 ? 's' : ''}`;
-    emoji = '🤺';
+    icon = 'sword';
     thresholds = THRESHOLDS.weekend_warrior;
     cat = 'weekend_warrior';
   } else if (category === 'schoolnight') {
     label = `School Night Pro x${val} Week${val > 1 ? 's' : ''}`;
-    emoji = '📚';
+    icon = 'book-open-variant';
     thresholds = THRESHOLDS.school_night;
     cat = 'school_night';
+  } else if (category === 'underlimit') {
+    label = `Weekly Limit Hero x${val}`;
+    icon = 'shield-check';
+    thresholds = THRESHOLDS.under_limit_streak;
+    cat = 'under_limit_streak';
+  } else if (category === 'keepingpace') {
+    label = `Keeping Pace x${val}`;
+    icon = 'cup-water';
+    thresholds = THRESHOLDS.water_streak;
+    cat = 'keeping_pace';
+  } else if (category === 'hydrated') {
+    label = `Hydrated x${val}`;
+    icon = 'water-check';
+    thresholds = THRESHOLDS.water_streak;
+    cat = 'hydrated';
+  } else if (category === 'consistency') {
+    label = `Consistency King x${val}`;
+    icon = 'crown';
+    thresholds = THRESHOLDS.under_limit_streak;
+    cat = 'consistency_king';
   }
 
   const tierIndex = thresholds.indexOf(val);
@@ -365,7 +539,7 @@ export function findBadgeById(id: string): UserBadge | null {
     value: val,
     targetValue: val,
     label,
-    emoji,
+    icon,
     tier: (tierIndex + 1) as BadgeTier,
   };
 }

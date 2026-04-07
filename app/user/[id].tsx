@@ -21,6 +21,9 @@ import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/stores/authStore';
 import { useColorScheme } from 'nativewind';
 import { FeedEntry, Profile } from '@/types/models';
+import { findBadgeById, TIER_COLORS, UserBadge } from '@/utils/badgeHelpers';
+import { BadgeInfoModal } from '@/components/profile/BadgeInfoModal';
+import { useState } from 'react';
 
 export default function UserProfileScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -34,7 +37,7 @@ export default function UserProfileScreen() {
       const { data, error } = await supabase
         .from('profiles')
         .select(
-          `*, followers_count:follows!following_id(count), following_count:follows!follower_id(count)`,
+          `*, displayed_badges, followers_count:follows!following_id(count), following_count:follows!follower_id(count)`,
         )
         .eq('id', id!)
         .single();
@@ -68,6 +71,7 @@ export default function UserProfileScreen() {
   const { follow, unfollow } = useFollow(currentUser?.id);
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
+  const [badgeInfoVisible, setBadgeInfoVisible] = useState(false);
 
   const isLoading = profileLoading || feedLoading;
 
@@ -80,6 +84,9 @@ export default function UserProfileScreen() {
   }
 
   if (!profile) return null;
+
+  const selectedBadgeIds = profile.displayed_badges ?? [];
+  const selectedBadges = selectedBadgeIds.map(findBadgeById).filter(Boolean) as UserBadge[];
 
   function ProfileHeader() {
     return (
@@ -127,19 +134,41 @@ export default function UserProfileScreen() {
             <Text className="text-muted-foreground text-sm mt-2">{profile!.bio}</Text>
           )}
 
-          <View className="flex-row gap-6 mt-3">
-            <Pressable onPress={() => router.push(`/user/${profile!.id}/followers`)}>
-              <Text className="text-muted-foreground text-sm">
-                <Text className="font-bold text-foreground">{profile!.followers_count ?? 0}</Text>{' '}
-                Followers
-              </Text>
-            </Pressable>
-            <Pressable onPress={() => router.push(`/user/${profile!.id}/following`)}>
-              <Text className="text-muted-foreground text-sm">
-                <Text className="font-bold text-foreground">{profile!.following_count ?? 0}</Text>{' '}
-                Following
-              </Text>
-            </Pressable>
+          <View className="flex-row items-center justify-between mt-3">
+            <View className="flex-row gap-6">
+              <Pressable onPress={() => router.push(`/user/${profile!.id}/followers`)}>
+                <Text className="text-muted-foreground text-sm">
+                  <Text className="font-bold text-foreground">{profile!.followers_count ?? 0}</Text>{' '}
+                  Followers
+                </Text>
+              </Pressable>
+              <Pressable onPress={() => router.push(`/user/${profile!.id}/following`)}>
+                <Text className="text-muted-foreground text-sm">
+                  <Text className="font-bold text-foreground">{profile!.following_count ?? 0}</Text>{' '}
+                  Following
+                </Text>
+              </Pressable>
+            </View>
+
+            <View className="flex-row items-center gap-1.5">
+              {selectedBadges.map((b) => (
+                <Pressable 
+                  key={b.id} 
+                  className="w-8 h-10 items-center justify-center border-2 border-card shadow-sm -ml-2 first:ml-0"
+                  onPress={() => setBadgeInfoVisible(true)}
+                  style={{ 
+                      backgroundColor: TIER_COLORS[b.tier] + '40', 
+                      borderColor: TIER_COLORS[b.tier],
+                      borderTopLeftRadius: 4,
+                      borderTopRightRadius: 4,
+                      borderBottomLeftRadius: 16,
+                      borderBottomRightRadius: 16,
+                  }}
+                >
+                  <Text className="text-sm">{b.emoji}</Text>
+                </Pressable>
+              ))}
+            </View>
           </View>
         </View>
       </View>
@@ -148,6 +177,11 @@ export default function UserProfileScreen() {
 
   return (
     <SafeAreaView className={`flex-1 bg-background ${isDark ? 'dark' : ''}`}>
+      <BadgeInfoModal 
+        badges={selectedBadges} 
+        isVisible={badgeInfoVisible} 
+        onClose={() => setBadgeInfoVisible(false)} 
+      />
       <FlatList
         data={entries}
         keyExtractor={(entry) =>

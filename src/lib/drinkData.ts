@@ -74,9 +74,29 @@ export const DRINK_NAMES: Record<DrinkType, string[]> = {
     'Berry Hard Seltzer', 'Citrus Hard Seltzer', 'Mango Hard Seltzer',
     'Ranch Water', 'Sparkling Hard Seltzer',
   ],
+  water: [
+    'Still Water', 'Sparkling Water', 'Mineral Water', 'Tap Water',
+    'Coconut Water', 'Lemon Water', 'Cucumber Water', 'Infused Water',
+  ],
+  soft_drink: [
+    'Cola', 'Diet Cola', 'Zero Sugar Cola', 'Lemon-Lime Soda',
+    'Ginger Ale', 'Ginger Beer', 'Root Beer', 'Orange Soda',
+    'Grape Soda', 'Ice Tea', 'Lemonade',
+    'Fruit Punch', 'Energy Drink', 'Sports Drink',
+  ],
+  mocktail: [
+    'Shirley Temple', 'Roy Rogers', 'Virgin Mojito', 'Virgin Margarita',
+    'Virgin Mary', 'Virgin Piña Colada', 'Virgin Daiquiri',
+    'Arnold Palmer', 'Safe on the Beach', 'No-Groni',
+  ],
+  non_alcoholic: [
+    'Non-Alcoholic Beer', '0.0% Lager', 'NA IPA', 'NA Stout',
+    'Non-Alcoholic Wine', 'Non-Alcoholic Sparkling Wine',
+    'Alcohol-Free Spirit', 'NA Gin Alternative', 'NA Whiskey Alternative',
+    'Kombucha',
+  ],
   other: [
     'House Special', 'Mixed Drink', 'Signature Cocktail',
-    'Non-Alcoholic Beer', 'Non-Alcoholic Wine', 'Kombucha',
     'Hard Tea', 'Hard Lemonade', 'Hard Kombucha',
     'Canned Cocktail', 'RTD Cocktail',
   ],
@@ -167,6 +187,26 @@ export const DRINK_BRANDS: Record<DrinkType, string[]> = {
     'Wild Basin', 'Crook & Marker', 'Flying Embers',
     'Arctic Summer', 'Social Lite', 'Coors Seltzer',
     'Michelob Ultra Organic Seltzer', 'Natural Light Seltzer',
+  ],
+  water: [
+    'Fiji', 'Evian', 'Voss', 'San Pellegrino', 'Perrier',
+    'Aquafina', 'Dasani', 'SmartWater', 'Poland Spring',
+    'Essentia', 'Core Hydration', 'Liquid Death',
+  ],
+  soft_drink: [
+    'Coca-Cola', 'Pepsi', 'Dr Pepper', 'Sprite', 'Mountain Dew',
+    '7-Up', 'Fanta', 'Schweppes', 'Canada Dry', 'Vernors',
+    'Fever-Tree', 'Q Mixers', 'Red Bull', 'Monster', 'Gatorade',
+  ],
+  mocktail: [
+    'Seedlip', 'Lyre\'s', 'Ritual Zero Proof', 'Ghia',
+    'Kin Euphorics', 'Optimist Botanicals', 'Spiritless',
+  ],
+  non_alcoholic: [
+    'Heineken 0.0', 'Athletic Brewing', 'BrewDog AF', 'Guinness 0.0',
+    'Budweiser Zero', 'Stella Artois Liberté', 'Lagunitas IPNA',
+    'Brooklyn Special Effects', 'Clausthaler', 'Erdinger Alkoholfrei',
+    'Tost', 'Fre', 'Giesen 0%',
   ],
   other: [],
 };

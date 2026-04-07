@@ -5,6 +5,10 @@ export type DrinkType =
   | 'spirit'
   | 'cider'
   | 'seltzer'
+  | 'water'
+  | 'soft_drink'
+  | 'mocktail'
+  | 'non_alcoholic'
   | 'other';
 
 export type SubscriptionTier = 'free' | 'premium';
@@ -67,6 +71,8 @@ export interface DrinkTypeStats {
 export interface ActivityDay {
   date: string;
   count: number;
+  alcohol_count: number;
+  water_count: number;
 }
 
 export interface UserStats {
@@ -80,6 +86,9 @@ export interface UserStats {
   last_call_count: number;
   early_bird_count: number;
   unique_countries_count: number;
+  weekly_limit: number;
+  goal_updated_at: string | null;
+  user_created_at: string;
 }
 
 export interface FeedItem extends DrinkLog {

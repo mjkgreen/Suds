@@ -1,6 +1,6 @@
 import React from 'react';
 import { Modal, Pressable, ScrollView, Text, View, SafeAreaView } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { UserBadge, BadgeCategory, TIER_COLORS } from '@/utils/badgeHelpers';
 
 interface BadgePickerProps {
@@ -127,7 +127,7 @@ export function BadgePicker({
                                                 elevation: 3
                                             }}
                                         >
-                                            <Text className="text-3xl">{badge.emoji}</Text>
+                                            <MaterialCommunityIcons name={badge.icon as any} size={32} color={TIER_COLORS[badge.tier]} />
                                         </View>
                                         <Text className="text-[10px] font-bold text-center text-foreground">{badge.label}</Text>
                                         {isSelected && (
