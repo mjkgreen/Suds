@@ -178,6 +178,16 @@ export default function SignUpScreen() {
                 />
               )}
 
+              {Platform.OS === 'web' && !success && (
+                <Button
+                  label="Sign up with Apple"
+                  onPress={handleAppleSignUp}
+                  disabled={loading}
+                  variant="apple"
+                  size="lg"
+                />
+              )}
+
               {!success && (
                 <Button
                   label="Sign up with Google"

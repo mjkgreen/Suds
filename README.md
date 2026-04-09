@@ -88,11 +88,30 @@ suds/
    - `EXPO_PUBLIC_RC_IOS_KEY`
    - `EXPO_PUBLIC_RC_ANDROID_KEY`
 
-### 3. Backend Implementation
+### 3. Environment Variables (full list)
+   - `EXPO_PUBLIC_SUPABASE_URL`
+   - `EXPO_PUBLIC_SUPABASE_ANON_KEY`
+   - `EXPO_PUBLIC_RC_IOS_KEY`
+   - `EXPO_PUBLIC_RC_ANDROID_KEY`
+   - `EXPO_PUBLIC_AUTH_URL` — set to `http://localhost:8081` in dev, `https://drink-with-suds.com` in prod
+   - `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` — Google OAuth Web client ID
+   - `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID` — Google OAuth iOS client ID
+
+### 4. Backend Implementation
 1. Go to your **Supabase Dashboard**.
 2. Run the SQL migrations found in `/supabase/migrations/` sequentially (001-007) or use the **`combined.sql`** script for a fresh setup.
 3. Enable the **PostGIS** extension in the Supabase extension dashboard.
 4. Create a public storage bucket named **`avatars`**.
+
+---
+
+## 🌐 Production
+
+**Live at:** [drink-with-suds.com](https://drink-with-suds.com)
+
+- Set `EXPO_PUBLIC_AUTH_URL=https://drink-with-suds.com` in your prod environment
+- Google OAuth redirect URI (in Google Cloud Console): `https://gbenibgytweskljxneup.supabase.co/auth/v1/callback`
+- Apple web OAuth (Services ID return URL): `https://gbenibgytweskljxneup.supabase.co/auth/v1/callback`
 
 ---
 

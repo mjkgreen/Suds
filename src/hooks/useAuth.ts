@@ -108,6 +108,17 @@ export function useAuth() {
   }
 
   async function signInWithApple() {
+    if (Platform.OS === 'web') {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'apple',
+        options: {
+          redirectTo: `${process.env.EXPO_PUBLIC_AUTH_URL ?? (typeof window !== 'undefined' ? window.location.origin : '')}/callback`,
+        },
+      });
+      if (error) throw error;
+      return;
+    }
+
     try {
       const rawNonce = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
       const hashedNonce = await Crypto.digestStringAsync(

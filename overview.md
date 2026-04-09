@@ -202,6 +202,17 @@ Premium gating uses `PremiumGate` component: wraps premium UI, checks `useSubscr
 
 ---
 
+## Production
+
+**Live at:** https://drink-with-suds.com
+
+- `EXPO_PUBLIC_AUTH_URL=https://drink-with-suds.com` in prod env
+- Google OAuth authorized redirect URI: `https://gbenibgytweskljxneup.supabase.co/auth/v1/callback` (Web client only)
+- Apple web OAuth Services ID return URL: `https://gbenibgytweskljxneup.supabase.co/auth/v1/callback`
+- Apple domain verification: `https://drink-with-suds.com/.well-known/apple-developer-domain-association.txt`
+
+---
+
 ## Setup Checklist
 
 1. Create a Supabase project at supabase.com

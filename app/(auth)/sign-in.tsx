@@ -132,6 +132,16 @@ export default function SignInScreen() {
                 />
               )}
 
+              {Platform.OS === 'web' && (
+                <Button
+                  label="Sign in with Apple"
+                  onPress={handleAppleSignIn}
+                  disabled={loading}
+                  variant="apple"
+                  size="lg"
+                />
+              )}
+
               <Button
                 label="Sign in with Google"
                 onPress={async () => {

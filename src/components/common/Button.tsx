@@ -4,7 +4,7 @@ import { useColorScheme } from "nativewind";
 
 interface ButtonProps extends PressableProps {
   label: string;
-  variant?: "primary" | "secondary" | "ghost" | "danger" | "google";
+  variant?: "primary" | "secondary" | "ghost" | "danger" | "google" | "apple";
   size?: "sm" | "md" | "lg";
   loading?: boolean;
   icon?: React.ReactNode;
@@ -16,6 +16,7 @@ const variantStyles = {
   ghost: "bg-transparent active:bg-accent dark:active:bg-accent",
   danger: "bg-destructive active:opacity-90",
   google: "bg-black active:opacity-90",
+  apple: "bg-black active:opacity-90",
 };
 
 const labelStyles = {
@@ -24,6 +25,7 @@ const labelStyles = {
   ghost: "text-foreground dark:text-foreground font-medium",
   danger: "text-destructive-foreground font-semibold",
   google: "text-white font-semibold",
+  apple: "text-white font-semibold",
 };
 
 const sizeStyles = {
