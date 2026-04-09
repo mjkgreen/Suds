@@ -98,7 +98,13 @@ export default function TabsLayout() {
     <View className="flex-1">
       {Platform.OS === 'web' && <WebNavBar />}
       <SessionBanner />
-      <TabsLayoutInner />
+      {Platform.OS === 'web' ? (
+        <View style={{ flex: 1, maxWidth: 860, width: '100%', alignSelf: 'center' }}>
+          <TabsLayoutInner />
+        </View>
+      ) : (
+        <TabsLayoutInner />
+      )}
     </View>
   );
 }

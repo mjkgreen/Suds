@@ -152,7 +152,7 @@ export function useAuth() {
         const { error } = await supabase.auth.signInWithOAuth({
           provider: 'google',
           options: {
-            redirectTo: `${typeof window !== 'undefined' ? window.location.origin : ''}/callback`,
+            redirectTo: `${process.env.EXPO_PUBLIC_AUTH_URL ?? (typeof window !== 'undefined' ? window.location.origin : '')}/callback`,
           },
         });
         if (error) throw error;

@@ -62,7 +62,7 @@ export default function SignInScreen() {
           contentContainerStyle={{ flexGrow: 1 }}
           keyboardShouldPersistTaps="handled"
         >
-          <View className="flex-1 px-6 pt-16 pb-10">
+          <View className="flex-1 px-6 pt-16 pb-10" style={{ maxWidth: 480, width: '100%', alignSelf: 'center' }}>
             {/* Header */}
             <View className="items-center mb-12">
               <Image
