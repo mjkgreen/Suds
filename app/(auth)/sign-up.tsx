@@ -25,6 +25,8 @@ export default function SignUpScreen() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [legalAgeConfirmed, setLegalAgeConfirmed] = useState(false);
+  const [tosConfirmed, setTosConfirmed] = useState(false);
 
   async function handleSignUp() {
     setError(null);
@@ -42,6 +44,14 @@ export default function SignUpScreen() {
     }
     if (password.length < 8) {
       setError('Password must be at least 8 characters.');
+      return;
+    }
+    if (!legalAgeConfirmed) {
+      setError('You must confirm that you are of legal drinking age.');
+      return;
+    }
+    if (!tosConfirmed) {
+      setError('You must accept the Terms of Service and Privacy Policy.');
       return;
     }
     setLoading(true);
@@ -144,6 +154,39 @@ export default function SignUpScreen() {
                 />
                 <Text className="text-gray-400 text-xs mt-1">Minimum 8 characters</Text>
               </View>
+
+              {/* Legal age confirmation */}
+              <Pressable
+                onPress={() => setLegalAgeConfirmed(v => !v)}
+                className="flex-row items-start gap-3 py-1"
+              >
+                <View className={`w-5 h-5 rounded border-2 mt-0.5 items-center justify-center flex-shrink-0 ${legalAgeConfirmed ? 'bg-amber-500 border-amber-500' : 'border-gray-300 bg-white'}`}>
+                  {legalAgeConfirmed && <Ionicons name="checkmark" size={13} color="#fff" />}
+                </View>
+                <Text className="text-gray-600 text-sm flex-1">
+                  I confirm that I am of legal drinking age in my jurisdiction
+                </Text>
+              </Pressable>
+
+              {/* TOS + Privacy Policy */}
+              <Pressable
+                onPress={() => setTosConfirmed(v => !v)}
+                className="flex-row items-start gap-3 py-1"
+              >
+                <View className={`w-5 h-5 rounded border-2 mt-0.5 items-center justify-center flex-shrink-0 ${tosConfirmed ? 'bg-amber-500 border-amber-500' : 'border-gray-300 bg-white'}`}>
+                  {tosConfirmed && <Ionicons name="checkmark" size={13} color="#fff" />}
+                </View>
+                <Text className="text-gray-600 text-sm flex-1">
+                  {'I have read and agree to the '}
+                  <Link href="/terms" asChild>
+                    <Text className="text-amber-600 font-semibold">Terms of Service</Text>
+                  </Link>
+                  {' and '}
+                  <Link href="/privacy" asChild>
+                    <Text className="text-amber-600 font-semibold">Privacy Policy</Text>
+                  </Link>
+                </Text>
+              </Pressable>
 
               {error && (
                 <View className="bg-red-50 border border-red-200 rounded-xl px-4 py-3">

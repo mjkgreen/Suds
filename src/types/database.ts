@@ -24,7 +24,7 @@ export interface Database {
           height_unit: string | null;
           weight: number | null;
           weight_unit: string | null;
-          age: number | null;
+          birthdate: string | null;
           onboarded: boolean;
           created_at: string;
           updated_at: string;
@@ -39,7 +39,7 @@ export interface Database {
           height_unit?: string | null;
           weight?: number | null;
           weight_unit?: string | null;
-          age?: number | null;
+          birthdate?: string | null;
           onboarded?: boolean;
           created_at?: string;
           updated_at?: string;
@@ -53,7 +53,7 @@ export interface Database {
           height_unit?: string | null;
           weight?: number | null;
           weight_unit?: string | null;
-          age?: number | null;
+          birthdate?: string | null;
           onboarded?: boolean;
           updated_at?: string;
         };

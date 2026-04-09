@@ -23,7 +23,7 @@ export interface Profile {
   height_unit: 'cm' | 'in' | null;
   weight: number | null;
   weight_unit: 'kg' | 'lb' | null;
-  age: number | null;
+  birthdate: string | null;
   onboarded: boolean;
   subscription_tier: SubscriptionTier;
   displayed_badges?: string[]; // IDs like "milestone-100", "sober-7"

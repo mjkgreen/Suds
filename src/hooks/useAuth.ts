@@ -77,7 +77,10 @@ export function useAuth() {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { username } },
+      options: {
+        data: { username },
+        emailRedirectTo: `${process.env.EXPO_PUBLIC_AUTH_URL ?? (typeof window !== 'undefined' ? window.location.origin : '')}/callback`,
+      },
     });
     if (error) throw error;
 

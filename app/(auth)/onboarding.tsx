@@ -25,7 +25,7 @@ export default function OnboardingScreen() {
   const [weightUnit, setWeightUnit] = useState<'lb' | 'kg'>('lb');
   const [weightValue, setWeightValue] = useState('');
 
-  const [age, setAge] = useState('');
+  const [birthdate, setBirthdate] = useState('');
 
   const handleNextStep = async () => {
     if (step === 1) {
@@ -48,8 +48,13 @@ export default function OnboardingScreen() {
         }
       }
 
-      if (!weightValue.trim() || !age.trim()) {
-        Alert.alert('Error', 'Weight and age are required for BAC calculations.');
+      if (!weightValue.trim() || !birthdate.trim()) {
+        Alert.alert('Error', 'Weight and date of birth are required for BAC calculations.');
+        return;
+      }
+      const parsedBirthdate = new Date(birthdate);
+      if (isNaN(parsedBirthdate.getTime()) || parsedBirthdate >= new Date()) {
+        Alert.alert('Error', 'Please enter a valid date of birth (MM/DD/YYYY).');
         return;
       }
       await completeOnboarding();
@@ -69,11 +74,13 @@ export default function OnboardingScreen() {
       }
 
       const finalWeight = parseFloat(weightValue);
-      const parsedAge = parseInt(age, 10);
 
-      if (isNaN(finalHeight) || isNaN(finalWeight) || isNaN(parsedAge)) {
-        throw new Error('Please enter valid numbers for height, weight, and age.');
+      if (isNaN(finalHeight) || isNaN(finalWeight)) {
+        throw new Error('Please enter valid numbers for height and weight.');
       }
+
+      // Store birthdate as YYYY-MM-DD
+      const birthdateISO = new Date(birthdate).toISOString().split('T')[0];
 
       const updates = {
         username: username.trim(),
@@ -82,7 +89,7 @@ export default function OnboardingScreen() {
         height_unit: heightUnit,
         weight: finalWeight,
         weight_unit: weightUnit,
-        age: parsedAge,
+        birthdate: birthdateISO,
         onboarded: true,
         updated_at: new Date().toISOString(),
       };
@@ -138,9 +145,9 @@ export default function OnboardingScreen() {
         {step === 1 ? 'Welcome to Suds!' : 'Almost there!'}
       </Text>
       <Text className="text-muted-foreground mb-8 text-lg">
-        {step === 1 
-          ? "Let's set up your profile so friends can find you." 
-          : "We need a few details to estimate your Blood Alcohol Content (BAC). This stays private."}
+        {step === 1
+          ? "Let's set up your profile so friends can find you."
+          : "We need a few details to estimate your BAC. Your height, weight, and date of birth are private — only you can see them."}
       </Text>
 
       {step === 1 ? (
@@ -171,9 +178,10 @@ export default function OnboardingScreen() {
         <View className="gap-6">
           {/* Height Section */}
           <View>
-            <View className="flex-row justify-between items-center mb-2">
+            <View className="flex-row justify-between items-center mb-1">
               <Text className="text-foreground font-medium text-lg">Height</Text>
             </View>
+            <Text className="text-muted-foreground text-sm mb-2">Private — never shown to other users</Text>
             <UnitToggle 
               value={heightUnit} 
               onChange={setHeightUnit} 
@@ -216,7 +224,8 @@ export default function OnboardingScreen() {
 
           {/* Weight Section */}
           <View>
-            <Text className="text-foreground font-medium text-lg mb-2">Weight</Text>
+            <Text className="text-foreground font-medium text-lg mb-1">Weight</Text>
+            <Text className="text-muted-foreground text-sm mb-2">Private — never shown to other users</Text>
             <UnitToggle 
               value={weightUnit} 
               onChange={setWeightUnit} 
@@ -232,16 +241,17 @@ export default function OnboardingScreen() {
             />
           </View>
 
-          {/* Age Section */}
+          {/* Date of Birth Section */}
           <View>
-            <Text className="text-foreground font-medium text-lg mb-2">Age</Text>
+            <Text className="text-foreground font-medium text-lg mb-1">Date of Birth</Text>
+            <Text className="text-muted-foreground text-sm mb-2">Private — never shown to other users</Text>
             <TextInput
               className="bg-card text-foreground p-4 rounded-xl border border-border"
-              placeholder="e.g. 25"
+              placeholder="MM/DD/YYYY"
               placeholderTextColor="#64748b"
-              keyboardType="numeric"
-              value={age}
-              onChangeText={setAge}
+              keyboardType="numbers-and-punctuation"
+              value={birthdate}
+              onChangeText={setBirthdate}
             />
           </View>
         </View>

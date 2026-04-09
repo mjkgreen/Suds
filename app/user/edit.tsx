@@ -42,8 +42,12 @@ export default function EditProfileScreen() {
   const [weightValue, setWeightValue] = useState(profile?.weight?.toString() ?? "");
   const [weightUnit, setWeightUnit] = useState<'lb' | 'kg'>(profile?.weight_unit || 'lb');
 
-  // Age State
-  const [age, setAge] = useState(profile?.age?.toString() ?? "");
+  // Date of Birth State (display as MM/DD/YYYY, store as YYYY-MM-DD)
+  const [birthdate, setBirthdate] = useState(() => {
+    if (!profile?.birthdate) return "";
+    const [y, m, d] = profile.birthdate.split('-');
+    return `${m}/${d}/${y}`;
+  });
 
   const [avatarUri, setAvatarUri] = useState<string | null>(null);
   const [avatarBase64, setAvatarBase64] = useState<string | null>(null);
@@ -54,7 +58,11 @@ export default function EditProfileScreen() {
     setDisplayName(profile?.display_name ?? "");
     setUsername(profile?.username ?? "");
     setBio(profile?.bio ?? "");
-    setAge(profile?.age?.toString() ?? "");
+    setBirthdate(() => {
+      if (!profile?.birthdate) return "";
+      const [y, m, d] = profile.birthdate.split('-');
+      return `${m}/${d}/${y}`;
+    });
     setHeightUnit(profile?.height_unit || 'in');
     setWeightUnit(profile?.weight_unit || 'lb');
     setWeightValue(profile?.weight?.toString() ?? "");
@@ -137,7 +145,7 @@ export default function EditProfileScreen() {
           height_unit: heightUnit,
           weight: weightValue ? parseFloat(weightValue) : null,
           weight_unit: weightUnit,
-          age: age ? parseInt(age, 10) : null,
+          birthdate: birthdate ? new Date(birthdate).toISOString().split('T')[0] : null,
         },
       });
       
@@ -249,18 +257,17 @@ export default function EditProfileScreen() {
             />
           </View>
 
-          <View className="flex-row gap-4">
-            <View className="flex-1">
-              <Text className="text-foreground font-semibold mb-1.5 text-sm">Age</Text>
-              <TextInput
-                className="bg-card border border-border rounded-xl px-4 py-3 text-base text-foreground"
-                placeholder="21"
-                placeholderTextColor="hsl(var(--muted-foreground))"
-                value={age}
-                onChangeText={setAge}
-                keyboardType="numeric"
-              />
-            </View>
+          <View>
+            <Text className="text-foreground font-semibold mb-0.5 text-sm">Date of Birth</Text>
+            <Text className="text-muted-foreground text-xs mb-1.5">Private — only used for BAC estimates</Text>
+            <TextInput
+              className="bg-card border border-border rounded-xl px-4 py-3 text-base text-foreground"
+              placeholder="MM/DD/YYYY"
+              placeholderTextColor="hsl(var(--muted-foreground))"
+              value={birthdate}
+              onChangeText={setBirthdate}
+              keyboardType="numbers-and-punctuation"
+            />
           </View>
 
           <View>
