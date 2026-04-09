@@ -1,3 +1,4 @@
+import Head from 'expo-router/head';
 import { useQueryClient } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
@@ -68,8 +69,10 @@ export default function FeedScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-background" edges={topEdges}>
-      <FlatList
+    <>
+      <Head><title>Feed | Suds</title></Head>
+      <SafeAreaView className="flex-1 bg-background" edges={topEdges}>
+        <FlatList
         data={entries}
         keyExtractor={(entry) => (entry.type === "session" ? `session-${entry.session_id}` : `drink-${entry.item.id}`)}
         renderItem={({ item: entry }) => {
@@ -168,7 +171,8 @@ export default function FeedScreen() {
             </View>
           </Pressable>
         </Pressable>
-      </Modal>
-    </SafeAreaView>
+        </Modal>
+      </SafeAreaView>
+    </>
   );
 }

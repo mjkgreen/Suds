@@ -1,3 +1,4 @@
+import Head from 'expo-router/head';
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useCallback, useState } from "react";
@@ -12,7 +13,6 @@ import { AdvancedStatsPreview, BACEstimatorPreview, TopDrinksPreview } from "@/c
 import { GoalCard } from "@/components/profile/GoalCard";
 import { MilestoneBanner } from "@/components/profile/MilestoneBanner";
 import { BadgePicker } from "@/components/profile/BadgePicker";
-import { StreakCard } from "@/components/profile/StreakCard";
 import { ActivityCalendar } from "@/components/profile/ActivityCalendar";
 import { useAuth } from "@/hooks/useAuth";
 import { useMyFeed } from "@/hooks/useFeed";
@@ -285,7 +285,26 @@ export default function ProfileScreen() {
             </Pressable>
           </View>
 
-          <Pressable 
+          <View className="gap-1.5">
+            {streaks && streaks.sober_streak > 0 && (
+              <View
+                className="flex-row items-center gap-1 self-start rounded-full px-2 py-0.5"
+                style={{
+                  backgroundColor: colorScheme === "dark" ? "#1e3a5f" : "#eff6ff",
+                  borderWidth: 1,
+                  borderColor: colorScheme === "dark" ? "#2563eb" : "#bfdbfe",
+                }}
+              >
+                <Text className="text-xs">💧</Text>
+                <Text
+                  className="text-xs font-semibold"
+                  style={{ color: colorScheme === "dark" ? "#93c5fd" : "#2563eb" }}
+                >
+                  {streaks.sober_streak}d sober
+                </Text>
+              </View>
+            )}
+          <Pressable
             className="flex-row items-center gap-1.5"
             onPress={() => setBadgeInfoVisible(true)}
           >
@@ -319,6 +338,7 @@ export default function ProfileScreen() {
               </View>
             )}
           </Pressable>
+          </View>
         </View>
       </View>
     );
@@ -355,7 +375,6 @@ export default function ProfileScreen() {
           contentContainerStyle={{ paddingBottom: 24 }}
           refreshControl={<RefreshControl refreshing={false} onRefresh={onRefresh} tintColor="#f59e0b" />}
         >
-          {streaks && <StreakCard streaks={streaks} />}
           {stats && user?.id && <GoalCard userId={user.id} stats={stats} />}
 
           {stats && (
@@ -440,8 +459,10 @@ export default function ProfileScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-background" edges={topEdges}>
-      <ProfileHeader />
+    <>
+      <Head><title>Profile | Suds</title></Head>
+      <SafeAreaView className="flex-1 bg-background" edges={topEdges}>
+        <ProfileHeader />
       {badgePicker}
       <TabBar active={activeTab} onChange={setActiveTab} />
       <FlatList
@@ -481,6 +502,7 @@ export default function ProfileScreen() {
         onEndReachedThreshold={0.4}
         contentContainerStyle={{ paddingBottom: 24 }}
       />
-    </SafeAreaView>
+      </SafeAreaView>
+    </>
   );
 }

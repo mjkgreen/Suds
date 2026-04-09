@@ -1,4 +1,5 @@
 import { useRouter } from 'expo-router';
+import Head from 'expo-router/head';
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
@@ -84,8 +85,10 @@ export default function SearchScreen() {
   });
 
   return (
-    <SafeAreaView className="flex-1 bg-background" edges={topEdges}>
-      {/* Search bar */}
+    <>
+      <Head><title>Search | Suds</title></Head>
+      <SafeAreaView className="flex-1 bg-background" edges={topEdges}>
+        {/* Search bar */}
       <View className="px-4 pt-6 pb-3 bg-card border-b border-border">
         <Text className="text-2xl font-bold text-foreground mb-3">Find Friends</Text>
         <View className="flex-row items-center bg-accent rounded-xl px-4 py-2.5">
@@ -132,6 +135,7 @@ export default function SearchScreen() {
           }
         />
       )}
-    </SafeAreaView>
+      </SafeAreaView>
+    </>
   );
 }

@@ -1,4 +1,5 @@
 import { Link } from 'expo-router';
+import Head from 'expo-router/head';
 import React, { useState } from 'react';
 import {
   KeyboardAvoidingView,
@@ -10,6 +11,7 @@ import {
   View,
 } from 'react-native';
 import { Image } from 'expo-image';
+import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '@/components/common/Button';
 import { useAuth } from '@/hooks/useAuth';
@@ -53,10 +55,15 @@ export default function SignInScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-amber-50">
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        className="flex-1"
+    <>
+      <Head>
+        <title>Sign In | Suds</title>
+        <meta name="robots" content="noindex" />
+      </Head>
+      <SafeAreaView className="flex-1 bg-amber-50">
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          className="flex-1"
       >
         <ScrollView
           contentContainerStyle={{ flexGrow: 1 }}
@@ -139,6 +146,7 @@ export default function SignInScreen() {
                   disabled={loading}
                   variant="apple"
                   size="lg"
+                  icon={<Ionicons name="logo-apple" size={20} color="#fff" />}
                 />
               )}
 
@@ -172,7 +180,8 @@ export default function SignInScreen() {
             </View>
           </View>
         </ScrollView>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    </>
   );
 }

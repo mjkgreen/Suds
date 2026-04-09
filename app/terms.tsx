@@ -1,5 +1,6 @@
 import { Text, View } from 'react-native';
 import { useColorScheme } from 'nativewind';
+import Head from 'expo-router/head';
 import { PublicLayout } from '@/components/web/PublicLayout';
 
 function Section({ title, children, isDark }: { title: string; children: React.ReactNode; isDark: boolean }) {
@@ -26,6 +27,10 @@ export default function TermsScreen() {
 
   return (
     <PublicLayout>
+      <Head>
+        <title>Terms of Service | Suds</title>
+        <meta name="description" content="Read the Terms of Service for the Suds drink tracking app." />
+      </Head>
       {/* Header */}
       <View style={{ marginBottom: 40 }}>
         <Text className={`text-4xl font-bold mb-3 ${isDark ? 'text-white' : 'text-gray-900'}`}>

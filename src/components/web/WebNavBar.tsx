@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { usePathname, useRouter } from "expo-router";
 import { Image } from "expo-image";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Pressable, Text, View } from "react-native";
 import { useColorScheme } from "nativewind";
 import { useAuthStore } from "@/stores/authStore";
@@ -18,7 +18,6 @@ const NAV_ITEMS: NavItem[] = [
   { label: "Feed", icon: "beer-outline", activeIcon: "beer", href: "/(tabs)/feed" },
   { label: "Map", icon: "map-outline", activeIcon: "map", href: "/(tabs)/map" },
   { label: "Search", icon: "search-outline", activeIcon: "search", href: "/(tabs)/search" },
-  { label: "Profile", icon: "person-outline", activeIcon: "person", href: "/(tabs)/profile" },
 ];
 
 function UserDropdown({ isDark, onClose }: { isDark: boolean; onClose: () => void }) {
@@ -34,8 +33,8 @@ function UserDropdown({ isDark, onClose }: { isDark: boolean; onClose: () => voi
 
   return (
     <View
-      className={`absolute right-0 top-12 rounded-xl shadow-lg border z-50 overflow-hidden ${isDark ? "bg-gray-800 border-gray-700" : "bg-white border-gray-100"}`}
-      style={{ width: 180 }}
+      className={`absolute right-0 top-12 rounded-xl shadow-lg border overflow-hidden ${isDark ? "bg-gray-800 border-gray-700" : "bg-white border-gray-100"}`}
+      style={{ width: 180, zIndex: 9999 }}
     >
       <Pressable
         onPress={() => {
@@ -70,6 +69,16 @@ export function WebNavBar() {
   const isDark = colorScheme === "dark";
   const { profile } = useAuthStore();
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  // Close dropdown on any click outside (web only)
+  useEffect(() => {
+    if (!dropdownOpen || typeof document === "undefined") return;
+    const close = () => setDropdownOpen(false);
+    const id = window.setTimeout(() => document.addEventListener("click", close, { once: true }), 0);
+    return () => {
+      window.clearTimeout(id);
+      document.removeEventListener("click", close);
+    };
+  }, [dropdownOpen]);
 
   const isActive = (href: string) => {
     const segment = href.replace("/(tabs)/", "");
@@ -79,7 +88,7 @@ export function WebNavBar() {
   return (
     <View
       className={`w-full border-b ${isDark ? "bg-gray-900 border-gray-800" : "bg-white border-gray-100"}`}
-      style={{ paddingHorizontal: 24, paddingVertical: 0 }}
+      style={{ paddingHorizontal: 24, paddingVertical: 0, zIndex: 100 }}
     >
       <View
         style={{
@@ -153,19 +162,18 @@ export function WebNavBar() {
           </Pressable>
 
           {/* Avatar with dropdown */}
-          <View style={{ position: "relative" }}>
+          <View style={{ position: "relative", zIndex: 200 }}>
             <Pressable
               onPress={() => setDropdownOpen((v) => !v)}
               className={`rounded-full items-center justify-center overflow-hidden border-2 ${dropdownOpen ? "border-primary" : isDark ? "border-gray-700" : "border-gray-200"}`}
               style={{ width: 36, height: 36 }}
             >
               {profile?.avatar_url ? (
-                // eslint-disable-next-line @typescript-eslint/no-require-imports
-                <View className="w-full h-full bg-gray-300 items-center justify-center">
-                  <Text className={`text-sm font-bold ${isDark ? "text-white" : "text-gray-700"}`}>
-                    {(profile.display_name ?? profile.username ?? "?")[0].toUpperCase()}
-                  </Text>
-                </View>
+                <Image
+                  source={{ uri: profile.avatar_url }}
+                  style={{ width: 36, height: 36 }}
+                  contentFit="cover"
+                />
               ) : (
                 <View className={`w-full h-full items-center justify-center ${isDark ? "bg-gray-700" : "bg-gray-100"}`}>
                   <Text className={`text-sm font-bold ${isDark ? "text-white" : "text-gray-700"}`}>
@@ -180,20 +188,6 @@ export function WebNavBar() {
         </View>
       </View>
 
-      {/* Overlay to close dropdown */}
-      {dropdownOpen && (
-        <Pressable
-          onPress={() => setDropdownOpen(false)}
-          style={{
-            position: "fixed" as never,
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            zIndex: 40,
-          }}
-        />
-      )}
     </View>
   );
 }

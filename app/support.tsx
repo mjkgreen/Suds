@@ -1,5 +1,6 @@
 import { Linking, Pressable, Text, View } from 'react-native';
 import { useColorScheme } from 'nativewind';
+import Head from 'expo-router/head';
 import { PublicLayout } from '@/components/web/PublicLayout';
 
 function Section({ title, children, isDark }: { title: string; children: React.ReactNode; isDark: boolean }) {
@@ -86,6 +87,10 @@ export default function SupportScreen() {
 
   return (
     <PublicLayout>
+      <Head>
+        <title>Support | Suds</title>
+        <meta name="description" content="Get help with the Suds drink tracking app. Contact support or report a bug." />
+      </Head>
       {/* Header */}
       <View style={{ marginBottom: 48 }}>
         <Text className={`text-4xl font-bold mb-3 ${isDark ? 'text-white' : 'text-gray-900'}`}>

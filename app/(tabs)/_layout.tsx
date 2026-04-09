@@ -39,7 +39,7 @@ function TabsLayoutInner() {
       <Tabs.Screen
         name="feed"
         options={{
-          title: 'Feed',
+          title: 'Feed | Suds',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="beer-outline" size={size} color={color} />
           ),
@@ -48,7 +48,7 @@ function TabsLayoutInner() {
       <Tabs.Screen
         name="map"
         options={{
-          title: 'Map',
+          title: 'Map | Suds',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="map-outline" size={size} color={color} />
           ),
@@ -57,7 +57,7 @@ function TabsLayoutInner() {
       <Tabs.Screen
         name="log"
         options={{
-          title: 'Log',
+          title: 'Log | Suds',
           tabBarIcon: ({ color }) => (
             <View className="w-12 h-12 bg-primary rounded-full items-center justify-center -mt-4 shadow-lg shadow-primary/30">
               <Ionicons name="add" size={28} color="#fff" />
@@ -70,7 +70,7 @@ function TabsLayoutInner() {
       <Tabs.Screen
         name="search"
         options={{
-          title: 'Search',
+          title: 'Search | Suds',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="search-outline" size={size} color={color} />
           ),
@@ -79,7 +79,7 @@ function TabsLayoutInner() {
       <Tabs.Screen
         name="profile"
         options={{
-          title: 'Profile',
+          title: 'Profile | Suds',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="person-outline" size={size} color={color} />
           ),
@@ -91,11 +91,13 @@ function TabsLayoutInner() {
 
 export default function TabsLayout() {
   const { user } = useAuthStore();
+  const { colorScheme } = useColorScheme();
+  const isDark = colorScheme === 'dark';
   // Hydrates sessionStore with any open session from the DB on mount
   useMyOpenSession(user?.id);
 
   return (
-    <View className="flex-1">
+    <View className="flex-1" style={Platform.OS === 'web' ? { backgroundColor: isDark ? '#030712' : '#f3f4f6' } : undefined}>
       {Platform.OS === 'web' && <WebNavBar />}
       <SessionBanner />
       {Platform.OS === 'web' ? (

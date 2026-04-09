@@ -22,16 +22,21 @@ function Divider({ isDark }: { isDark: boolean }) {
 function SignUpButtons({
   isDark,
   googleLoading,
+  appleLoading,
   onEmail,
   onGoogle,
+  onApple,
   onSignIn,
 }: {
   isDark: boolean;
   googleLoading: boolean;
+  appleLoading: boolean;
   onEmail: () => void;
   onGoogle: () => void;
+  onApple: () => void;
   onSignIn: () => void;
 }) {
+  const anyLoading = googleLoading || appleLoading;
   return (
     <View style={{ width: "100%", maxWidth: 360, gap: 12 }}>
       <Pressable
@@ -46,7 +51,7 @@ function SignUpButtons({
 
       <Pressable
         onPress={onGoogle}
-        disabled={googleLoading}
+        disabled={anyLoading}
         className="rounded-xl items-center justify-center border bg-white border-gray-200"
         style={{ paddingVertical: 13, flexDirection: "row", gap: 10, opacity: googleLoading ? 0.6 : 1 }}
       >
@@ -57,6 +62,26 @@ function SignUpButtons({
         />
         <Text className="text-gray-800 font-semibold text-base">
           {googleLoading ? "Redirecting…" : "Sign up with Google"}
+        </Text>
+      </Pressable>
+
+      <Pressable
+        onPress={onApple}
+        disabled={anyLoading}
+        style={{
+          paddingVertical: 13,
+          flexDirection: "row",
+          gap: 10,
+          alignItems: "center",
+          justifyContent: "center",
+          backgroundColor: "#000",
+          borderRadius: 12,
+          opacity: appleLoading ? 0.6 : 1,
+        }}
+      >
+        <Ionicons name="logo-apple" size={20} color="#fff" />
+        <Text style={{ color: "#fff", fontWeight: "600", fontSize: 16 }}>
+          {appleLoading ? "Redirecting…" : "Sign up with Apple"}
         </Text>
       </Pressable>
 
@@ -473,8 +498,9 @@ export function MarketingHomepage() {
   const isDark = colorScheme === "dark";
   const { width } = useWindowDimensions();
   const isWide = width >= 900;
-  const { signInWithGoogle } = useAuth();
+  const { signInWithGoogle, signInWithApple } = useAuth();
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [appleLoading, setAppleLoading] = useState(false);
 
   async function handleGoogleSignUp() {
     setGoogleLoading(true);
@@ -484,6 +510,17 @@ export function MarketingHomepage() {
       // errors handled by Supabase redirect
     } finally {
       setGoogleLoading(false);
+    }
+  }
+
+  async function handleAppleSignUp() {
+    setAppleLoading(true);
+    try {
+      await signInWithApple();
+    } catch {
+      // errors handled by Supabase redirect
+    } finally {
+      setAppleLoading(false);
     }
   }
 
@@ -524,15 +561,16 @@ export function MarketingHomepage() {
               className={`text-base text-center mb-10 ${isDark ? "text-gray-400" : "text-gray-500"}`}
               style={{ lineHeight: 26, maxWidth: 360 }}
             >
-              The social drink tracker that helps you log what you drink, estimate your BAC in real time, and share the
-              night with friends.
+              The social drink tracker that helps you log what you drink, and share the night with friends.
             </Text>
 
             <SignUpButtons
               isDark={isDark}
               googleLoading={googleLoading}
+              appleLoading={appleLoading}
               onEmail={() => router.push("/(auth)/sign-up" as never)}
               onGoogle={handleGoogleSignUp}
+              onApple={handleAppleSignUp}
               onSignIn={() => router.push("/(auth)/sign-in" as never)}
             />
           </View>
@@ -561,14 +599,15 @@ export function MarketingHomepage() {
             className={`text-base text-center mb-10 ${isDark ? "text-gray-400" : "text-gray-500"}`}
             style={{ lineHeight: 26, maxWidth: 360 }}
           >
-            The social drink tracker that helps you log what you drink, estimate your BAC in real time, and share the
-            night with friends.
+            The social drink tracker that helps you log what you drink, and share the night with friends.
           </Text>
           <SignUpButtons
             isDark={isDark}
             googleLoading={googleLoading}
+            appleLoading={appleLoading}
             onEmail={() => router.push("/(auth)/sign-up" as never)}
             onGoogle={handleGoogleSignUp}
+            onApple={handleAppleSignUp}
             onSignIn={() => router.push("/(auth)/sign-in" as never)}
           />
         </View>

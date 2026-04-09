@@ -1,3 +1,4 @@
+import Head from 'expo-router/head';
 import * as Haptics from "expo-haptics";
 import * as ImagePicker from "expo-image-picker";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
@@ -155,7 +156,9 @@ export default function LogScreen() {
   }
 
   return (
-    <View className="flex-1 bg-background" style={{ paddingTop: activeSession ? 0 : insets.top }}>
+    <>
+      <Head><title>Log a Drink | Suds</title></Head>
+      <View className="flex-1 bg-background" style={{ paddingTop: activeSession ? 0 : insets.top }}>
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         className="flex-1"
@@ -229,6 +232,7 @@ export default function LogScreen() {
           )}
         </View>
       </KeyboardAvoidingView>
-    </View>
+      </View>
+    </>
   );
 }
