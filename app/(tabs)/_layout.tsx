@@ -1,14 +1,17 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 import { useColorScheme } from 'nativewind';
-import { View } from 'react-native';
+import { Platform, View } from 'react-native';
 import { SessionBanner } from '@/components/session/SessionBanner';
 import { useMyOpenSession } from '@/hooks/useSession';
 import { useAuthStore } from '@/stores/authStore';
+import { WebNavBar } from '@/components/web/WebNavBar';
 
 function TabsLayoutInner() {
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
+
+  const isWeb = Platform.OS === 'web';
 
   return (
     <Tabs
@@ -16,15 +19,17 @@ function TabsLayoutInner() {
         headerShown: false,
         tabBarActiveTintColor: '#f59e0b',
         tabBarInactiveTintColor: isDark ? '#6b7280' : '#9ca3af',
-        tabBarStyle: {
-          backgroundColor: isDark ? '#111827' : '#ffffff',
-          borderTopColor: isDark ? '#1f2937' : '#f3f4f6',
-          height: 84,
-          paddingBottom: 28,
-          paddingTop: 8,
-          borderTopWidth: 1,
-          elevation: 0,
-        },
+        tabBarStyle: isWeb
+          ? { display: 'none' }
+          : {
+              backgroundColor: isDark ? '#111827' : '#ffffff',
+              borderTopColor: isDark ? '#1f2937' : '#f3f4f6',
+              height: 84,
+              paddingBottom: 28,
+              paddingTop: 8,
+              borderTopWidth: 1,
+              elevation: 0,
+            },
         tabBarLabelStyle: {
           fontSize: 11,
           fontWeight: '500',
@@ -91,6 +96,7 @@ export default function TabsLayout() {
 
   return (
     <View className="flex-1">
+      {Platform.OS === 'web' && <WebNavBar />}
       <SessionBanner />
       <TabsLayoutInner />
     </View>

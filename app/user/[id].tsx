@@ -152,12 +152,12 @@ export default function UserProfileScreen() {
 
             <View className="flex-row items-center gap-1.5">
               {selectedBadges.map((b) => (
-                <Pressable 
-                  key={b.id} 
+                <Pressable
+                  key={b.id}
                   className="w-8 h-10 items-center justify-center border-2 border-card shadow-sm -ml-2 first:ml-0"
                   onPress={() => setBadgeInfoVisible(true)}
-                  style={{ 
-                      backgroundColor: TIER_COLORS[b.tier] + '40', 
+                  style={{
+                      backgroundColor: TIER_COLORS[b.tier] + '40',
                       borderColor: TIER_COLORS[b.tier],
                       borderTopLeftRadius: 4,
                       borderTopRightRadius: 4,
@@ -165,7 +165,7 @@ export default function UserProfileScreen() {
                       borderBottomRightRadius: 16,
                   }}
                 >
-                  <Text className="text-sm">{b.emoji}</Text>
+                  <Ionicons name={b.icon as any} size={16} color={TIER_COLORS[b.tier]} />
                 </Pressable>
               ))}
             </View>

@@ -15,7 +15,7 @@ const variantStyles = {
   secondary: "bg-background dark:bg-card border border-primary active:bg-accent dark:active:bg-accent",
   ghost: "bg-transparent active:bg-accent dark:active:bg-accent",
   danger: "bg-destructive active:opacity-90",
-  google: "bg-background active:opacity-90",
+  google: "bg-black active:opacity-90",
 };
 
 const labelStyles = {

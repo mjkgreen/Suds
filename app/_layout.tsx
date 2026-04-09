@@ -47,8 +47,10 @@ function AuthGuard() {
     const segs = segments as string[];
     const inAuthGroup = segs[0] === '(auth)';
     const isOnboarding = segs[0] === '(auth)' && segs[1] === 'onboarding';
+    // Public web routes: root index, terms, privacy, support
+    const isPublicRoute = segs.length === 0 || ['terms', 'privacy', 'support'].includes(segs[0]);
 
-    if (!session && !inAuthGroup) {
+    if (!session && !inAuthGroup && !isPublicRoute) {
       router.replace('/(auth)/sign-in');
     } else if (session) {
       if (profile && !profile.onboarded) {
@@ -57,6 +59,10 @@ function AuthGuard() {
           router.replace('/(auth)/onboarding');
         }
       } else if (profile && profile.onboarded && inAuthGroup) {
+        // @ts-ignore
+        router.replace('/(tabs)/feed');
+      } else if (profile && profile.onboarded && segs.length === 0) {
+        // Authenticated users visiting root get sent to the feed
         // @ts-ignore
         router.replace('/(tabs)/feed');
       }
@@ -89,6 +95,9 @@ function AuthGuard() {
         <Stack.Screen name="user/[id]" />
         <Stack.Screen name="user/edit" />
         <Stack.Screen name="paywall" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="terms" />
+        <Stack.Screen name="privacy" />
+        <Stack.Screen name="support" />
       </Stack>
     </View>
   );

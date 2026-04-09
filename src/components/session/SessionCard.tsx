@@ -77,11 +77,11 @@ export function SessionCard({ group, isActive, onEnd, isEnding, onQuickLog }: Se
                 const b = findBadgeById(id);
                 if (!b) return null;
                 return (
-                  <View 
-                    key={id} 
+                  <View
+                    key={id}
                     className="w-4 h-5 items-center justify-center border border-card -ml-1 first:ml-0 shadow-sm"
-                    style={{ 
-                        backgroundColor: TIER_COLORS[b.tier] + '40', 
+                    style={{
+                        backgroundColor: TIER_COLORS[b.tier] + '40',
                         borderColor: TIER_COLORS[b.tier],
                         borderTopLeftRadius: 2,
                         borderTopRightRadius: 2,
@@ -89,7 +89,7 @@ export function SessionCard({ group, isActive, onEnd, isEnding, onQuickLog }: Se
                         borderBottomRightRadius: 8,
                     }}
                   >
-                    <Text style={{ fontSize: 8 }}>{b.emoji}</Text>
+                    <Ionicons name={b.icon as any} size={10} color={TIER_COLORS[b.tier]} />
                   </View>
                 );
               })}

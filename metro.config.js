@@ -4,6 +4,13 @@ const path = require('path');
 
 const config = getDefaultConfig(__dirname);
 
+// Exclude Deno edge functions from the Metro bundle — they use Deno globals
+// and are not part of the React Native app.
+config.resolver.blockList = [
+  ...(Array.isArray(config.resolver.blockList) ? config.resolver.blockList : []),
+  /supabase[\\/]functions[\\/].*/,
+];
+
 config.resolver.resolveRequest = (context, moduleName, platform) => {
   if (platform === 'web' && moduleName === 'react-native-maps') {
     return {

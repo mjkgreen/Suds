@@ -9,6 +9,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '@/components/common/Button';
 import { useAuth } from '@/hooks/useAuth';
@@ -83,9 +84,12 @@ export default function SignUpScreen() {
           <View className="flex-1 px-6 pt-16 pb-10">
             {/* Header */}
             <View className="items-center mb-10">
-              <Text className="text-6xl mb-3">🍺</Text>
-              <Text className="text-3xl font-bold text-amber-600">Join Suds</Text>
-              <Text className="text-gray-500 text-sm mt-1">Track your drinks. Follow friends.</Text>
+              <Image
+                source={require('../../assets/Suds.png')}
+                style={{ width: 180, height: 80 }}
+                contentFit="contain"
+              />
+              <Text className="text-gray-500 text-sm mt-2">Track your drinks. Follow friends.</Text>
             </View>
 
             {/* Form */}
@@ -188,8 +192,9 @@ export default function SignUpScreen() {
                     }
                   }}
                   disabled={loading}
-                  variant="secondary"
+                  variant="google"
                   size="lg"
+                  icon={<Image source={require('../../assets/google-logo.svg')} style={{ width: 20, height: 20 }} contentFit="contain" />}
                 />
               )}
             </View>
