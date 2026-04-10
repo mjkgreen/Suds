@@ -37,8 +37,8 @@ export default function LogScreen() {
 
   const { locationEnabled, hideAddresses } = usePrefsStore();
 
-  const [photoUri, setPhotoUri] = useState<string | null>(null);
-  const [photoBase64, setPhotoBase64] = useState<string | null>(null);
+  const [photoUris, setPhotoUris] = useState<string[]>([]);
+  const [photoBase64s, setPhotoBase64s] = useState<(string | null)[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [isKeyboardVisible, setKeyboardVisible] = useState(false);
@@ -97,12 +97,18 @@ export default function LogScreen() {
     }, [locationEnabled, hideAddresses, locationClearedByUser, params.lat, params.lng, locationName]),
   );
 
-  async function handlePickPhoto() {
+  async function handleAddPhoto() {
+    if (photoUris.length >= 3) return;
     Alert.alert("Add Photo", undefined, [
       { text: "Take Photo", onPress: () => launchPicker(true) },
       { text: "Choose from Library", onPress: () => launchPicker(false) },
       { text: "Cancel", style: "cancel" },
     ]);
+  }
+
+  function handleRemovePhoto(index: number) {
+    setPhotoUris((prev) => prev.filter((_, i) => i !== index));
+    setPhotoBase64s((prev) => prev.filter((_, i) => i !== index));
   }
 
   async function launchPicker(useCamera: boolean) {
@@ -121,8 +127,8 @@ export default function LogScreen() {
       ? await ImagePicker.launchCameraAsync(options)
       : await ImagePicker.launchImageLibraryAsync(options);
     if (!result.canceled) {
-      setPhotoUri(result.assets[0].uri);
-      setPhotoBase64(result.assets[0].base64 ?? null);
+      setPhotoUris((prev) => [...prev, result.assets[0].uri]);
+      setPhotoBase64s((prev) => [...prev, result.assets[0].base64 ?? null]);
     }
   }
 
@@ -133,19 +139,17 @@ export default function LogScreen() {
     try {
       await logDrink({
         userId: user.id,
-        formData: {
-          ...data,
-          photo_url: photoUri ?? undefined,
-          photoBase64: photoBase64 ?? undefined,
-        },
+        formData: data,
         sessionId: activeSession?.id ?? null,
+        photoUris: photoUris.length > 0 ? photoUris : undefined,
+        photoBase64s: photoBase64s.length > 0 ? photoBase64s : undefined,
       });
       if (Platform.OS !== "web") {
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       }
       reset({ ...DEFAULT_VALUES, logged_at: new Date().toISOString() });
-      setPhotoUri(null);
-      setPhotoBase64(null);
+      setPhotoUris([]);
+      setPhotoBase64s([]);
       setLocationClearedByUser(false);
       router.replace("/(tabs)/feed");
     } catch (err: any) {
@@ -208,9 +212,9 @@ export default function LogScreen() {
               control={control}
               watch={watch}
               setValue={setValue}
-              previewUri={photoUri}
-              onPickPhoto={handlePickPhoto}
-              onRemovePhoto={() => setPhotoUri(null)}
+              previewUris={photoUris}
+              onAddPhoto={handleAddPhoto}
+              onRemovePhoto={handleRemovePhoto}
               onClearLocation={() => setLocationClearedByUser(true)}
               error={error}
               isInSession={!!activeSession}
@@ -223,7 +227,7 @@ export default function LogScreen() {
               style={{ paddingBottom: Math.max(insets.bottom, 15), paddingTop: 0 }}
             >
               <Button
-                label={photoUri && submitting ? "Uploading photo…" : "Log It"}
+                label={photoUris.length > 0 && submitting ? "Uploading photos…" : "Log It"}
                 onPress={handleSubmit(onSubmit)}
                 loading={submitting}
                 size="lg"

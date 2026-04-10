@@ -1,4 +1,4 @@
-import Head from 'expo-router/head';
+import Head from "expo-router/head";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useCallback, useState } from "react";
@@ -36,7 +36,7 @@ import { useColorScheme } from "nativewind";
 type Tab = "progress" | "activities";
 
 const Y_LABEL_W = 22;
-const CHART_H = 60;
+const CHART_H = 120;
 
 function formatAxisDate(dateStr: string) {
   const d = new Date(dateStr + "T00:00:00");
@@ -214,7 +214,8 @@ export default function ProfileScreen() {
   const myEntries: FeedEntry[] = feedData?.pages.flatMap((p) => p.entries) ?? [];
 
   const earnedBadges = getEarnedBadges(milestones, streaks, stats);
-  const selectedBadgeIds = profile?.displayed_badges ?? (milestones?.latest_milestone ? [`milestone-${milestones.latest_milestone}`] : []);
+  const selectedBadgeIds =
+    profile?.displayed_badges ?? (milestones?.latest_milestone ? [`milestone-${milestones.latest_milestone}`] : []);
   const selectedBadges = selectedBadgeIds.map(findBadgeById).filter(Boolean) as UserBadge[];
 
   const handleEndReached = useCallback(() => {
@@ -304,40 +305,37 @@ export default function ProfileScreen() {
                 </Text>
               </View>
             )}
-          <Pressable
-            className="flex-row items-center gap-1.5"
-            onPress={() => setBadgeInfoVisible(true)}
-          >
-            {selectedBadges.map((b) => (
-              <View 
-                key={b.id} 
-                className="w-8 h-10 items-center justify-center border-2 border-card shadow-sm -ml-2 first:ml-0"
-                style={{ 
-                    backgroundColor: TIER_COLORS[b.tier] + '40', 
+            <Pressable className="flex-row items-center gap-1.5" onPress={() => setBadgeInfoVisible(true)}>
+              {selectedBadges.map((b) => (
+                <View
+                  key={b.id}
+                  className="w-8 h-10 items-center justify-center border-2 border-card shadow-sm -ml-2 first:ml-0"
+                  style={{
+                    backgroundColor: TIER_COLORS[b.tier] + "40",
                     borderColor: TIER_COLORS[b.tier],
                     borderTopLeftRadius: 4,
                     borderTopRightRadius: 4,
                     borderBottomLeftRadius: 16,
                     borderBottomRightRadius: 16,
-                }}
-              >
-                <MaterialCommunityIcons name={b.icon as any} size={14} color={TIER_COLORS[b.tier]} />
-              </View>
-            ))}
-            {selectedBadges.length === 0 && (
-              <View 
-                className="w-8 h-10 items-center justify-center border-2 border-dashed border-muted-foreground/30"
-                style={{
+                  }}
+                >
+                  <MaterialCommunityIcons name={b.icon as any} size={14} color={TIER_COLORS[b.tier]} />
+                </View>
+              ))}
+              {selectedBadges.length === 0 && (
+                <View
+                  className="w-8 h-10 items-center justify-center border-2 border-dashed border-muted-foreground/30"
+                  style={{
                     borderTopLeftRadius: 4,
                     borderTopRightRadius: 4,
                     borderBottomLeftRadius: 16,
                     borderBottomRightRadius: 16,
-                }}
-              >
-                <Ionicons name="add" size={16} color="#6b7280" />
-              </View>
-            )}
-          </Pressable>
+                  }}
+                >
+                  <Ionicons name="add" size={16} color="#6b7280" />
+                </View>
+              )}
+            </Pressable>
           </View>
         </View>
       </View>
@@ -460,48 +458,50 @@ export default function ProfileScreen() {
 
   return (
     <>
-      <Head><title>Profile | Suds</title></Head>
+      <Head>
+        <title>Profile | Suds</title>
+      </Head>
       <SafeAreaView className="flex-1 bg-background" edges={topEdges}>
         <ProfileHeader />
-      {badgePicker}
-      <TabBar active={activeTab} onChange={setActiveTab} />
-      <FlatList
-        data={myEntries}
-        keyExtractor={(entry) =>
-          entry.type === "session" ? `session-${entry.session_id}` : `drink-${entry.item.id}`
-        }
-        renderItem={({ item: entry }) => {
-          if (entry.type === "session") {
-            const isActive = !!activeSession && entry.session_id === activeSession.id;
-            return (
-              <SessionCard
-                group={entry}
-                isActive={isActive}
-                onEnd={isActive ? () => endSession(activeSession!.id) : undefined}
-                isEnding={isActive ? isEnding : undefined}
-              />
-            );
+        {badgePicker}
+        <TabBar active={activeTab} onChange={setActiveTab} />
+        <FlatList
+          data={myEntries}
+          keyExtractor={(entry) =>
+            entry.type === "session" ? `session-${entry.session_id}` : `drink-${entry.item.id}`
           }
-          return <DrinkCard item={entry.item} />;
-        }}
-        refreshControl={<RefreshControl refreshing={false} onRefresh={onRefresh} tintColor="#f59e0b" />}
-        ListEmptyComponent={
-          <View className="px-6 py-10 items-center">
-            <Text className="text-3xl mb-2">🍺</Text>
-            <Text className="text-muted-foreground text-center">No drinks logged yet. Crack one open!</Text>
-          </View>
-        }
-        ListFooterComponent={
-          isFetchingNextPage ? (
-            <View className="py-4 items-center">
-              <ActivityIndicator color="#f59e0b" />
+          renderItem={({ item: entry }) => {
+            if (entry.type === "session") {
+              const isActive = !!activeSession && entry.session_id === activeSession.id;
+              return (
+                <SessionCard
+                  group={entry}
+                  isActive={isActive}
+                  onEnd={isActive ? () => endSession(activeSession!.id) : undefined}
+                  isEnding={isActive ? isEnding : undefined}
+                />
+              );
+            }
+            return <DrinkCard item={entry.item} />;
+          }}
+          refreshControl={<RefreshControl refreshing={false} onRefresh={onRefresh} tintColor="#f59e0b" />}
+          ListEmptyComponent={
+            <View className="px-6 py-10 items-center">
+              <Text className="text-3xl mb-2">🍺</Text>
+              <Text className="text-muted-foreground text-center">No drinks logged yet. Crack one open!</Text>
             </View>
-          ) : null
-        }
-        onEndReached={handleEndReached}
-        onEndReachedThreshold={0.4}
-        contentContainerStyle={{ paddingBottom: 24 }}
-      />
+          }
+          ListFooterComponent={
+            isFetchingNextPage ? (
+              <View className="py-4 items-center">
+                <ActivityIndicator color="#f59e0b" />
+              </View>
+            ) : null
+          }
+          onEndReached={handleEndReached}
+          onEndReachedThreshold={0.4}
+          contentContainerStyle={{ paddingBottom: 24 }}
+        />
       </SafeAreaView>
     </>
   );

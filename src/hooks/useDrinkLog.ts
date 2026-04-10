@@ -19,6 +19,8 @@ export function useMyDrinkLogs(userId: string | undefined) {
   });
 }
 
+const MAX_PHOTOS = 3;
+
 export function useLogDrink() {
   const queryClient = useQueryClient();
 
@@ -27,15 +29,21 @@ export function useLogDrink() {
       userId,
       formData,
       sessionId,
+      photoUris,
+      photoBase64s,
     }: {
       userId: string;
-      formData: LogDrinkFormData & { photoBase64?: string | null };
+      formData: LogDrinkFormData;
       sessionId?: string | null;
+      photoUris?: string[];
+      photoBase64s?: (string | null)[];
     }) => {
-      // Upload photo to Storage if a local URI was provided
-      let photoUrl: string | null = null;
-      if (formData.photo_url) {
-        photoUrl = await uploadDrinkPhoto(userId, formData.photo_url, formData.photoBase64);
+      // Upload all photos (max 3)
+      const photoUrls: string[] = [];
+      const uris = (photoUris ?? []).slice(0, MAX_PHOTOS);
+      for (let i = 0; i < uris.length; i++) {
+        const url = await uploadDrinkPhoto(userId, uris[i], photoBase64s?.[i] ?? null);
+        photoUrls.push(url);
       }
 
       const { data, error } = await (supabase.from('drink_logs') as any)
@@ -49,7 +57,8 @@ export function useLogDrink() {
           location_lat: formData.location_lat ?? null,
           location_lng: formData.location_lng ?? null,
           notes: formData.notes || null,
-          photo_url: photoUrl,
+          photo_url: photoUrls[0] ?? null,
+          photo_urls: photoUrls,
           rating: formData.rating || null,
           event_name: formData.event_name?.trim() || null,
           logged_at: formData.logged_at ?? new Date().toISOString(),
@@ -78,32 +87,36 @@ export function useUpdateDrinkLog() {
       id,
       userId,
       formData,
-      existingPhotoUrl,
-      newPhotoUri,
-      newPhotoBase64,
-      removePhoto,
+      keptPhotoUrls,
+      removedPhotoUrls,
+      newPhotoUris,
+      newPhotoBase64s,
     }: {
       id: string;
       userId: string;
-      formData: Omit<LogDrinkFormData, 'photo_url'>;
-      existingPhotoUrl: string | null;
-      newPhotoUri: string | null;
-      newPhotoBase64?: string | null;
-      removePhoto: boolean;
+      formData: LogDrinkFormData;
+      /** Existing remote URLs to keep */
+      keptPhotoUrls: string[];
+      /** Existing remote URLs to delete from storage */
+      removedPhotoUrls: string[];
+      /** New local URIs to upload */
+      newPhotoUris: string[];
+      newPhotoBase64s: (string | null)[];
     }) => {
-      let photoUrl: string | null = existingPhotoUrl;
-
-      if (removePhoto && existingPhotoUrl) {
-        const { deleteDrinkPhoto } = await import('@/lib/storage');
-        await deleteDrinkPhoto(existingPhotoUrl);
-        photoUrl = null;
-      } else if (newPhotoUri) {
-        if (existingPhotoUrl) {
-          const { deleteDrinkPhoto } = await import('@/lib/storage');
-          await deleteDrinkPhoto(existingPhotoUrl);
-        }
-        photoUrl = await uploadDrinkPhoto(userId, newPhotoUri, newPhotoBase64);
+      // Delete removed photos from storage
+      for (const url of removedPhotoUrls) {
+        await deleteDrinkPhoto(url);
       }
+
+      // Upload new photos
+      const uploadedUrls: string[] = [];
+      const uris = newPhotoUris.slice(0, MAX_PHOTOS - keptPhotoUrls.length);
+      for (let i = 0; i < uris.length; i++) {
+        const url = await uploadDrinkPhoto(userId, uris[i], newPhotoBase64s[i] ?? null);
+        uploadedUrls.push(url);
+      }
+
+      const finalPhotoUrls = [...keptPhotoUrls, ...uploadedUrls].slice(0, MAX_PHOTOS);
 
       const { data, error } = await (supabase.from('drink_logs') as any)
         .update({
@@ -115,7 +128,8 @@ export function useUpdateDrinkLog() {
           location_lat: formData.location_lat ?? null,
           location_lng: formData.location_lng ?? null,
           notes: formData.notes || null,
-          photo_url: photoUrl,
+          photo_url: finalPhotoUrls[0] ?? null,
+          photo_urls: finalPhotoUrls,
           rating: formData.rating || null,
           event_name: formData.event_name?.trim() || null,
           logged_at: formData.logged_at ?? new Date().toISOString(),

@@ -6,6 +6,20 @@ import { Profile } from '@/types/models';
 import { sendSignupEmail } from '@/lib/email';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import * as Crypto from 'expo-crypto';
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
+
+// Initialize Google Sign-in for native platforms
+if (Platform.OS !== 'web') {
+  const webClientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
+  const iosClientId = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID;
+  if (webClientId || iosClientId) {
+    GoogleSignin.configure({
+      webClientId,
+      iosClientId,
+      scopes: ['profile', 'email'],
+    });
+  }
+}
 
 export function useAuth() {
   const { session, user, profile, isLoading, setSession, setProfile, setLoading, signOut } =
@@ -177,8 +191,28 @@ export function useAuth() {
       return;
     }
 
-    // Native platform only - this code never runs on web
-    throw new Error('Google Sign-In on native is not yet configured');
+    // Native platform: use @react-native-google-signin/google-signin
+    try {
+      await GoogleSignin.hasPlayServices();
+      const response = await GoogleSignin.signIn();
+      const idToken = response.data?.idToken;
+
+      if (!idToken) {
+        throw new Error('No ID token present!');
+      }
+
+      const { error } = await supabase.auth.signInWithIdToken({
+        provider: 'google',
+        token: idToken,
+      });
+
+      if (error) throw error;
+    } catch (error: any) {
+      if (error.code === 'SIGN_IN_CANCELLED') {
+        return;
+      }
+      throw error;
+    }
   }
 
   return {

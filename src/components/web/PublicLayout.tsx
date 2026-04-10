@@ -6,6 +6,7 @@ import { useColorScheme } from 'nativewind';
 
 interface PublicLayoutProps {
   children: React.ReactNode;
+  contentPadded?: boolean;
 }
 
 function PublicHeader() {
@@ -123,7 +124,7 @@ function PublicFooter() {
   );
 }
 
-export function PublicLayout({ children }: PublicLayoutProps) {
+export function PublicLayout({ children, contentPadded = false }: PublicLayoutProps) {
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
 
@@ -136,7 +137,11 @@ export function PublicLayout({ children }: PublicLayoutProps) {
       >
         <PublicHeader />
         <View style={{ flex: 1 }}>
-          {children}
+          {contentPadded ? (
+            <View style={{ maxWidth: 760, width: '100%', alignSelf: 'center', paddingHorizontal: 24, paddingVertical: 48 }}>
+              {children}
+            </View>
+          ) : children}
         </View>
         <PublicFooter />
       </ScrollView>

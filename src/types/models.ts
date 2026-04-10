@@ -47,6 +47,7 @@ export interface DrinkLog {
   location_lng: number | null;
   notes: string | null;
   photo_url: string | null;
+  photo_urls: string[];
   rating: number | null;
   event_name: string | null;
   session_id: string | null;
@@ -91,10 +92,22 @@ export interface UserStats {
   user_created_at: string;
 }
 
+export interface DrinkComment {
+  id: string;
+  drink_log_id: string;
+  user_id: string;
+  content: string;
+  created_at: string;
+  profile: Profile;
+}
+
 export interface FeedItem extends DrinkLog {
   profile: Profile;
   session_id: string | null;
   session_title?: string | null;
+  like_count?: number;
+  comment_count?: number;
+  user_liked?: boolean;
 }
 
 export interface SessionFeedGroup {
@@ -191,7 +204,6 @@ export type LogDrinkFormData = {
   location_lng?: number;
   notes: string;
   rating: number;
-  photo_url?: string;
   logged_at?: string;
   ended_at?: string;
 };

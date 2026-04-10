@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   FlatList,
   Pressable,
@@ -28,6 +28,13 @@ export function CombinedDrinkInput({
   const [focused, setFocused] = useState(false);
   const [inputValue, setInputValue] = useState(value);
   const inputRef = useRef<TextInput>(null);
+
+  // Sync with external value changes (e.g. form reset or async data load on edit screen)
+  useEffect(() => {
+    if (!focused) {
+      setInputValue(value ?? '');
+    }
+  }, [value]);
 
   const suggestions = searchDrinks(inputValue);
 

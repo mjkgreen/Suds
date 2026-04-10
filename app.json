@@ -43,7 +43,7 @@
       "favicon": "./assets/Suds.png"
     },
     "plugins": [
-      "expo-router",
+      ["expo-router", { "origin": "https://drink-with-suds.com" }],
       "expo-location",
       [
         "expo-image-picker",

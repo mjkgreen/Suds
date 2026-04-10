@@ -30,9 +30,10 @@ export default function EditDrinkScreen() {
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
 
-  const [newPhotoUri, setNewPhotoUri] = useState<string | null>(null);
-  const [newPhotoBase64, setNewPhotoBase64] = useState<string | null>(null);
-  const [removePhoto, setRemovePhoto] = useState(false);
+  const [keptPhotoUrls, setKeptPhotoUrls] = useState<string[]>([]);
+  const [removedPhotoUrls, setRemovedPhotoUrls] = useState<string[]>([]);
+  const [newPhotoUris, setNewPhotoUris] = useState<string[]>([]);
+  const [newPhotoBase64s, setNewPhotoBase64s] = useState<(string | null)[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   const { data: drink, isLoading } = useQuery({
@@ -79,9 +80,15 @@ export default function EditDrinkScreen() {
       logged_at: drink.logged_at,
       ended_at: drink.ended_at ?? undefined,
     });
+    // Initialise photo state from existing data
+    const existing = drink.photo_urls?.length ? drink.photo_urls : drink.photo_url ? [drink.photo_url] : [];
+    setKeptPhotoUrls(existing);
   }, [drink]);
 
-  async function handlePickPhoto() {
+  const totalPhotos = keptPhotoUrls.length + newPhotoUris.length;
+
+  async function handleAddPhoto() {
+    if (totalPhotos >= 3) return;
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
       allowsEditing: true,
@@ -90,9 +97,20 @@ export default function EditDrinkScreen() {
       base64: true,
     });
     if (!result.canceled) {
-      setNewPhotoUri(result.assets[0].uri);
-      setNewPhotoBase64(result.assets[0].base64 ?? null);
-      setRemovePhoto(false);
+      setNewPhotoUris((prev) => [...prev, result.assets[0].uri]);
+      setNewPhotoBase64s((prev) => [...prev, result.assets[0].base64 ?? null]);
+    }
+  }
+
+  function handleRemovePhoto(index: number) {
+    if (index < keptPhotoUrls.length) {
+      const url = keptPhotoUrls[index];
+      setRemovedPhotoUrls((prev) => [...prev, url]);
+      setKeptPhotoUrls((prev) => prev.filter((_, i) => i !== index));
+    } else {
+      const newIndex = index - keptPhotoUrls.length;
+      setNewPhotoUris((prev) => prev.filter((_, i) => i !== newIndex));
+      setNewPhotoBase64s((prev) => prev.filter((_, i) => i !== newIndex));
     }
   }
 
@@ -100,15 +118,14 @@ export default function EditDrinkScreen() {
     if (!user || !drink) return;
     setError(null);
     try {
-
       await updateDrink({
         id: drink.id,
         userId: user.id,
         formData: data,
-        existingPhotoUrl: drink.photo_url,
-        newPhotoUri,
-        newPhotoBase64,
-        removePhoto,
+        keptPhotoUrls,
+        removedPhotoUrls,
+        newPhotoUris,
+        newPhotoBase64s,
       });
       router.replace(`/drink/${id}`);
     } catch (err: any) {
@@ -116,7 +133,7 @@ export default function EditDrinkScreen() {
     }
   }
 
-  const previewUri = removePhoto ? null : newPhotoUri ?? drink?.photo_url ?? null;
+  const previewUris = [...keptPhotoUrls, ...newPhotoUris];
 
   if (isLoading) {
     return (
@@ -150,10 +167,9 @@ export default function EditDrinkScreen() {
             control={control}
             watch={watch}
             setValue={setValue}
-            previewUri={previewUri}
-            onPickPhoto={handlePickPhoto}
-            onRemovePhoto={() => { setNewPhotoUri(null); setRemovePhoto(true); }}
-            onReplacePhoto={handlePickPhoto}
+            previewUris={previewUris}
+            onAddPhoto={handleAddPhoto}
+            onRemovePhoto={handleRemovePhoto}
             error={error}
           />
         </ScrollView>
@@ -161,7 +177,7 @@ export default function EditDrinkScreen() {
         {/* Pinned Save Button */}
         <View className="px-6 py-4 bg-background border-t border-border">
           <Button
-            label={newPhotoUri && isPending ? 'Uploading photo…' : 'Save Changes'}
+            label={newPhotoUris.length > 0 && isPending ? 'Uploading photos…' : 'Save Changes'}
             onPress={handleSubmit(onSubmit)}
             loading={isPending}
             size="lg"

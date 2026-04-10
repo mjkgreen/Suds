@@ -4,7 +4,10 @@ import { FeedEntry, FeedItem } from '@/types/models';
 import { FEED_PAGE_SIZE } from '@/lib/constants';
 
 function parseFeedRows(data: any[]): FeedEntry[] {
-  const rows: FeedItem[] = (data ?? []).map((row: any) => ({
+
+  const rows: FeedItem[] = (data ?? []).map((row: any) => {
+    console.log('drink_name from RPC:', row.drink_name, 'for', row.id);
+    return {
     id: row.id,
     user_id: row.user_id,
     drink_type: row.drink_type,
@@ -16,6 +19,7 @@ function parseFeedRows(data: any[]): FeedEntry[] {
     location_lng: row.location_lng,
     notes: row.notes,
     photo_url: row.photo_url,
+    photo_urls: row.photo_urls ?? [],
     rating: row.rating ?? null,
     event_name: row.event_name ?? null,
     logged_at: row.logged_at,
@@ -23,6 +27,9 @@ function parseFeedRows(data: any[]): FeedEntry[] {
     created_at: row.created_at,
     session_id: row.session_id ?? null,
     session_title: row.session_title ?? null,
+    like_count: row.like_count ? Number(row.like_count) : 0,
+    comment_count: row.comment_count ? Number(row.comment_count) : 0,
+    user_liked: row.user_liked ?? false,
     profile: {
       id: row.user_id,
       username: row.username,
@@ -33,14 +40,15 @@ function parseFeedRows(data: any[]): FeedEntry[] {
       height_unit: null,
       weight: null,
       weight_unit: null,
-      age: null,
+      birthdate: null,
       onboarded: true,
       subscription_tier: 'free' as const,
       displayed_badges: row.displayed_badges,
       created_at: '',
       updated_at: '',
     },
-  }));
+    };
+  });
 
   // Group rows that share a session_id into SessionFeedGroups
   const entries: FeedEntry[] = [];
@@ -75,9 +83,9 @@ async function fetchFeedPage(userId: string, offset: number): Promise<{ entries:
   });
   if (error) throw error;
   const rawData = data ?? [];
-  return { 
+  return {
     entries: parseFeedRows(rawData),
-    rawCount: rawData.length 
+    rawCount: rawData.length
   };
 }
 
@@ -111,7 +119,7 @@ export function useMyFeed(userId: string | undefined) {
       });
 
       if (error) throw error;
-      
+
       const rawData = data ?? [];
       const own = rawData.filter((row: any) => row.user_id === userId);
 

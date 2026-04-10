@@ -5,9 +5,13 @@ import React, { useState } from "react";
 import { ActivityIndicator, Platform, Pressable, Text, View } from "react-native";
 import { Avatar } from "@/components/common/Avatar";
 import { PressableCard } from "@/components/common/Card";
-import { RemoteImage } from "@/components/common/RemoteImage";
+import { ImageCarousel } from "@/components/common/ImageCarousel";
 import { DrinkBadge } from "@/components/drink/DrinkBadge";
 import { DrinkIcon } from "@/components/icons/DrinkIcon";
+import { useLike } from "@/hooks/useLikes";
+import { useLikers } from "@/hooks/useLikers";
+import { AvatarStack } from "@/components/social/AvatarStack";
+import { LikersModal } from "@/components/social/LikersModal";
 import { DRINK_TYPE_MAP } from "@/lib/constants";
 import { FeedItem } from "@/types/models";
 import { relativeTime, formatTime } from "@/utils/dateHelpers";
@@ -16,14 +20,43 @@ import { findBadgeById, TIER_COLORS } from "@/utils/badgeHelpers";
 
 interface DrinkCardProps {
   item: FeedItem;
+  currentUserId?: string;
   onQuickLog?: () => Promise<void>;
 }
 
-export function DrinkCard({ item, onQuickLog }: DrinkCardProps) {
+export function DrinkCard({ item, currentUserId, onQuickLog }: DrinkCardProps) {
   const router = useRouter();
   const drinkInfo = DRINK_TYPE_MAP[item.drink_type] ?? DRINK_TYPE_MAP["other"];
   const [isLogging, setIsLogging] = useState(false);
   const [didLog, setDidLog] = useState(false);
+  // Optimistic like state
+  const [optimisticLiked, setOptimisticLiked] = useState<boolean | null>(null);
+  const [optimisticCount, setOptimisticCount] = useState<number | null>(null);
+  const { like, unlike } = useLike(currentUserId);
+  const [showLikers, setShowLikers] = useState(false);
+
+  const userLiked = optimisticLiked ?? item.user_liked ?? false;
+  const likeCount = optimisticCount ?? item.like_count ?? 0;
+  const { data: likers } = useLikers(likeCount > 0 ? item.id : undefined);
+
+  async function handleLike(e: { stopPropagation: () => void }) {
+    e.stopPropagation();
+    if (!currentUserId) return;
+    const nowLiked = !userLiked;
+    setOptimisticLiked(nowLiked);
+    setOptimisticCount(likeCount + (nowLiked ? 1 : -1));
+    try {
+      if (nowLiked) {
+        await like.mutateAsync(item.id);
+      } else {
+        await unlike.mutateAsync(item.id);
+      }
+    } catch {
+      // Revert on error
+      setOptimisticLiked(!nowLiked);
+      setOptimisticCount(likeCount);
+    }
+  }
 
   async function handleQuickLog(e: { stopPropagation: () => void }) {
     e.stopPropagation();
@@ -43,16 +76,18 @@ export function DrinkCard({ item, onQuickLog }: DrinkCardProps) {
 
   let drinksPerHour: string | null = null;
   if (item.ended_at && item.quantity > 0) {
-    const hoursElapsed =
-      (new Date(item.ended_at).getTime() - new Date(item.logged_at).getTime()) /
-      (1000 * 60 * 60);
+    const hoursElapsed = (new Date(item.ended_at).getTime() - new Date(item.logged_at).getTime()) / (1000 * 60 * 60);
     if (hoursElapsed >= 0.25) {
       drinksPerHour = (item.quantity / hoursElapsed).toFixed(1);
     }
   }
 
   return (
-    <PressableCard className="mx-4 my-2 p-4" onPress={() => router.push(`/drink/${item.id}`)}>
+    <PressableCard
+      className={`${Platform.OS === "web" ? "mx-4" : ""} my-2 p-4`}
+      flush={Platform.OS !== "web"}
+      onPress={() => router.push(`/drink/${item.id}`)}
+    >
       {/* Header */}
       <View className="flex-row items-center mb-3">
         <Avatar uri={item.profile.avatar_url} name={getDisplayName(item.profile)} size={40} />
@@ -69,16 +104,16 @@ export function DrinkCard({ item, onQuickLog }: DrinkCardProps) {
                 const b = findBadgeById(id);
                 if (!b) return null;
                 return (
-                  <View 
-                    key={id} 
+                  <View
+                    key={id}
                     className="w-4 h-5 items-center justify-center border border-card -ml-1 first:ml-0 shadow-sm"
-                    style={{ 
-                        backgroundColor: TIER_COLORS[b.tier] + '40', 
-                        borderColor: TIER_COLORS[b.tier],
-                        borderTopLeftRadius: 2,
-                        borderTopRightRadius: 2,
-                        borderBottomLeftRadius: 8,
-                        borderBottomRightRadius: 8,
+                    style={{
+                      backgroundColor: TIER_COLORS[b.tier] + "40",
+                      borderColor: TIER_COLORS[b.tier],
+                      borderTopLeftRadius: 2,
+                      borderTopRightRadius: 2,
+                      borderBottomLeftRadius: 8,
+                      borderBottomRightRadius: 8,
                     }}
                   >
                     <MaterialCommunityIcons name={b.icon as any} size={8} color={TIER_COLORS[b.tier]} />
@@ -88,7 +123,10 @@ export function DrinkCard({ item, onQuickLog }: DrinkCardProps) {
             </View>
           </View>
           <Text className="text-muted-foreground text-xs">
-            @{getUsername(item.profile)} · {item.ended_at ? `${formatTime(item.logged_at)} – ${formatTime(item.ended_at)}` : relativeTime(item.logged_at)}
+            @{getUsername(item.profile)} ·{" "}
+            {item.ended_at
+              ? `${formatTime(item.logged_at)} – ${formatTime(item.ended_at)}`
+              : relativeTime(item.logged_at)}
           </Text>
         </View>
         <DrinkBadge type={item.drink_type} size="sm" />
@@ -100,7 +138,10 @@ export function DrinkCard({ item, onQuickLog }: DrinkCardProps) {
           <View className="flex-row items-center gap-1">
             <Text className="text-foreground  font-bold text-base mb-2">{item.event_name || drinkInfo.label}</Text>
           </View>
+          {item.drink_name ? <Text className="text-foreground font-medium text-sm mb-1">{item.drink_name}</Text> : null}
           {item.brand && <Text className="text-muted-foreground font-bold text-base mb-2">{item.brand}</Text>}
+          {/* Notes */}
+          {item.notes ? <Text className="text-muted-foreground text-sm mt-1 mb-2">{item.notes}</Text> : null}
 
           <View className="flex-row gap-4">
             {item.quantity > 1 && (
@@ -125,13 +166,8 @@ export function DrinkCard({ item, onQuickLog }: DrinkCardProps) {
         </View>
       </View>
 
-      {/* Notes */}
-      {item.notes ? <Text className="text-muted-foreground text-sm mt-1">{item.notes}</Text> : null}
-
       {/* Photo */}
-      {item.photo_url ? (
-        <RemoteImage uri={item.photo_url} height={180} borderRadius={12} style={{ marginTop: 10 }} />
-      ) : null}
+      {item.photo_url ? <ImageCarousel images={[item.photo_url]} height={180} borderRadius={12} /> : null}
       <View className="flex-row items-center mt-2">
         {item.location_name && (
           <View className="flex-row items-center gap-1">
@@ -140,9 +176,36 @@ export function DrinkCard({ item, onQuickLog }: DrinkCardProps) {
           </View>
         )}
       </View>
-      {/* Quick log */}
-      {onQuickLog && (
-        <View className="flex-row justify-end mt-3 pt-2 border-t border-border/50">
+      {/* Social bar */}
+      <View className="flex-row justify-evenly items-center gap-4 mt-3 pt-2 border-t border-border/50">
+        <View className="flex-row items-center gap-1">
+          <Pressable onPress={handleLike} className="flex-row items-center gap-1" hitSlop={8}>
+            <Ionicons name={userLiked ? "heart" : "heart-outline"} size={30} color={userLiked ? "#ef4444" : "gray"} />
+          </Pressable>
+          {likeCount > 0 && likers && likers.length > 0 && (
+            <AvatarStack
+              profiles={likers}
+              totalCount={likeCount}
+              onPress={() => setShowLikers(true)}
+              size={22}
+              max={3}
+            />
+          )}
+        </View>
+        <Pressable
+          onPress={(e) => {
+            e.stopPropagation();
+            router.push(`/drink/${item.id}`);
+          }}
+          className="flex-row items-center gap-1"
+          hitSlop={8}
+        >
+          <Ionicons name="chatbubble-outline" size={30} color="gray" />
+          {(item.comment_count ?? 0) > 0 && <Text className="text-muted-foreground text-xs">{item.comment_count}</Text>}
+        </Pressable>
+      </View>
+      <View className="flex-1">
+        {onQuickLog && (
           <Pressable
             onPress={handleQuickLog}
             disabled={isLogging}
@@ -157,8 +220,14 @@ export function DrinkCard({ item, onQuickLog }: DrinkCardProps) {
             )}
             <Text className="text-primary text-xs font-semibold">{didLog ? "Added!" : "+1"}</Text>
           </Pressable>
-        </View>
-      )}
+        )}
+      </View>
+      <LikersModal
+        drinkLogId={item.id}
+        visible={showLikers}
+        onClose={() => setShowLikers(false)}
+        currentUserId={currentUserId}
+      />
     </PressableCard>
   );
 }

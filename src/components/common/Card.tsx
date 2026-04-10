@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable, PressableProps, View, ViewProps } from 'react-native';
+import { Platform, Pressable, PressableProps, View, ViewProps } from 'react-native';
 import { useColorScheme } from 'nativewind';
 
 interface CardProps extends ViewProps {
@@ -8,6 +8,7 @@ interface CardProps extends ViewProps {
 
 interface PressableCardProps extends PressableProps {
   children: React.ReactNode;
+  flush?: boolean;
 }
 
 export function Card({ children, className, ...props }: CardProps) {
@@ -24,13 +25,18 @@ export function Card({ children, className, ...props }: CardProps) {
   );
 }
 
-export function PressableCard({ children, className, style, ...props }: PressableCardProps) {
+export function PressableCard({ children, className, style, flush, ...props }: PressableCardProps) {
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
+  const flushOnMobile = flush && Platform.OS !== 'web';
+
+  const shapeClass = flushOnMobile
+    ? 'border-t border-b border-border'
+    : 'rounded-2xl shadow-sm border border-border';
 
   return (
     <Pressable
-      className={`bg-card rounded-2xl shadow-sm border border-border active:opacity-80 ${isDark ? 'dark' : ''} ${className ?? ''}`}
+      className={`bg-card active:opacity-80 ${shapeClass} ${isDark ? 'dark' : ''} ${className ?? ''}`}
       style={[{ alignSelf: 'stretch' }, style as any]}
       {...props}
     >

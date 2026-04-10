@@ -131,7 +131,7 @@ export function getEarnedBadges(
           value: streaks.drink_streak,
           targetValue: t,
           label: `${t} Night Run`,
-          icon: 'fire',
+          icon: 'flame-outline',
           tier: (index + 1) as BadgeTier,
         });
       }
@@ -185,7 +185,7 @@ export function getEarnedBadges(
           value: stats.last_call_count,
           targetValue: t,
           label: `Last Call x${t}`,
-          icon: 'clock-check',
+          icon: 'alarm',
           tier: (index + 1) as BadgeTier,
         });
       }
@@ -475,7 +475,7 @@ export function findBadgeById(id: string): UserBadge | null {
     cat = 'sober_streak';
   } else if (category === 'streak') {
     label = `${val} Night Run`;
-    icon = 'fire';
+    icon = 'flame-outline';
     thresholds = THRESHOLDS.drink_streak;
     cat = 'drink_streak';
   } else if (category === 'global') {
@@ -490,7 +490,7 @@ export function findBadgeById(id: string): UserBadge | null {
     cat = 'happy_hour';
   } else if (category === 'lastcall') {
     label = `Last Call x${val}`;
-    icon = 'clock-check';
+    icon = 'alarm';
     thresholds = THRESHOLDS.last_call;
     cat = 'last_call';
   } else if (category === 'earlybird') {

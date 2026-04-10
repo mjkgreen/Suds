@@ -5,7 +5,12 @@ import React, { useState } from "react";
 import { ActivityIndicator, Platform, Pressable, Text, View } from "react-native";
 import { Avatar } from "@/components/common/Avatar";
 import { PressableCard } from "@/components/common/Card";
+import { ImageCarousel } from "@/components/common/ImageCarousel";
 import { DrinkIcon } from "@/components/icons/DrinkIcon";
+import { useLike } from "@/hooks/useLikes";
+import { useLikers } from "@/hooks/useLikers";
+import { AvatarStack } from "@/components/social/AvatarStack";
+import { LikersModal } from "@/components/social/LikersModal";
 import { DRINK_TYPE_MAP } from "@/lib/constants";
 import { DrinkType, FeedItem, SessionFeedGroup } from "@/types/models";
 import { formatDateTime, formatDuration } from "@/utils/dateHelpers";
@@ -14,17 +19,46 @@ import { findBadgeById, TIER_COLORS } from "@/utils/badgeHelpers";
 
 interface SessionCardProps {
   group: SessionFeedGroup;
+  currentUserId?: string;
   isActive?: boolean;
   onEnd?: () => void;
   isEnding?: boolean;
   onQuickLog?: (item: FeedItem) => Promise<void>;
 }
 
-export function SessionCard({ group, isActive, onEnd, isEnding, onQuickLog }: SessionCardProps) {
+export function SessionCard({ group, currentUserId, isActive, onEnd, isEnding, onQuickLog }: SessionCardProps) {
   const router = useRouter();
-  const [expanded, setExpanded] = useState(isActive ?? false);
   const [loggingId, setLoggingId] = useState<string | null>(null);
   const [loggedId, setLoggedId] = useState<string | null>(null);
+  // Use the most recent drink log as the representative for social interactions
+  const representativeItem = group.items[0];
+  const [optimisticLiked, setOptimisticLiked] = useState<boolean | null>(null);
+  const [optimisticCount, setOptimisticCount] = useState<number | null>(null);
+  const { like, unlike } = useLike(currentUserId);
+  const [showLikers, setShowLikers] = useState(false);
+
+  const userLiked = optimisticLiked ?? representativeItem?.user_liked ?? false;
+  const likeCount = optimisticCount ?? representativeItem?.like_count ?? 0;
+  const commentCount = representativeItem?.comment_count ?? 0;
+  const { data: likers } = useLikers(likeCount > 0 ? representativeItem?.id : undefined);
+
+  async function handleLike(e: { stopPropagation: () => void }) {
+    e.stopPropagation();
+    if (!currentUserId || !representativeItem) return;
+    const nowLiked = !userLiked;
+    setOptimisticLiked(nowLiked);
+    setOptimisticCount(likeCount + (nowLiked ? 1 : -1));
+    try {
+      if (nowLiked) {
+        await like.mutateAsync(representativeItem.id);
+      } else {
+        await unlike.mutateAsync(representativeItem.id);
+      }
+    } catch {
+      setOptimisticLiked(!nowLiked);
+      setOptimisticCount(likeCount);
+    }
+  }
 
   async function handleQuickLog(e: { stopPropagation: () => void }, item: FeedItem) {
     e.stopPropagation();
@@ -51,8 +85,14 @@ export function SessionCard({ group, isActive, onEnd, isEnding, onQuickLog }: Se
     (1000 * 60 * 60);
   const drinksPerHour = hoursElapsed >= 0.25 && totalQuantity > 0 ? (totalQuantity / hoursElapsed).toFixed(1) : "—";
 
+  const photos = group.items.map((i) => i.photo_url).filter(Boolean) as string[];
+
   return (
-    <PressableCard className="mx-4 my-2 p-4" onPress={isActive ? undefined : () => setExpanded((v) => !v)}>
+    <PressableCard
+      className={`${Platform.OS === "web" ? "mx-4" : ""} my-2 p-4`}
+      flush={Platform.OS !== "web"}
+      onPress={isActive ? undefined : () => router.push(`/session/${group.session_id}`)}
+    >
       {/* Active in-progress banner */}
       {isActive && (
         <View className="flex-row items-center gap-2 mb-3">
@@ -81,12 +121,12 @@ export function SessionCard({ group, isActive, onEnd, isEnding, onQuickLog }: Se
                     key={id}
                     className="w-4 h-5 items-center justify-center border border-card -ml-1 first:ml-0 shadow-sm"
                     style={{
-                        backgroundColor: TIER_COLORS[b.tier] + '40',
-                        borderColor: TIER_COLORS[b.tier],
-                        borderTopLeftRadius: 2,
-                        borderTopRightRadius: 2,
-                        borderBottomLeftRadius: 8,
-                        borderBottomRightRadius: 8,
+                      backgroundColor: TIER_COLORS[b.tier] + "40",
+                      borderColor: TIER_COLORS[b.tier],
+                      borderTopLeftRadius: 2,
+                      borderTopRightRadius: 2,
+                      borderBottomLeftRadius: 8,
+                      borderBottomRightRadius: 8,
                     }}
                   >
                     <Ionicons name={b.icon as any} size={10} color={TIER_COLORS[b.tier]} />
@@ -160,8 +200,11 @@ export function SessionCard({ group, isActive, onEnd, isEnding, onQuickLog }: Se
         </View>
       )}
 
-      {/* Expanded drink-by-drink list */}
-      {(isActive || expanded) && (
+      {/* Photos from drinks */}
+      {photos.length > 0 && <ImageCarousel images={photos} height={180} borderRadius={10} style={{ marginTop: 8 }} />}
+
+      {/* Expanded drink-by-drink list — active sessions only */}
+      {isActive && (
         <View className="mt-3 border-t border-border pt-3 gap-2">
           {group.items.map((item) => {
             const info = DRINK_TYPE_MAP[item.drink_type as DrinkType] ?? DRINK_TYPE_MAP["other"];
@@ -213,13 +256,11 @@ export function SessionCard({ group, isActive, onEnd, isEnding, onQuickLog }: Se
         </View>
       )}
 
-      {/* Expand/collapse hint — past sessions only */}
+      {/* View details hint — past sessions */}
       {!isActive && (
         <View className="flex-row items-center justify-center gap-1 mt-2">
-          <Ionicons name={expanded ? "chevron-up" : "chevron-down"} size={14} color="hsl(var(--primary))" />
-          <Text className="text-primary text-xs font-medium">
-            {expanded ? "Show less" : `Show all ${group.items.length} drinks`}
-          </Text>
+          <Ionicons name="chevron-forward" size={14} color="hsl(var(--primary))" />
+          <Text className="text-primary text-xs font-medium">View details</Text>
         </View>
       )}
 
@@ -240,6 +281,49 @@ export function SessionCard({ group, isActive, onEnd, isEnding, onQuickLog }: Se
             <Text className="text-primary font-semibold text-sm">{isEnding ? "Ending…" : "End Night Out"}</Text>
           </Pressable>
         </View>
+      )}
+
+      {/* Social bar */}
+      {representativeItem && (
+        <>
+          <View className="flex-row justify-evenly items-center gap-4 mt-3 pt-2 border-t border-border/50">
+            <View className="flex-row items-center gap-1">
+              <Pressable onPress={handleLike} className="flex-row items-center gap-1" hitSlop={8}>
+                <Ionicons
+                  name={userLiked ? "heart" : "heart-outline"}
+                  size={30}
+                  color={userLiked ? "#ef4444" : "gray"}
+                />
+              </Pressable>
+              {likeCount > 0 && likers && likers.length > 0 && (
+                <AvatarStack
+                  profiles={likers}
+                  totalCount={likeCount}
+                  onPress={() => setShowLikers(true)}
+                  size={22}
+                  max={3}
+                />
+              )}
+            </View>
+            <Pressable
+              onPress={(e) => {
+                e.stopPropagation();
+                router.push(`/session/${group.session_id}`);
+              }}
+              className="flex-row items-center gap-1"
+              hitSlop={8}
+            >
+              <Ionicons name="chatbubble-outline" size={30} color="gray" />
+              {commentCount > 0 && <Text className="text-muted-foreground text-xs">{commentCount}</Text>}
+            </Pressable>
+          </View>
+          <LikersModal
+            drinkLogId={representativeItem.id}
+            visible={showLikers}
+            onClose={() => setShowLikers(false)}
+            currentUserId={currentUserId}
+          />
+        </>
       )}
     </PressableCard>
   );

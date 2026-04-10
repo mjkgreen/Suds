@@ -2,13 +2,15 @@ import { Ionicons } from "@expo/vector-icons";
 import React, { useState } from "react";
 import { Control, Controller, UseFormSetValue, UseFormWatch } from "react-hook-form";
 import { Pressable, Text, TextInput, View } from "react-native";
+import { Image } from "expo-image";
 import { LocationPicker } from "@/components/common/LocationPicker";
-import { RemoteImage } from "@/components/common/RemoteImage";
 import { ScrollPicker } from "@/components/common/ScrollPicker";
 import { SimpleDateTimePicker } from "@/components/common/SimpleDateTimePicker";
 import { CombinedDrinkInput } from "@/components/drink/CombinedDrinkInput";
 import { DrinkTypePicker } from "@/components/drink/DrinkTypePicker";
 import { LogDrinkFormData } from "@/types/models";
+
+const MAX_PHOTOS = 3;
 
 const RATING_OPTIONS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 const QUANTITY_OPTIONS = [0.5, 1, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10, 12, 15, 20];
@@ -17,11 +19,10 @@ interface DrinkFormBodyProps {
   control: Control<LogDrinkFormData>;
   watch: UseFormWatch<LogDrinkFormData>;
   setValue: UseFormSetValue<LogDrinkFormData>;
-  previewUri: string | null;
-  onPickPhoto: () => void;
-  onRemovePhoto: () => void;
-  /** Edit mode only — shows Replace + Trash overlay instead of a close button */
-  onReplacePhoto?: () => void;
+  /** All photos to display (local URIs or remote URLs), max 3 */
+  previewUris: string[];
+  onAddPhoto: () => void;
+  onRemovePhoto: (index: number) => void;
   onClearLocation?: () => void;
   error?: string | null;
   /** When true, the event name field is hidden (already in an active session) */
@@ -32,10 +33,9 @@ export function DrinkFormBody({
   control,
   watch,
   setValue,
-  previewUri,
-  onPickPhoto,
+  previewUris,
+  onAddPhoto,
   onRemovePhoto,
-  onReplacePhoto,
   onClearLocation,
   error,
   isInSession = false,
@@ -210,41 +210,49 @@ export function DrinkFormBody({
           />
         </View>
 
-        {/* Photo */}
+        {/* Photos */}
         <View>
-          <Text className="text-foreground font-semibold mb-2">Photo (optional)</Text>
-          {previewUri ? (
-            <View className="relative" style={{ height: 160 }}>
-              <RemoteImage uri={previewUri} height={160} borderRadius={12} />
-              <View className="absolute top-2 right-2 flex-row gap-2">
-                {onReplacePhoto ? (
-                  <>
-                    <Pressable
-                      className="bg-black/50 rounded-full px-3 py-1.5 flex-row items-center gap-1"
-                      onPress={onReplacePhoto}
-                    >
-                      <Ionicons name="swap-horizontal" size={14} color="#fff" />
-                      <Text className="text-white text-xs font-medium">Replace</Text>
-                    </Pressable>
-                    <Pressable className="bg-red-500/80 rounded-full p-1.5" onPress={onRemovePhoto}>
-                      <Ionicons name="trash" size={14} color="#fff" />
-                    </Pressable>
-                  </>
-                ) : (
-                  <Pressable className="bg-black/50 rounded-full p-1" onPress={onRemovePhoto}>
-                    <Ionicons name="close" size={18} color="#fff" />
-                  </Pressable>
-                )}
-              </View>
-            </View>
-          ) : (
+          <View className="flex-row items-center justify-between mb-2">
+            <Text className="text-foreground font-semibold">Photos (optional)</Text>
+            <Text className="text-muted-foreground text-xs">{previewUris.length}/{MAX_PHOTOS}</Text>
+          </View>
+          {previewUris.length === 0 ? (
             <Pressable
               className="bg-card border-2 border-dashed border-border rounded-xl py-6 items-center active:bg-accent"
-              onPress={onPickPhoto}
+              onPress={onAddPhoto}
             >
               <Ionicons name="camera-outline" size={24} color="hsl(var(--muted-foreground))" />
-              <Text className="text-muted-foreground text-xs mt-1">Add a photo</Text>
+              <Text className="text-muted-foreground text-xs mt-1">Add up to 3 photos</Text>
             </Pressable>
+          ) : (
+            <View className="flex-row gap-2">
+              {previewUris.map((uri, index) => (
+                <View key={index} style={{ width: 100, height: 90 }} className="relative">
+                  <Image
+                    source={{ uri }}
+                    style={{ width: 100, height: 90, borderRadius: 10 }}
+                    contentFit="cover"
+                  />
+                  <Pressable
+                    className="absolute top-1 right-1 bg-black/60 rounded-full p-0.5"
+                    onPress={() => onRemovePhoto(index)}
+                    hitSlop={8}
+                  >
+                    <Ionicons name="close" size={14} color="#fff" />
+                  </Pressable>
+                </View>
+              ))}
+              {previewUris.length < MAX_PHOTOS && (
+                <Pressable
+                  style={{ width: 100, height: 90 }}
+                  className="bg-card border-2 border-dashed border-border rounded-xl items-center justify-center active:bg-accent"
+                  onPress={onAddPhoto}
+                >
+                  <Ionicons name="add" size={22} color="hsl(var(--muted-foreground))" />
+                  <Text className="text-muted-foreground text-[10px] mt-0.5">Add</Text>
+                </Pressable>
+              )}
+            </View>
           )}
         </View>
 

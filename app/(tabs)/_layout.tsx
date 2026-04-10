@@ -1,29 +1,29 @@
-import { Ionicons } from '@expo/vector-icons';
-import { Tabs } from 'expo-router';
-import { useColorScheme } from 'nativewind';
-import { Platform, View } from 'react-native';
-import { SessionBanner } from '@/components/session/SessionBanner';
-import { useMyOpenSession } from '@/hooks/useSession';
-import { useAuthStore } from '@/stores/authStore';
-import { WebNavBar } from '@/components/web/WebNavBar';
+import { Ionicons } from "@expo/vector-icons";
+import { Tabs } from "expo-router";
+import { useColorScheme } from "nativewind";
+import { Platform, View } from "react-native";
+import { SessionBanner } from "@/components/session/SessionBanner";
+import { useMyOpenSession } from "@/hooks/useSession";
+import { useAuthStore } from "@/stores/authStore";
+import { WebNavBar } from "@/components/web/WebNavBar";
 
 function TabsLayoutInner() {
   const { colorScheme } = useColorScheme();
-  const isDark = colorScheme === 'dark';
+  const isDark = colorScheme === "dark";
 
-  const isWeb = Platform.OS === 'web';
+  const isWeb = Platform.OS === "web";
 
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: '#f59e0b',
-        tabBarInactiveTintColor: isDark ? '#6b7280' : '#9ca3af',
+        tabBarActiveTintColor: "#f59e0b",
+        tabBarInactiveTintColor: isDark ? "#6b7280" : "#9ca3af",
         tabBarStyle: isWeb
-          ? { display: 'none' }
+          ? { display: "none" }
           : {
-              backgroundColor: isDark ? '#111827' : '#ffffff',
-              borderTopColor: isDark ? '#1f2937' : '#f3f4f6',
+              backgroundColor: isDark ? "#111827" : "#ffffff",
+              borderTopColor: isDark ? "#1f2937" : "#f3f4f6",
               height: 84,
               paddingBottom: 28,
               paddingTop: 8,
@@ -32,57 +32,49 @@ function TabsLayoutInner() {
             },
         tabBarLabelStyle: {
           fontSize: 11,
-          fontWeight: '500',
+          fontWeight: "500",
         },
       }}
     >
       <Tabs.Screen
         name="feed"
         options={{
-          title: 'Feed | Suds',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="beer-outline" size={size} color={color} />
-          ),
+          title: "Feed",
+          tabBarIcon: ({ color, size }) => <Ionicons name="beer-outline" size={size} color={color} />,
         }}
       />
       <Tabs.Screen
         name="map"
         options={{
-          title: 'Map | Suds',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="map-outline" size={size} color={color} />
-          ),
+          title: "Map",
+          tabBarIcon: ({ color, size }) => <Ionicons name="map-outline" size={size} color={color} />,
         }}
       />
       <Tabs.Screen
         name="log"
         options={{
-          title: 'Log | Suds',
+          title: "Log",
           tabBarIcon: ({ color }) => (
             <View className="w-12 h-12 bg-primary rounded-full items-center justify-center -mt-4 shadow-lg shadow-primary/30">
               <Ionicons name="add" size={28} color="#fff" />
             </View>
           ),
           tabBarLabel: () => null,
-          tabBarStyle: { display: 'none' },
+          tabBarStyle: { display: "none" },
         }}
       />
       <Tabs.Screen
         name="search"
         options={{
-          title: 'Search | Suds',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="search-outline" size={size} color={color} />
-          ),
+          title: "Search",
+          tabBarIcon: ({ color, size }) => <Ionicons name="search-outline" size={size} color={color} />,
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
-          title: 'Profile | Suds',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="person-outline" size={size} color={color} />
-          ),
+          title: "Profile",
+          tabBarIcon: ({ color, size }) => <Ionicons name="person-outline" size={size} color={color} />,
         }}
       />
     </Tabs>
@@ -92,16 +84,19 @@ function TabsLayoutInner() {
 export default function TabsLayout() {
   const { user } = useAuthStore();
   const { colorScheme } = useColorScheme();
-  const isDark = colorScheme === 'dark';
+  const isDark = colorScheme === "dark";
   // Hydrates sessionStore with any open session from the DB on mount
   useMyOpenSession(user?.id);
 
   return (
-    <View className="flex-1" style={Platform.OS === 'web' ? { backgroundColor: isDark ? '#030712' : '#f3f4f6' } : undefined}>
-      {Platform.OS === 'web' && <WebNavBar />}
+    <View
+      className="flex-1"
+      style={Platform.OS === "web" ? { backgroundColor: isDark ? "#030712" : "#f3f4f6" } : undefined}
+    >
+      {Platform.OS === "web" && <WebNavBar />}
       <SessionBanner />
-      {Platform.OS === 'web' ? (
-        <View style={{ flex: 1, maxWidth: 860, width: '100%', alignSelf: 'center' }}>
+      {Platform.OS === "web" ? (
+        <View style={{ flex: 1, maxWidth: 860, width: "100%", alignSelf: "center" }}>
           <TabsLayoutInner />
         </View>
       ) : (
