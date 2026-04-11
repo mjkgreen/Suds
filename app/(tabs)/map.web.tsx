@@ -106,7 +106,7 @@ export default function MapScreen() {
       if (!user) return [];
       let query = supabase
         .from('drink_logs')
-        .select('*, profile:profiles(id, username, display_name, avatar_url)')
+        .select('*, profile:profiles!drink_logs_user_id_fkey(id, username, display_name, avatar_url)')
         .not('location_lat', 'is', null)
         .not('location_lng', 'is', null)
         .order('logged_at', { ascending: false })

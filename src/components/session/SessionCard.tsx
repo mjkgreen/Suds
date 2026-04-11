@@ -30,8 +30,9 @@ export function SessionCard({ group, currentUserId, isActive, onEnd, isEnding, o
   const router = useRouter();
   const [loggingId, setLoggingId] = useState<string | null>(null);
   const [loggedId, setLoggedId] = useState<string | null>(null);
-  // Use the most recent drink log as the representative for social interactions
-  const representativeItem = group.items[0];
+  // Use the oldest drink log as the representative for social interactions —
+  // matches the session detail page which orders drinks ascending and reads drinks[0].
+  const representativeItem = group.items[group.items.length - 1];
   const [optimisticLiked, setOptimisticLiked] = useState<boolean | null>(null);
   const [optimisticCount, setOptimisticCount] = useState<number | null>(null);
   const { like, unlike } = useLike(currentUserId);

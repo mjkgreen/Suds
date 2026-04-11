@@ -45,7 +45,7 @@ function isResidentialNominatim(address: NominatimAddress): boolean {
   if (isNamedPOI) return false;
 
   // No known POI? Default to private for anything with a house_number or road.
-  return !!(address.house_number || address.road || true);
+  return !!(address.house_number || address.road);
 }
 
 /**

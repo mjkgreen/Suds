@@ -6,8 +6,7 @@ import { FEED_PAGE_SIZE } from '@/lib/constants';
 function parseFeedRows(data: any[]): FeedEntry[] {
 
   const rows: FeedItem[] = (data ?? []).map((row: any) => {
-    console.log('drink_name from RPC:', row.drink_name, 'for', row.id);
-    return {
+return {
     id: row.id,
     user_id: row.user_id,
     drink_type: row.drink_type,

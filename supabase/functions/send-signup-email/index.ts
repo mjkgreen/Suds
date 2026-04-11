@@ -2,7 +2,7 @@ import { serve } from "https://deno.land/std@0.195.0/http/server.ts";
 import { corsHeaders } from "../_shared/cors.ts";
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
-const RESEND_FROM_EMAIL = Deno.env.get("RESEND_FROM_EMAIL") || "noreply@suds.app";
+const RESEND_FROM_EMAIL = Deno.env.get("RESEND_FROM_EMAIL") || "noreply@drink-with-suds.com";
 
 interface SignupEventPayload {
   record: {
@@ -87,12 +87,13 @@ serve(async (req) => {
         status: 200,
       }
     );
-  } catch (error) {
-    console.error("Error:", error.message);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    console.error("Error:", message);
     return new Response(
       JSON.stringify({
         success: false,
-        error: error.message,
+        error: message,
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },

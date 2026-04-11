@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { uploadDrinkPhoto } from '@/lib/storage';
+import { deleteDrinkPhoto, uploadDrinkPhoto } from '@/lib/storage';
 import { supabase } from '@/lib/supabase';
 import { DrinkLog, LogDrinkFormData } from '@/types/models';
 

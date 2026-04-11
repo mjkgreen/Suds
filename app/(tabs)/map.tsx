@@ -86,7 +86,7 @@ export default function MapScreen() {
     });
   }
 
-  const { data: logs, isLoading } = useQuery({
+  const { data: logs, isLoading, error: logsError } = useQuery({
     queryKey: ['mapLogs', user?.id],
     queryFn: async () => {
       if (!user) return [];
@@ -100,7 +100,7 @@ export default function MapScreen() {
 
       const { data, error } = await supabase
         .from('drink_logs')
-        .select('*, profile:profiles(id, username, display_name, avatar_url)')
+        .select('*, profile:profiles!drink_logs_user_id_fkey(id, username, display_name, avatar_url)')
         .not('location_lat', 'is', null)
         .not('location_lng', 'is', null)
         .in('user_id', allIds)
@@ -266,8 +266,21 @@ export default function MapScreen() {
         </View>
       )}
 
+      {/* Error overlay */}
+      {!isLoading && logsError && (
+        <View className="absolute inset-0 items-center justify-center">
+          <View className="bg-card rounded-2xl px-8 py-6 mx-8 items-center shadow-lg border border-border">
+            <Text className="text-3xl mb-2">⚠️</Text>
+            <Text className="text-foreground font-semibold text-center">Could not load drinks</Text>
+            <Text className="text-muted-foreground text-sm text-center mt-1">
+              {(logsError as Error)?.message ?? 'Something went wrong.'}
+            </Text>
+          </View>
+        </View>
+      )}
+
       {/* Empty overlay */}
-      {!isLoading && !logs?.length && (
+      {!isLoading && !logsError && !logs?.length && (
         <View className="absolute inset-0 items-center justify-center">
           <View className="bg-card rounded-2xl px-8 py-6 mx-8 items-center shadow-lg border border-border">
             <Text className="text-3xl mb-2">🗺️</Text>
