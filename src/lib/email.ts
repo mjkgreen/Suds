@@ -25,8 +25,18 @@ export async function sendSignupEmail({
     });
 
     if (error) {
-      console.error('Failed to send signup email:', error);
-      throw error;
+      // Extract the actual error body from the edge function response
+      let detail = error.message;
+      if (error.context instanceof Response) {
+        try {
+          const body = await error.context.json();
+          detail = body?.error ?? JSON.stringify(body);
+        } catch {
+          detail = await error.context.text().catch(() => error.message);
+        }
+      }
+      console.error('Failed to send signup email:', detail);
+      throw new Error(detail);
     }
 
     console.log('Signup email sent successfully:', data);
