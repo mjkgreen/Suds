@@ -4,7 +4,11 @@
  * Uses the Widmark formula:
  *   BAC = (drinks * 14 / (weight_kg * r * 1000)) * 100 - (0.015 * hours)
  *
- * r = 0.68 for male, 0.55 for female (body water constant)
+ * r values:
+ *   male   = 0.68
+ *   female = 0.55
+ *   other  = 0.615 (midpoint — user can adjust manually)
+ *
  * 14g = standard drink alcohol weight
  *
  * This is an estimate only and should never be used to determine
@@ -14,18 +18,22 @@
 import React, { useMemo, useState } from "react";
 import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { useAuthStore } from "@/stores/authStore";
+import { Gender } from "@/types/models";
 
-type Sex = "male" | "female";
+function widmarkR(gender: Gender): number {
+  if (gender === "male") return 0.68;
+  if (gender === "female") return 0.55;
+  return 0.615; // other — midpoint
+}
 
-function computeBAC(drinks: number, weightKg: number, sex: Sex, hoursElapsed: number): number {
-  const r = sex === "male" ? 0.68 : 0.55;
+function computeBAC(drinks: number, weightKg: number, gender: Gender, hoursElapsed: number): number {
+  const r = widmarkR(gender);
   const raw = ((drinks * 14) / (weightKg * r * 1000)) * 100;
   const metabolized = 0.015 * hoursElapsed;
   return Math.max(raw - metabolized, 0);
 }
 
 function BACBar({ bac }: { bac: number }) {
-  // Scale: 0.00 (sober) → 0.30+ (very drunk), color-coded
   const pct = Math.min(bac / 0.25, 1) * 100;
   const color = bac < 0.04 ? "#22C55E" : bac < 0.08 ? "#F59E0B" : "#EF4444";
 
@@ -43,28 +51,35 @@ function BACBar({ bac }: { bac: number }) {
   );
 }
 
+const GENDER_OPTIONS: { value: Gender; label: string }[] = [
+  { value: "male", label: "M" },
+  { value: "female", label: "F" },
+  { value: "other", label: "X" },
+];
+
 export function BACEstimator() {
   const { profile } = useAuthStore();
   const [drinks, setDrinks] = useState("2");
-  
+
   const initialWeight = profile?.weight?.toString() ?? "160";
   const initialWeightUnit = profile?.weight_unit ?? "lb";
-  
+  const initialGender: Gender = profile?.gender ?? "male";
+
   const [weight, setWeight] = useState(initialWeight);
-  const [weightUnit, setWeightUnit] = useState<'lb' | 'kg'>(initialWeightUnit);
-  const [sex, setSex] = useState<Sex>("male");
+  const [weightUnit, setWeightUnit] = useState<"lb" | "kg">(initialWeightUnit);
+  const [gender, setGender] = useState<Gender>(initialGender);
   const [hours, setHours] = useState("1");
 
   const bac = useMemo(() => {
     const d = parseFloat(drinks);
     let w = parseFloat(weight);
-    if (weightUnit === 'lb') {
-      w = w * 0.453592; // lbs → kg
+    if (weightUnit === "lb") {
+      w = w * 0.453592;
     }
     const h = parseFloat(hours);
     if (!d || !w || isNaN(h)) return null;
-    return computeBAC(d, w, sex, h);
-  }, [drinks, weight, weightUnit, sex, hours]);
+    return computeBAC(d, w, gender, h);
+  }, [drinks, weight, weightUnit, gender, hours]);
 
   const statusText =
     bac === null
@@ -133,10 +148,14 @@ export function BACEstimator() {
         <View className="items-center">
           <Text className="text-xs text-gray-400 mb-1">Sex</Text>
           <View className="flex-row bg-gray-100 rounded-xl overflow-hidden">
-            {(["male", "female"] as Sex[]).map((s) => (
-              <Pressable key={s} className={`px-3 py-2 ${sex === s ? "bg-amber-400" : ""}`} onPress={() => setSex(s)}>
-                <Text className={`text-xs font-medium ${sex === s ? "text-white" : "text-gray-500"}`}>
-                  {s === "male" ? "M" : "F"}
+            {GENDER_OPTIONS.map(({ value, label }) => (
+              <Pressable
+                key={value}
+                className={`px-3 py-2 ${gender === value ? "bg-amber-400" : ""}`}
+                onPress={() => setGender(value)}
+              >
+                <Text className={`text-xs font-medium ${gender === value ? "text-white" : "text-gray-500"}`}>
+                  {label}
                 </Text>
               </Pressable>
             ))}

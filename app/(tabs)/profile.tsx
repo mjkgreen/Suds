@@ -9,6 +9,7 @@ import { DrinkBadge } from "@/components/drink/DrinkBadge";
 import { PremiumGate } from "@/components/common/PremiumGate";
 import { AdvancedStatsCard } from "@/components/profile/AdvancedStatsCard";
 import { BACEstimator } from "@/components/profile/BACEstimator";
+import { LiveBACCard } from "@/components/profile/LiveBACCard";
 import { AdvancedStatsPreview, BACEstimatorPreview, TopDrinksPreview } from "@/components/profile/PremiumPreviews";
 import { GoalCard } from "@/components/profile/GoalCard";
 import { MilestoneBanner } from "@/components/profile/MilestoneBanner";
@@ -445,6 +446,12 @@ export default function ProfileScreen() {
           {user?.id && (
             <PremiumGate featureName="Advanced Analytics" preview={<AdvancedStatsPreview />}>
               <AdvancedStatsCard userId={user.id} />
+            </PremiumGate>
+          )}
+
+          {activeSession && (
+            <PremiumGate featureName="Live BAC" preview={<BACEstimatorPreview />}>
+              <LiveBACCard />
             </PremiumGate>
           )}
 

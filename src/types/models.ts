@@ -13,6 +13,8 @@ export type DrinkType =
 
 export type SubscriptionTier = 'free' | 'premium';
 
+export type Gender = 'male' | 'female' | 'other';
+
 export interface Profile {
   id: string;
   username: string;
@@ -24,6 +26,7 @@ export interface Profile {
   weight: number | null;
   weight_unit: 'kg' | 'lb' | null;
   birthdate: string | null;
+  gender: Gender | null;
   onboarded: boolean;
   subscription_tier: SubscriptionTier;
   displayed_badges?: string[]; // IDs like "milestone-100", "sober-7"

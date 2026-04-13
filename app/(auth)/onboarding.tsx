@@ -16,6 +16,7 @@ import {
 import { useRouter } from "expo-router";
 import { supabase } from "@/lib/supabase";
 import { useAuthStore } from "@/stores/authStore";
+import { Gender } from "@/types/models";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -284,6 +285,7 @@ export default function OnboardingScreen() {
   const [weightValue, setWeightValue] = useState("");
 
   const [birthdate, setBirthdate] = useState("");
+  const [gender, setGender] = useState<Gender | null>(null);
 
   const handleNextStep = async () => {
     if (step === 1) {
@@ -310,6 +312,10 @@ export default function OnboardingScreen() {
       }
       if (!birthdate) {
         Alert.alert("Error", "Date of birth is required for BAC calculations.");
+        return;
+      }
+      if (!gender) {
+        Alert.alert("Error", "Please select your biological sex for accurate BAC calculations.");
         return;
       }
       await completeOnboarding();
@@ -340,6 +346,7 @@ export default function OnboardingScreen() {
         weight: finalWeight,
         weight_unit: weightUnit,
         birthdate,
+        gender,
         onboarded: true,
         updated_at: new Date().toISOString(),
       };
@@ -491,6 +498,46 @@ export default function OnboardingScreen() {
               <Text className="text-foreground font-medium text-lg mb-1">Date of Birth</Text>
               <Text className="text-muted-foreground text-sm mb-2">Private — never shown to other users</Text>
               <DOBPicker value={birthdate} onChange={setBirthdate} />
+            </View>
+
+            {/* Biological Sex */}
+            <View>
+              <Text className="text-foreground font-medium text-lg mb-1">Biological Sex</Text>
+              <Text className="text-muted-foreground text-sm mb-3">
+                Used for BAC estimates (Widmark formula). Private — never shown to other users.
+              </Text>
+              <View className="flex-row gap-3">
+                {(["male", "female", "other"] as Gender[]).map((g) => {
+                  const labels: Record<Gender, string> = { male: "Male", female: "Female", other: "Other" };
+                  const isSelected = gender === g;
+                  return (
+                    <TouchableOpacity
+                      key={g}
+                      onPress={() => setGender(g)}
+                      activeOpacity={0.7}
+                      style={{
+                        flex: 1,
+                        paddingVertical: 14,
+                        borderRadius: 12,
+                        alignItems: "center",
+                        backgroundColor: isSelected ? "rgba(250,204,21,0.15)" : "rgba(255,255,255,0.05)",
+                        borderWidth: 1.5,
+                        borderColor: isSelected ? "#facc15" : "rgba(255,255,255,0.1)",
+                      }}
+                    >
+                      <Text
+                        style={{
+                          color: isSelected ? "#facc15" : "#94a3b8",
+                          fontWeight: isSelected ? "700" : "500",
+                          fontSize: 15,
+                        }}
+                      >
+                        {labels[g]}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
             </View>
           </View>
         )}

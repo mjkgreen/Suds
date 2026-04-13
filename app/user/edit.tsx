@@ -21,7 +21,7 @@ import { uploadAvatarPhoto } from "@/lib/storage";
 import { useUpdateProfile } from "@/hooks/useProfile";
 import { useAuthStore } from "@/stores/authStore";
 import { useColorScheme } from "nativewind";
-import { Profile } from "@/types/models";
+import { Gender, Profile } from "@/types/models";
 
 export default function EditProfileScreen() {
   const router = useRouter();
@@ -49,6 +49,8 @@ export default function EditProfileScreen() {
     return `${m}/${d}/${y}`;
   });
 
+  const [gender, setGender] = useState<Gender | null>(profile?.gender ?? null);
+
   const [avatarUri, setAvatarUri] = useState<string | null>(null);
   const [avatarBase64, setAvatarBase64] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -66,6 +68,7 @@ export default function EditProfileScreen() {
     setHeightUnit(profile?.height_unit || 'in');
     setWeightUnit(profile?.weight_unit || 'lb');
     setWeightValue(profile?.weight?.toString() ?? "");
+    setGender(profile?.gender ?? null);
 
     if (profile?.height) {
       if (profile.height_unit === 'in') {
@@ -146,6 +149,7 @@ export default function EditProfileScreen() {
           weight: weightValue ? parseFloat(weightValue) : null,
           weight_unit: weightUnit,
           birthdate: birthdate ? new Date(birthdate).toISOString().split('T')[0] : null,
+          gender: gender ?? null,
         },
       });
       
@@ -268,6 +272,30 @@ export default function EditProfileScreen() {
               onChangeText={setBirthdate}
               keyboardType="numbers-and-punctuation"
             />
+          </View>
+
+          <View>
+            <Text className="text-foreground font-semibold mb-0.5 text-sm">Biological Sex</Text>
+            <Text className="text-muted-foreground text-xs mb-2">Private — used for BAC estimates (Widmark formula)</Text>
+            <View className="flex-row gap-2">
+              {(["male", "female", "other"] as Gender[]).map((g) => {
+                const labels: Record<Gender, string> = { male: "Male", female: "Female", other: "Other" };
+                const isSelected = gender === g;
+                return (
+                  <TouchableOpacity
+                    key={g}
+                    onPress={() => setGender(g)}
+                    className={`flex-1 py-3 rounded-xl items-center border ${
+                      isSelected ? "border-primary bg-primary/10" : "border-border bg-card"
+                    }`}
+                  >
+                    <Text className={`text-sm font-medium ${isSelected ? "text-primary" : "text-muted-foreground"}`}>
+                      {labels[g]}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
           </View>
 
           <View>
