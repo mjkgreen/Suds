@@ -1,0 +1,133 @@
+=== File: README.md ===
+Length: 4773 chars
+Lines: 134 lines
+
+First 500 chars:
+# Suds 🍺
+
+**Suds** is the social app for logging alcoholic beverages, following friends, and tracking your personal stats and streaks.
+
+Built with **Expo**, **Supabase**, and **RevenueCat**, Suds combines habit tracking with a social layer to help you stay mindful and share your recreational drinking journey with friends.
+
+---
+
+## 🚀 Key Features
+
+### 🆓 Free Tier
+- **Drink Logging**: Log any drink (beer, wine, cocktail, spirit, etc.) with quantity, notes, and GPS location.
+- **Social Feed**: Foll
+
+================================================================================
+
+=== File: README_ascii.md ===
+Length: 4773 chars
+Lines: 134 lines
+
+First 500 chars:
+# Suds ?
+
+**Suds** is the social app for logging alcoholic beverages, following friends, and tracking your personal stats and streaks.
+
+Built with **Expo**, **Supabase**, and **RevenueCat**, Suds combines habit tracking with a social layer to help you stay mindful and share your recreational drinking journey with friends.
+
+---
+
+## ? Key Features
+
+### ? Free Tier
+- **Drink Logging**: Log any drink (beer, wine, cocktail, spirit, etc.) with quantity, notes, and GPS location.
+- **Social Feed**: Foll
+
+================================================================================
+
+=== File: README_clean.md ===
+Length: 4773 chars
+Lines: 134 lines
+
+First 500 chars:
+# Suds 🍺
+
+**Suds** is the social app for logging alcoholic beverages, following friends, and tracking your personal stats and streaks.
+
+Built with **Expo**, **Supabase**, and **RevenueCat**, Suds combines habit tracking with a social layer to help you stay mindful and share your recreational drinking journey with friends.
+
+---
+
+## 🚀 Key Features
+
+### 🆓 Free Tier
+- **Drink Logging**: Log any drink (beer, wine, cocktail, spirit, etc.) with quantity, notes, and GPS location.
+- **Social Feed**: Foll
+
+================================================================================
+
+=== File: RESEND_SETUP.md ===
+Length: 4204 chars
+Lines: 175 lines
+
+First 500 chars:
+# Resend Email Integration Setup
+
+You now have Resend integrated for signup emails! Here's what was set up and what you need to do:
+
+## What's Been Created
+
+### 1. **Supabase Edge Function** (`supabase/functions/send-signup-email/index.ts`)
+   - Listens for signup requests
+   - Sends a welcome email via Resend API
+   - Customizable with your branding
+
+### 2. **Email Utility** (`src/lib/email.ts`)
+   - `sendSignupEmail()` function that calls the Edge Function
+   - Non-blocking (doesn't delay sign
+
+================================================================================
+
+=== File: overview.md ===
+Length: 9663 chars
+Lines: 229 lines
+
+First 500 chars:
+# Suds — Project Overview
+
+## Concept
+
+Suds is a **"Strava for drinking"** — a social iOS app where users log alcoholic beverages, follow friends, and track personal stats and streaks. It blends the habit-tracking loop of fitness apps with a light, social layer to make recreational drinking more self-aware and fun.
+
+---
+
+## Business Model
+
+### Free Tier
+Core social and tracking features, always free:
+
+| Feature | Description |
+|---|---|
+| Drink logging | Log drinks with quantity, notes, **end ti
+
+================================================================================
+
+=== File: overview_ascii.md ===
+Length: 9220 chars
+Lines: 229 lines
+
+First 500 chars:
+# Suds  Project Overview
+
+## Concept
+
+Suds is a **"Strava for drinking"**  a social iOS app where users log alcoholic beverages, follow friends, and track personal stats and streaks. It blends the habit-tracking loop of fitness apps with a light, social layer to make recreational drinking more self-aware and fun.
+
+---
+
+## Business Model
+
+### Free Tier
+Core social and tracking features, always free:
+
+| Feature | Description |
+|---|---|
+| Drink logging | Log drinks with quantity, notes, **end time
+
+================================================================================
+

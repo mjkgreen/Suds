@@ -1,4 +1,7 @@
-# Suds 🍺
+# -*- coding: utf-8 -*-
+import sys
+
+readme_content = """# Suds \\U0001f37a
 
 **Suds** is the premier social app for logging alcoholic beverages, following friends, tracking hydration, and gaining deep insights into your consumption habits.
 
@@ -6,9 +9,9 @@ Built with **Expo SDK 54**, **Supabase**, and **RevenueCat**, Suds combines intu
 
 ---
 
-## 🚀 Key Features
+## \\U0001f680 Key Features
 
-### 🆓 Free Tier
+### \\U0001f193 Free Tier
 - **Drink Logging**: Log any drink (beer, wine, cocktail, spirit, seltzer, cider, etc.) with custom branding, rating, event names, or notes.
 - **Social Feed**: Follow friends and view their drinking activity in a real-time, infinite-scroll feed complete with likes and comments.
 - **Heatmap & Geolocation**: Map your logged drinks with GPS coordinates and automatic country-code tracking.
@@ -16,14 +19,14 @@ Built with **Expo SDK 54**, **Supabase**, and **RevenueCat**, Suds combines intu
 - **Milestones**: Earn gamified achievements/badges for drink frequencies and varieties.
 - **Sessions & Hydration Tracking**: Group multiple drinks into "sessions" and log non-alcoholic drinks (water, soft drinks, etc.) to calculate active hydration status.
 
-### ⭐ Suds Plus (Premium)
+### \\u2b50 Suds Plus (Premium)
 - **Advanced Analytics**: Granular trends (weekly/monthly charts, day-of-week distribution).
 - **BAC Estimator**: Live estimation of Blood Alcohol Content based on height, weight, gender, birthdate, and session duration.
 - **Full History**: Unlimited archive and data export (CSV format).
 
 ---
 
-## ⚒️ Tech Stack & Expo SDK 54 Configuration
+## \\u2692\\ufe0f Tech Stack & Expo SDK 54 Configuration
 
 Suds leverages **Expo SDK 54** to build high-performance native iOS, Android, and Web applications.
 
@@ -62,7 +65,7 @@ eas build --profile development --platform all
 
 ---
 
-## ☑️ Database Schema & Migrations (001 to 026)
+## \\u2611\\ufe0f Database Schema & Migrations (001 to 026)
 
 The Supabase PostgreSQL database is constructed incrementally. Migrations `001` through `006` setup the initial structure. Migrations `007` to `026` add advanced application features:
 
@@ -80,8 +83,8 @@ The Supabase PostgreSQL database is constructed incrementally. Migrations `001` 
 | **014** | `014_expanded_stats.sql` | Enhances `get_user_stats()` to compute deep temporal statistics: weekly limits, drinks by day of week, hour distribution, and favorite drink category counts. |
 | **015** | `015_country_tracking.sql` | Adds global mapping capability by tracking `location_country_code` on logs. |
 | **016** | `016_stats_countries.sql` | Upgrades statistics calculations to include `unique_countries_count` in user metrics. |
-| **017** | `017_early_bird_refine.sql` | Adjusts statistical tracking filters for the "Early Bird" badge window to 10:00 AM – 3:00 PM. |
-| **018** | `018_early_bird_refine_v2.sql` | Fine-tunes the "Early Bird" metric tracking window to encompass 10:00 AM – 4:00 PM. |
+| **017** | `017_early_bird_refine.sql` | Adjusts statistical tracking filters for the "Early Bird" badge window to 10:00 AM \\u2013 3:00 PM. |
+| **018** | `018_early_bird_refine_v2.sql` | Fine-tunes the "Early Bird" metric tracking window to encompass 10:00 AM \\u2013 4:00 PM. |
 | **019** | `019_add_more_drink_types.sql` | Refactors drinking categorization logic. Incorporates hydration tracking and non-alcoholic drinks: `water`, `soft_drink`, `mocktail`, `non_alcoholic`, and `other` into the database. Updates streaks and milestone statistics to specifically ignore non-alcoholic categories. |
 | **019-Feed**| `019_feed_badges.sql` | Re-integrates displayed user badge arrays (`displayed_badges`) directly into the returned payloads of the central `get_feed()` function. |
 | **020** | `020_stats_weekly_limit.sql` | Links `get_user_stats()` directly with custom target variables (`weekly_limit`) configured dynamically in the `goals` table. |
@@ -94,7 +97,7 @@ The Supabase PostgreSQL database is constructed incrementally. Migrations `001` 
 
 ---
 
-## ✉️ Resend Email Integration Setup
+## \\u2709\\ufe0f Resend Email Integration Setup
 
 Suds leverages **Resend** to send automated, high-deliverability transactional emails (such as welcome messages on user registration).
 
@@ -142,12 +145,15 @@ supabase functions deploy send-signup-email
 You can invoke the deployed function manually to confirm delivery:
 ```bash
 # Send a test registration payload
-curl -i --location --request POST 'https://gbenibgytweskljxneup.supabase.co/functions/v1/send-signup-email'   --header 'Authorization: Bearer YOUR_ANON_KEY'   --header 'Content-Type: application/json'   --data '{"record":{"id":"test-uuid","email":"your-email@example.com","raw_user_meta_data":{"username":"testuser"}}}'
+curl -i --location --request POST 'https://gbenibgytweskljxneup.supabase.co/functions/v1/send-signup-email' \
+  --header 'Authorization: Bearer YOUR_ANON_KEY' \
+  --header 'Content-Type: application/json' \
+  --data '{"record":{"id":"test-uuid","email":"your-email@example.com","raw_user_meta_data":{"username":"testuser"}}}'
 ```
 
 ---
 
-## 🚀 Installation & Getting Started
+## \\U0001f680 Installation & Getting Started
 
 ### 1. Prerequisites
 - **Node.js**: (LTS v18+ recommended)
@@ -195,7 +201,7 @@ RESEND_API_KEY=re_XjZvRdFu_KcAb8vkbq2Bzq76fdRrpdr9z
 
 ---
 
-## 📱 Running the App
+## \\U0001f4f1 Running the App
 
 Start the Expo bundler:
 ```bash
@@ -209,5 +215,14 @@ npm run start
 
 ---
 
-## 📄 License
+## \\U0001f4c4 License
 This repository is licensed under the MIT License - see the `LICENSE` file for details.
+"""
+
+# Decode unicode escape sequences so the actual characters/emojis are written to the file
+decoded_content = readme_content.encode('utf-8').decode('unicode_escape')
+
+with open('README.md', 'w', encoding='utf-8') as f:
+    f.write(decoded_content)
+
+print("Successfully wrote README.md in UTF-8 encoding!")

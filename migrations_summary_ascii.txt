@@ -1,0 +1,639 @@
+=== 007_drink_brand.sql ===
+-- Add brand and rating columns to drink_logs
+ALTER TABLE public.drink_logs
+  ADD COLUMN IF NOT EXISTS brand text,
+  ADD COLUMN IF NOT EXISTS rating integer CHECK (rating >= 1 AND rating <= 10);
+
+... (truncated if longer) ...
+Key SQL statements:
+  ALTER TABLE public.drink_logs
+  ADD COLUMN IF NOT EXISTS brand text,
+  ADD COLUMN IF NOT EXISTS rating integer CHECK (rating >= 1 AND rating <= 10);
+
+==================================================
+
+=== 008_event_name.sql ===
+-- Add event_name column to drink_logs
+ALTER TABLE public.drink_logs
+  ADD COLUMN IF NOT EXISTS event_name text;
+
+-- ============================================================
+-- Updated get_feed ? includes brand, rating, event_name
+-- ============================================================
+DROP FUNCTION IF EXISTS public.get_feed(uuid, integer, integer);
+
+CREATE OR REPLACE FUNCTION public.get_feed(
+  p_user_id uuid,
+  p_limit   int DEFAULT 20,
+  p_offset  int DEFAULT 0
+)
+RETURNS TABLE (
+  id            uuid,
+  user_id       uuid,
+  drink_type    text,
+  drink_name    text,
+  brand         text,
+  quantity      numeric,
+  location_name text,
+  location_lat  numeric,
+  location_lng  numeric,
+  notes         text,
+  photo_url     text,
+  rating        numeric,
+  event_name    text,
+  logged_at     timestamptz,
+  created_at    timestamptz,
+
+... (truncated if longer) ...
+Key SQL statements:
+  ALTER TABLE public.drink_logs
+  ADD COLUMN IF NOT EXISTS event_name text;
+  CREATE OR REPLACE FUNCTION public.get_feed(
+
+==================================================
+
+=== 009_security_fixes.sql ===
+-- ============================================================
+-- SECURITY FIXES
+-- ============================================================
+
+-- Fix: security_definer_view for profile_counts
+-- Sets the view to use security_invoker = true so it runs with the privileges 
+-- of the user invoking it rather than the user who created it
+ALTER VIEW public.profile_counts SET (security_invoker = true);
+ALTER VIEW public.profile_counts SET (security_invoker = true);
+
+... (truncated if longer) ...
+
+==================================================
+
+=== 010_onboarding_fields.sql ===
+-- Add onboarding fields to profiles
+ALTER TABLE public.profiles
+ADD COLUMN IF NOT EXISTS height numeric(5,2),
+ADD COLUMN IF NOT EXISTS height_unit text DEFAULT 'in' CHECK (height_unit IN ('cm', 'in')),
+ADD COLUMN IF NOT EXISTS weight numeric(5,1),
+ADD COLUMN IF NOT EXISTS weight_unit text DEFAULT 'lb' CHECK (weight_unit IN ('kg', 'lb')),
+ADD COLUMN IF NOT EXISTS age integer,
+ADD COLUMN IF NOT EXISTS onboarded boolean NOT NULL DEFAULT false;
+
+... (truncated if longer) ...
+Key SQL statements:
+  ALTER TABLE public.profiles
+  ADD COLUMN IF NOT EXISTS height numeric(5,2),
+  ADD COLUMN IF NOT EXISTS height_unit text DEFAULT 'in' CHECK (height_unit IN ('cm', 'in')),
+  ADD COLUMN IF NOT EXISTS weight numeric(5,1),
+  ADD COLUMN IF NOT EXISTS weight_unit text DEFAULT 'lb' CHECK (weight_unit IN ('kg', 'lb')),
+  ADD COLUMN IF NOT EXISTS age integer,
+  ADD COLUMN IF NOT EXISTS onboarded boolean NOT NULL DEFAULT false;
+
+==================================================
+
+=== 011_drink_log_ended_at.sql ===
+-- Add ended_at to drink_logs to support time ranges (e.g. 5 drinks between 6-10pm)
+ALTER TABLE drink_logs ADD COLUMN ended_at TIMESTAMPTZ;
+
+-- ============================================================
+-- Updated get_feed ? includes brand, rating, event_name, ended_at
+-- ============================================================
+DROP FUNCTION IF EXISTS public.get_feed(uuid, integer, integer);
+
+CREATE OR REPLACE FUNCTION public.get_feed(
+  p_user_id uuid,
+  p_limit   int DEFAULT 20,
+  p_offset  int DEFAULT 0
+)
+RETURNS TABLE (
+  id            uuid,
+  user_id       uuid,
+  drink_type    text,
+  drink_name    text,
+  brand         text,
+  quantity      numeric,
+  location_name text,
+  location_lat  numeric,
+  location_lng  numeric,
+  notes         text,
+  photo_url     text,
+  rating        numeric,
+  event_name    text,
+  logged_at     timestamptz,
+  ended_at      timestamptz,
+  created_at    timestamptz,
+
+... (truncated if longer) ...
+Key SQL statements:
+  ALTER TABLE drink_logs ADD COLUMN ended_at TIMESTAMPTZ;
+  CREATE OR REPLACE FUNCTION public.get_feed(
+
+==================================================
+
+=== 012_displayed_badge.sql ===
+-- Add displayed badge to profiles
+ALTER TABLE public.profiles
+ADD COLUMN IF NOT EXISTS displayed_badge integer;
+
+... (truncated if longer) ...
+Key SQL statements:
+  ALTER TABLE public.profiles
+  ADD COLUMN IF NOT EXISTS displayed_badge integer;
+
+==================================================
+
+=== 013_top_three_badges.sql ===
+-- Update profile to support top 3 badges
+ALTER TABLE public.profiles
+DROP COLUMN IF EXISTS displayed_badge,
+ADD COLUMN IF NOT EXISTS displayed_badges text[] DEFAULT '{}';
+
+... (truncated if longer) ...
+Key SQL statements:
+  ALTER TABLE public.profiles
+  DROP COLUMN IF EXISTS displayed_badge,
+  ADD COLUMN IF NOT EXISTS displayed_badges text[] DEFAULT '{}';
+
+==================================================
+
+=== 014_expanded_stats.sql ===
+-- Update get_user_stats to include more counter for badges
+CREATE OR REPLACE FUNCTION public.get_user_stats(p_user_id uuid)
+RETURNS json AS $$
+DECLARE
+  v_result json;
+BEGIN
+  SELECT json_build_object(
+    'total_drinks',       COUNT(*),
+    'total_quantity',     COALESCE(SUM(quantity), 0),
+    'drinks_this_week',   COUNT(*) FILTER (WHERE logged_at >= date_trunc('week', now())),
+    'drinks_this_month',  COUNT(*) FILTER (WHERE logged_at >= date_trunc('month', now())),
+    'happy_hour_count',   COUNT(*) FILTER (WHERE EXTRACT(HOUR FROM (logged_at AT TIME ZONE 'UTC')) BETWEEN 16 AND 18),
+    'last_call_count',    COUNT(*) FILTER (WHERE EXTRACT(HOUR FROM (logged_at AT TIME ZONE 'UTC')) >= 1 OR EXTRACT(HOUR FROM (logged_at AT TIME ZONE 'UTC')) < 5),
+    'early_bird_count',   COUNT(*) FILTER (WHERE EXTRACT(HOUR FROM (logged_at AT TIME ZONE 'UTC')) < 14),
+    'unique_locations_count', COUNT(DISTINCT location_name) FILTER (WHERE location_name IS NOT NULL),
+    'favorite_drink_types', (
+      SELECT json_agg(row_to_json(t)) FROM (
+        SELECT drink_type, COUNT(*) AS count
+        FROM public.drink_logs
+        WHERE user_id = p_user_id
+        GROUP BY drink_type
+        ORDER BY count DESC
+        LIMIT 10
+      ) t
+    ),
+    'activity_by_day', (
+      SELECT json_agg(row_to_json(t)) FROM (
+        SELECT
+          to_char(date_trunc('day', logged_at), 'YYYY-MM-DD') AS date,
+          COUNT(*) AS count
+
+... (truncated if longer) ...
+Key SQL statements:
+  CREATE OR REPLACE FUNCTION public.get_user_stats(p_user_id uuid)
+
+==================================================
+
+=== 015_country_tracking.sql ===
+-- Add country code to drink logs
+ALTER TABLE public.drink_logs
+ADD COLUMN IF NOT EXISTS location_country_code text;
+
+... (truncated if longer) ...
+Key SQL statements:
+  ALTER TABLE public.drink_logs
+  ADD COLUMN IF NOT EXISTS location_country_code text;
+
+==================================================
+
+=== 016_stats_countries.sql ===
+-- Update get_user_stats to include unique_countries_count
+CREATE OR REPLACE FUNCTION public.get_user_stats(p_user_id uuid)
+RETURNS json AS $$
+DECLARE
+  v_result json;
+BEGIN
+  SELECT json_build_object(
+    'total_drinks',       COUNT(*),
+    'total_quantity',     COALESCE(SUM(quantity), 0),
+    'drinks_this_week',   COUNT(*) FILTER (WHERE logged_at >= date_trunc('week', now())),
+    'drinks_this_month',  COUNT(*) FILTER (WHERE logged_at >= date_trunc('month', now())),
+    'happy_hour_count',   COUNT(*) FILTER (WHERE EXTRACT(HOUR FROM (logged_at AT TIME ZONE 'UTC')) BETWEEN 16 AND 18),
+    'last_call_count',    COUNT(*) FILTER (WHERE EXTRACT(HOUR FROM (logged_at AT TIME ZONE 'UTC')) >= 1 OR EXTRACT(HOUR FROM (logged_at AT TIME ZONE 'UTC')) < 5),
+    'early_bird_count',   COUNT(*) FILTER (WHERE EXTRACT(HOUR FROM (logged_at AT TIME ZONE 'UTC')) < 14),
+    'unique_countries_count', COUNT(DISTINCT location_country_code) FILTER (WHERE location_country_code IS NOT NULL),
+    'favorite_drink_types', (
+      SELECT json_agg(row_to_json(t)) FROM (
+        SELECT drink_type, COUNT(*) AS count
+        FROM public.drink_logs
+        WHERE user_id = p_user_id
+        GROUP BY drink_type
+        ORDER BY count DESC
+        LIMIT 10
+      ) t
+    ),
+    'activity_by_day', (
+      SELECT json_agg(row_to_json(t)) FROM (
+        SELECT
+          to_char(date_trunc('day', logged_at), 'YYYY-MM-DD') AS date,
+          COUNT(*) AS count
+
+... (truncated if longer) ...
+Key SQL statements:
+  CREATE OR REPLACE FUNCTION public.get_user_stats(p_user_id uuid)
+
+==================================================
+
+=== 017_early_bird_refine.sql ===
+-- Refine Early Bird to 10AM - 3PM
+CREATE OR REPLACE FUNCTION public.get_user_stats(p_user_id uuid)
+RETURNS json AS $$
+DECLARE
+  v_result json;
+BEGIN
+  SELECT json_build_object(
+    'total_drinks',       COUNT(*),
+    'total_quantity',     COALESCE(SUM(quantity), 0),
+    'drinks_this_week',   COUNT(*) FILTER (WHERE logged_at >= date_trunc('week', now())),
+    'drinks_this_month',  COUNT(*) FILTER (WHERE logged_at >= date_trunc('month', now())),
+    'happy_hour_count',   COUNT(*) FILTER (WHERE EXTRACT(HOUR FROM (logged_at AT TIME ZONE 'UTC')) BETWEEN 16 AND 18),
+    'last_call_count',    COUNT(*) FILTER (WHERE EXTRACT(HOUR FROM (logged_at AT TIME ZONE 'UTC')) >= 1 OR EXTRACT(HOUR FROM (logged_at AT TIME ZONE 'UTC')) < 5),
+    'early_bird_count',   COUNT(*) FILTER (WHERE EXTRACT(HOUR FROM (logged_at AT TIME ZONE 'UTC')) BETWEEN 10 AND 14),
+    'unique_countries_count', COUNT(DISTINCT location_country_code) FILTER (WHERE location_country_code IS NOT NULL),
+    'favorite_drink_types', (
+      SELECT json_agg(row_to_json(t)) FROM (
+        SELECT drink_type, COUNT(*) AS count
+        FROM public.drink_logs
+        WHERE user_id = p_user_id
+        GROUP BY drink_type
+        ORDER BY count DESC
+        LIMIT 10
+      ) t
+    ),
+    'activity_by_day', (
+      SELECT json_agg(row_to_json(t)) FROM (
+        SELECT
+          to_char(date_trunc('day', logged_at), 'YYYY-MM-DD') AS date,
+          COUNT(*) AS count
+
+... (truncated if longer) ...
+Key SQL statements:
+  CREATE OR REPLACE FUNCTION public.get_user_stats(p_user_id uuid)
+
+==================================================
+
+=== 018_early_bird_refine_v2.sql ===
+-- Refine Early Bird to 10AM - 4PM
+CREATE OR REPLACE FUNCTION public.get_user_stats(p_user_id uuid)
+RETURNS json AS $$
+DECLARE
+  v_result json;
+BEGIN
+  SELECT json_build_object(
+    'total_drinks',       COUNT(*),
+    'total_quantity',     COALESCE(SUM(quantity), 0),
+    'drinks_this_week',   COUNT(*) FILTER (WHERE logged_at >= date_trunc('week', now())),
+    'drinks_this_month',  COUNT(*) FILTER (WHERE logged_at >= date_trunc('month', now())),
+    'happy_hour_count',   COUNT(*) FILTER (WHERE EXTRACT(HOUR FROM (logged_at AT TIME ZONE 'UTC')) BETWEEN 16 AND 18),
+    'last_call_count',    COUNT(*) FILTER (WHERE EXTRACT(HOUR FROM (logged_at AT TIME ZONE 'UTC')) >= 1 OR EXTRACT(HOUR FROM (logged_at AT TIME ZONE 'UTC')) < 5),
+    'early_bird_count',   COUNT(*) FILTER (WHERE EXTRACT(HOUR FROM (logged_at AT TIME ZONE 'UTC')) BETWEEN 10 AND 15),
+    'unique_countries_count', COUNT(DISTINCT location_country_code) FILTER (WHERE location_country_code IS NOT NULL),
+    'favorite_drink_types', (
+      SELECT json_agg(row_to_json(t)) FROM (
+        SELECT drink_type, COUNT(*) AS count
+        FROM public.drink_logs
+        WHERE user_id = p_user_id
+        GROUP BY drink_type
+        ORDER BY count DESC
+        LIMIT 10
+      ) t
+    ),
+    'activity_by_day', (
+      SELECT json_agg(row_to_json(t)) FROM (
+        SELECT
+          to_char(date_trunc('day', logged_at), 'YYYY-MM-DD') AS date,
+          COUNT(*) AS count
+
+... (truncated if longer) ...
+Key SQL statements:
+  CREATE OR REPLACE FUNCTION public.get_user_stats(p_user_id uuid)
+
+==================================================
+
+=== 019_add_more_drink_types.sql ===
+-- Update drink_type check constraint to include new types
+ALTER TABLE public.drink_logs
+DROP CONSTRAINT IF EXISTS drink_logs_drink_type_check;
+
+ALTER TABLE public.drink_logs
+ADD CONSTRAINT drink_logs_drink_type_check
+CHECK (drink_type IN (
+  'beer', 'wine', 'cocktail', 'spirit', 'cider', 'seltzer',
+  'water', 'soft_drink', 'mocktail', 'non_alcoholic', 'other'
+));
+
+-- Update get_user_stats to distinguish between alcoholic and total drinks
+-- Suggestion: Milestone stats ('total_drinks') should only count alcoholic drinks.
+CREATE OR REPLACE FUNCTION public.get_user_stats(p_user_id uuid)
+RETURNS json AS $$
+DECLARE
+  v_result json;
+BEGIN
+  SELECT json_build_object(
+    'total_drinks',       COUNT(*) FILTER (WHERE drink_type NOT IN ('water', 'soft_drink', 'mocktail', 'non_alcoholic')),
+    'total_quantity',     COALESCE(SUM(quantity) FILTER (WHERE drink_type NOT IN ('water', 'soft_drink', 'mocktail', 'non_alcoholic')), 0),
+    'drinks_this_week',   COUNT(*) FILTER (WHERE logged_at >= date_trunc('week', now()) AND drink_type NOT IN ('water', 'soft_drink', 'mocktail', 'non_alcoholic')),
+    'drinks_this_month',  COUNT(*) FILTER (WHERE logged_at >= date_trunc('month', now()) AND drink_type NOT IN ('water', 'soft_drink', 'mocktail', 'non_alcoholic')),
+    'happy_hour_count',   COUNT(*) FILTER (WHERE EXTRACT(HOUR FROM (logged_at AT TIME ZONE 'UTC')) BETWEEN 16 AND 18 AND drink_type NOT IN ('water', 'soft_drink', 'mocktail', 'non_alcoholic')),
+    'last_call_count',    COUNT(*) FILTER (WHERE (EXTRACT(HOUR FROM (logged_at AT TIME ZONE 'UTC')) >= 1 OR EXTRACT(HOUR FROM (logged_at AT TIME ZONE 'UTC')) < 5) AND drink_type NOT IN ('water', 'soft_drink', 'mocktail', 'non_alcoholic')),
+    'early_bird_count',   COUNT(*) FILTER (WHERE EXTRACT(HOUR FROM (logged_at AT TIME ZONE 'UTC')) BETWEEN 10 AND 15 AND drink_type NOT IN ('water', 'soft_drink', 'mocktail', 'non_alcoholic')),
+    'unique_countries_count', COUNT(DISTINCT location_country_code) FILTER (WHERE location_country_code IS NOT NULL),
+    'favorite_drink_types', (
+      SELECT json_agg(row_to_json(t)) FROM (
+        SELECT drink_type, COUNT(*) AS count
+
+... (truncated if longer) ...
+Key SQL statements:
+  ALTER TABLE public.drink_logs
+  ALTER TABLE public.drink_logs
+  CREATE OR REPLACE FUNCTION public.get_user_stats(p_user_id uuid)
+  CREATE OR REPLACE FUNCTION public.get_streaks(p_user_id uuid)
+  CREATE OR REPLACE FUNCTION public.get_milestones(p_user_id uuid)
+
+==================================================
+
+=== 019_feed_badges.sql ===
+-- Drop existing function to change return type
+DROP FUNCTION IF EXISTS public.get_feed(uuid,int,int);
+
+-- Update get_feed to include displayed_badges AND preserve session/extra fields
+CREATE OR REPLACE FUNCTION public.get_feed(
+  p_user_id uuid,
+  p_limit   int DEFAULT 20,
+  p_offset  int DEFAULT 0
+)
+RETURNS TABLE (
+  id               uuid,
+  user_id          uuid,
+  drink_type       text,
+  drink_name       text,
+  brand            text,
+  quantity         numeric,
+  location_name    text,
+  location_lat     numeric,
+  location_lng     numeric,
+  notes            text,
+  photo_url        text,
+  rating           numeric,
+  event_name       text,
+  logged_at        timestamptz,
+  ended_at         timestamptz,
+  created_at       timestamptz,
+  username         text,
+  display_name     text,
+  avatar_url       text,
+  displayed_badges text[],
+
+... (truncated if longer) ...
+Key SQL statements:
+  CREATE OR REPLACE FUNCTION public.get_feed(
+
+==================================================
+
+=== 020_stats_weekly_limit.sql ===
+-- Update get_user_stats to include weekly_limit from goals table
+CREATE OR REPLACE FUNCTION public.get_user_stats(p_user_id uuid)
+RETURNS json AS $$
+DECLARE
+  v_result json;
+  v_weekly_limit numeric;
+BEGIN
+  -- Get weekly limit from goals table
+  SELECT weekly_limit INTO v_weekly_limit
+  FROM public.goals
+  WHERE user_id = p_user_id
+  ORDER BY created_at DESC
+  LIMIT 1;
+
+  SELECT json_build_object(
+    'total_drinks',       COUNT(*),
+    'total_quantity',     COALESCE(SUM(quantity), 0),
+    'drinks_this_week',   COUNT(*) FILTER (WHERE logged_at >= date_trunc('week', now())),
+    'drinks_this_month',  COUNT(*) FILTER (WHERE logged_at >= date_trunc('month', now())),
+    'happy_hour_count',   COUNT(*) FILTER (WHERE EXTRACT(HOUR FROM (logged_at AT TIME ZONE 'UTC')) BETWEEN 16 AND 18),
+    'last_call_count',    COUNT(*) FILTER (WHERE EXTRACT(HOUR FROM (logged_at AT TIME ZONE 'UTC')) >= 1 OR EXTRACT(HOUR FROM (logged_at AT TIME ZONE 'UTC')) < 5),
+    'early_bird_count',   COUNT(*) FILTER (WHERE EXTRACT(HOUR FROM (logged_at AT TIME ZONE 'UTC')) BETWEEN 10 AND 15),
+    'unique_countries_count', COUNT(DISTINCT location_country_code) FILTER (WHERE location_country_code IS NOT NULL),
+    'weekly_limit',       COALESCE(v_weekly_limit, 0),
+    'favorite_drink_types', (
+      SELECT json_agg(row_to_json(t)) FROM (
+        SELECT drink_type, COUNT(*) AS count
+        FROM public.drink_logs
+        WHERE user_id = p_user_id
+        GROUP BY drink_type
+
+... (truncated if longer) ...
+Key SQL statements:
+  CREATE OR REPLACE FUNCTION public.get_user_stats(p_user_id uuid)
+
+==================================================
+
+=== 021_hydration_stats.sql ===
+-- Update get_user_stats to include user_created_at and per-day alcohol/water counts
+CREATE OR REPLACE FUNCTION public.get_user_stats(p_user_id uuid)
+RETURNS json AS $$
+DECLARE
+  v_result json;
+  v_weekly_limit numeric;
+  v_created_at timestamptz;
+BEGIN
+  -- Get weekly limit and created_at
+  SELECT weekly_limit INTO v_weekly_limit
+  FROM public.goals
+  WHERE user_id = p_user_id
+  ORDER BY created_at DESC
+  LIMIT 1;
+
+  SELECT created_at INTO v_created_at
+  FROM public.profiles
+  WHERE id = p_user_id;
+
+  SELECT json_build_object(
+    'total_drinks',       COUNT(*),
+    'total_quantity',     COALESCE(SUM(quantity), 0),
+    'drinks_this_week',   COUNT(*) FILTER (WHERE logged_at >= date_trunc('week', now())),
+    'drinks_this_month',  COUNT(*) FILTER (WHERE logged_at >= date_trunc('month', now())),
+    'happy_hour_count',   COUNT(*) FILTER (WHERE EXTRACT(HOUR FROM (logged_at AT TIME ZONE 'UTC')) BETWEEN 16 AND 18),
+    'last_call_count',    COUNT(*) FILTER (WHERE EXTRACT(HOUR FROM (logged_at AT TIME ZONE 'UTC')) >= 1 OR EXTRACT(HOUR FROM (logged_at AT TIME ZONE 'UTC')) < 5),
+    'early_bird_count',   COUNT(*) FILTER (WHERE EXTRACT(HOUR FROM (logged_at AT TIME ZONE 'UTC')) BETWEEN 10 AND 15),
+    'unique_countries_count', COUNT(DISTINCT location_country_code) FILTER (WHERE location_country_code IS NOT NULL),
+    'weekly_limit',       COALESCE(v_weekly_limit, 0),
+    'user_created_at',    v_created_at,
+
+... (truncated if longer) ...
+Key SQL statements:
+  CREATE OR REPLACE FUNCTION public.get_user_stats(p_user_id uuid)
+
+==================================================
+
+=== 022_consistency_king_stats.sql ===
+-- Update get_user_stats to include user_created_at, hydration metrics, AND goal_updated_at
+CREATE OR REPLACE FUNCTION public.get_user_stats(p_user_id uuid)
+RETURNS json AS $$
+DECLARE
+  v_result json;
+  v_weekly_limit numeric;
+  v_goal_updated_at timestamptz;
+  v_created_at timestamptz;
+BEGIN
+  -- Get weekly limit and when it was last changed
+  SELECT weekly_limit, created_at INTO v_weekly_limit, v_goal_updated_at
+  FROM public.goals
+  WHERE user_id = p_user_id
+  ORDER BY created_at DESC
+  LIMIT 1;
+
+  SELECT created_at INTO v_created_at
+  FROM public.profiles
+  WHERE id = p_user_id;
+
+  SELECT json_build_object(
+    'total_drinks',       COUNT(*),
+    'total_quantity',     COALESCE(SUM(quantity), 0),
+    'drinks_this_week',   COUNT(*) FILTER (WHERE logged_at >= date_trunc('week', now())),
+    'drinks_this_month',  COUNT(*) FILTER (WHERE logged_at >= date_trunc('month', now())),
+    'happy_hour_count',   COUNT(*) FILTER (WHERE EXTRACT(HOUR FROM (logged_at AT TIME ZONE 'UTC')) BETWEEN 16 AND 18),
+    'last_call_count',    COUNT(*) FILTER (WHERE EXTRACT(HOUR FROM (logged_at AT TIME ZONE 'UTC')) >= 1 OR EXTRACT(HOUR FROM (logged_at AT TIME ZONE 'UTC')) < 5),
+    'early_bird_count',   COUNT(*) FILTER (WHERE EXTRACT(HOUR FROM (logged_at AT TIME ZONE 'UTC')) BETWEEN 10 AND 15),
+    'unique_countries_count', COUNT(DISTINCT location_country_code) FILTER (WHERE location_country_code IS NOT NULL),
+    'weekly_limit',       COALESCE(v_weekly_limit, 0),
+
+... (truncated if longer) ...
+Key SQL statements:
+  CREATE OR REPLACE FUNCTION public.get_user_stats(p_user_id uuid)
+
+==================================================
+
+=== 023_delete_account.sql ===
+-- Allows an authenticated user to permanently delete their own account.
+-- Runs as SECURITY DEFINER so it has permission to delete from auth.users.
+CREATE OR REPLACE FUNCTION public.delete_account()
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  -- Delete the auth user; cascades to profiles and all related data
+  -- via FK constraints defined in the schema.
+  DELETE FROM auth.users WHERE id = auth.uid();
+END;
+$$;
+
+-- Only authenticated users can call this function
+REVOKE ALL ON FUNCTION public.delete_account() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.delete_account() TO authenticated;
+
+... (truncated if longer) ...
+Key SQL statements:
+  CREATE OR REPLACE FUNCTION public.delete_account()
+
+==================================================
+
+=== 024_birthdate.sql ===
+-- Replace age (integer) with birthdate (date) for more accurate BAC calculations
+ALTER TABLE public.profiles
+  ADD COLUMN IF NOT EXISTS birthdate date;
+
+ALTER TABLE public.profiles
+  DROP COLUMN IF EXISTS age;
+
+... (truncated if longer) ...
+Key SQL statements:
+  ALTER TABLE public.profiles
+  ADD COLUMN IF NOT EXISTS birthdate date;
+  ALTER TABLE public.profiles
+  DROP COLUMN IF EXISTS age;
+
+==================================================
+
+=== 025_social_interactions.sql ===
+-- ?? Likes ????????????????????????????????????????????????????
+CREATE TABLE public.drink_likes (
+  drink_log_id uuid NOT NULL REFERENCES public.drink_logs(id) ON DELETE CASCADE,
+  user_id      uuid NOT NULL REFERENCES public.profiles(id)   ON DELETE CASCADE,
+  created_at   timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (drink_log_id, user_id)
+);
+CREATE INDEX idx_drink_likes_drink_log ON public.drink_likes(drink_log_id);
+
+ALTER TABLE public.drink_likes ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "likes_select" ON public.drink_likes FOR SELECT USING (true);
+CREATE POLICY "likes_insert" ON public.drink_likes FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "likes_delete" ON public.drink_likes FOR DELETE USING (auth.uid() = user_id);
+
+-- ?? Comments ?????????????????????????????????????????????????
+CREATE TABLE public.drink_comments (
+  id           uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  drink_log_id uuid NOT NULL REFERENCES public.drink_logs(id) ON DELETE CASCADE,
+  user_id      uuid NOT NULL REFERENCES public.profiles(id)   ON DELETE CASCADE,
+  content      text NOT NULL CHECK (char_length(content) BETWEEN 1 AND 500),
+  created_at   timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX idx_drink_comments_drink_log ON public.drink_comments(drink_log_id);
+
+ALTER TABLE public.drink_comments ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "comments_select" ON public.drink_comments FOR SELECT USING (true);
+CREATE POLICY "comments_insert" ON public.drink_comments FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "comments_delete" ON public.drink_comments FOR DELETE USING (auth.uid() = user_id);
+
+-- ?? Update get_feed() to include like/comment counts ?????????
+
+... (truncated if longer) ...
+Key SQL statements:
+  CREATE TABLE public.drink_likes (
+  ALTER TABLE public.drink_likes ENABLE ROW LEVEL SECURITY;
+  CREATE TABLE public.drink_comments (
+  ALTER TABLE public.drink_comments ENABLE ROW LEVEL SECURITY;
+  CREATE OR REPLACE FUNCTION public.get_feed(
+
+==================================================
+
+=== 026_photo_urls.sql ===
+-- Add photo_urls array to drink_logs (max 3 photos per drink)
+ALTER TABLE public.drink_logs
+  ADD COLUMN IF NOT EXISTS photo_urls text[] NOT NULL DEFAULT '{}';
+
+-- Backfill existing single photos into the array
+UPDATE public.drink_logs
+  SET photo_urls = ARRAY[photo_url]
+  WHERE photo_url IS NOT NULL AND photo_urls = '{}';
+
+-- Update get_feed() to include photo_urls
+DROP FUNCTION IF EXISTS public.get_feed(uuid, int, int);
+
+CREATE OR REPLACE FUNCTION public.get_feed(
+  p_user_id uuid,
+  p_limit   int DEFAULT 20,
+  p_offset  int DEFAULT 0
+)
+RETURNS TABLE (
+  id               uuid,
+  user_id          uuid,
+  drink_type       text,
+  drink_name       text,
+  brand            text,
+  quantity         numeric,
+  location_name    text,
+  location_lat     numeric,
+  location_lng     numeric,
+  notes            text,
+  photo_url        text,
+  photo_urls       text[],
+
+... (truncated if longer) ...
+Key SQL statements:
+  ALTER TABLE public.drink_logs
+  ADD COLUMN IF NOT EXISTS photo_urls text[] NOT NULL DEFAULT '{}';
+  CREATE OR REPLACE FUNCTION public.get_feed(
+
+==================================================
+
