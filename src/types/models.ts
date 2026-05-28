@@ -133,6 +133,52 @@ export interface Session {
   created_at: string;
 }
 
+// ── Route & Map Planning Types ────────────────────────────────
+
+/**
+ * Represents a geographic coordinate with chronological mapping information,
+ * used to reconstruct route sequences (stops/venues) on the map during a session/night out.
+ */
+export interface Coordinate {
+  latitude: number;
+  longitude: number;
+  timestamp: string; // ISO 8601 timestamp representing when the coordinate was logged
+  sequence_order?: number; // Optional 1-based order of this coordinate point along the route
+  session_id: string; // The session ID that this coordinate point is associated with
+  location_name?: string | null; // Readable name of the location / venue
+  drink_log_id?: string; // Optional reference to the specific drink log created at this coordinate
+}
+
+/**
+ * Represents a session joined with its constituent logs and the computed chronological
+ * route coordinates representing the route taken over the course of the session.
+ */
+export interface SessionWithLogs extends Session {
+  logs: DrinkLog[];
+  route?: Coordinate[]; // Structured coordinate sequence representing the route/path taken
+}
+
+/**
+ * Represents a DrinkLog joined with its associated Profile and Session details.
+ * Contains location coordinates (latitude/longitude), drink metadata, and session/profile details.
+ */
+export interface DrinkLogWithSessionAndProfile extends DrinkLog {
+  profile?: Profile;
+  session?: Session | null;
+}
+
+/**
+ * Represents a Session joined with its associated logs.
+ * The logs contain coordinates and specific drink details.
+ */
+export interface SessionWithLogsAndCoordinates extends Session {
+  logs: (DrinkLog & {
+    location_lat: number;
+    location_lng: number;
+  })[];
+  route: Coordinate[];
+}
+
 // ── Streaks ──────────────────────────────────────────────────
 export interface StreakData {
   drink_streak: number;

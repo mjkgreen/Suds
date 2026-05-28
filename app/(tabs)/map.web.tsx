@@ -1,18 +1,41 @@
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, Text, View } from 'react-native';
+import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/lib/supabase';
 import { DRINK_TYPE_MAP } from '@/lib/constants';
 import { useAuthStore } from '@/stores/authStore';
-import { DrinkLog, DrinkType } from '@/types/models';
+import { Coordinate, DrinkLog, DrinkType, Session, SessionWithLogs, DrinkLogWithSessionAndProfile } from '@/types/models';
 import { formatDateTime } from '@/utils/dateHelpers';
 
 type MapFilter = 'mine' | 'friends';
 
 // Dynamically loaded react-leaflet components
 type LeafletComponents = typeof import('react-leaflet');
+
+const PALETTE = [
+  '#3b82f6', // Blue
+  '#ef4444', // Red
+  '#10b981', // Emerald
+  '#f59e0b', // Amber
+  '#8b5cf6', // Violet
+  '#ec4899', // Pink
+  '#06b6d4', // Cyan
+  '#f97316', // Orange
+  '#14b8a6', // Teal
+  '#a855f7', // Purple
+];
+
+function getPredictableColor(sessionId: string): string {
+  let hash = 0;
+  for (let i = 0; i < sessionId.length; i++) {
+    hash = sessionId.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const index = Math.abs(hash) % PALETTE.length;
+  return PALETTE[index];
+}
 
 async function reverseGeocode(lat: number, lng: number): Promise<string> {
   try {
@@ -70,6 +93,7 @@ export default function MapScreen() {
   const { user } = useAuthStore();
   const router = useRouter();
   const [filter, setFilter] = useState<MapFilter>('mine');
+  const [showRoutes, setShowRoutes] = useState(true);
   const [L, setL] = useState<LeafletComponents | null>(null);
 
   async function handleMapClick(lat: number, lng: number) {
@@ -100,35 +124,95 @@ export default function MapScreen() {
     import('react-leaflet').then(setL);
   }, []);
 
-  const { data: logs, isLoading } = useQuery({
-    queryKey: ['mapLogs', user?.id, filter],
+  const { data: logs, isLoading, error: logsError } = useQuery({
+    queryKey: ['mapLogs', user?.id],
     queryFn: async () => {
       if (!user) return [];
-      let query = supabase
+
+      const { data: follows } = await supabase
+        .from('follows')
+        .select('following_id')
+        .eq('follower_id', user.id);
+      const ids = (follows as { following_id: string }[] | null ?? []).map((f) => f.following_id);
+      const allIds = [user.id, ...ids];
+
+      const { data, error } = await supabase
         .from('drink_logs')
-        .select('*, profile:profiles!drink_logs_user_id_fkey(id, username, display_name, avatar_url)')
+        .select('*, profile:profiles!drink_logs_user_id_fkey(id, username, display_name, avatar_url), session:sessions(id, title, started_at, ended_at, created_at, user_id)')
         .not('location_lat', 'is', null)
         .not('location_lng', 'is', null)
+        .in('user_id', allIds)
         .order('logged_at', { ascending: false })
-        .limit(200);
+        .limit(1000);
 
-      if (filter === 'friends') {
-        const { data: follows } = await supabase
-          .from('follows')
-          .select('following_id')
-          .eq('follower_id', user.id);
-        const ids = (follows as { following_id: string }[] | null ?? []).map((f) => f.following_id);
-        if (ids.length === 0) return [];
-        query = query.in('user_id', ids);
-      } else {
-        query = query.eq('user_id', user.id);
-      }
-      const { data, error } = await query;
       if (error) throw error;
-      return data as (DrinkLog & { profile: any })[];
+      return data as DrinkLogWithSessionAndProfile[];
     },
     enabled: !!user,
   });
+
+  const { data: sessionsWithRoutes, isLoading: sessionsLoading, error: sessionsError } = useQuery({
+    queryKey: ['sessionRoutes', user?.id],
+    queryFn: async () => {
+      if (!user) return [];
+
+      const { data: follows } = await supabase
+        .from('follows')
+        .select('following_id')
+        .eq('follower_id', user.id);
+      const ids = (follows as { following_id: string }[] | null ?? []).map((f) => f.following_id);
+      const allIds = [user.id, ...ids];
+
+      // Single database query fetching sessions along with their coordinates, joining the sessions table with drink_logs
+      const { data: sessionsData, error: sError } = await supabase
+        .from('sessions')
+        .select('*, logs:drink_logs(*)')
+        .in('user_id', allIds)
+        .order('started_at', { ascending: false });
+
+      if (sError) throw sError;
+      if (!sessionsData || sessionsData.length === 0) return [];
+
+      const results: SessionWithLogs[] = sessionsData.map((session: any) => {
+        // Filter out logs that don't have coordinates and sort them chronologically
+        const sessionLogs = (session.logs as DrinkLog[] ?? [])
+          .filter((log) => log.location_lat !== null && log.location_lng !== null)
+          .sort((a, b) => new Date(a.logged_at).getTime() - new Date(b.logged_at).getTime());
+
+        const route: Coordinate[] = sessionLogs.map((log, index) => ({
+          latitude: log.location_lat!,
+          longitude: log.location_lng!,
+          timestamp: log.logged_at,
+          sequence_order: index + 1,
+          session_id: session.id,
+          location_name: log.location_name,
+          drink_log_id: log.id,
+        }));
+
+        return {
+          id: session.id,
+          user_id: session.user_id,
+          title: session.title,
+          started_at: session.started_at,
+          ended_at: session.ended_at,
+          created_at: session.created_at,
+          logs: sessionLogs,
+          route,
+        };
+      });
+
+      return results;
+    },
+    enabled: !!user,
+  });
+
+  const filteredSessions = React.useMemo(() => {
+    if (!sessionsWithRoutes) return [];
+    return sessionsWithRoutes.filter((session) => {
+      const isMine = session.user_id === user?.id;
+      return filter === 'mine' ? isMine : !isMine;
+    });
+  }, [sessionsWithRoutes, filter, user?.id]);
 
   const center: [number, number] = React.useMemo(() => {
     if (!logs?.length) return [37.78825, -122.4324];
@@ -139,18 +223,29 @@ export default function MapScreen() {
 
   // Group nearby logs into clusters (~100m radius via 3-decimal rounding)
   const clusters = React.useMemo(() => {
-    const groups = new Map<string, (DrinkLog & { profile: any })[]>();
+    const groups = new Map<string, { items: DrinkLogWithSessionAndProfile[]; isMine: boolean }>();
     for (const log of logs ?? []) {
       if (!log.location_lat || !log.location_lng) continue;
-      const key = `${log.location_lat.toFixed(3)},${log.location_lng.toFixed(3)}`;
-      const existing = groups.get(key) ?? [];
-      groups.set(key, [...existing, log]);
+      const isMine = log.user_id === user?.id;
+      const key = `${isMine ? 'mine' : 'friend'}-${log.location_lat.toFixed(3)},${log.location_lng.toFixed(3)}`;
+      const existing = groups.get(key) ?? { items: [], isMine };
+      groups.set(key, { ...existing, items: [...existing.items, log] });
     }
-    return Array.from(groups.entries()).map(([key, items]) => {
-      const [lat, lng] = key.split(',').map(Number);
-      return { lat, lng, items };
+    return Array.from(groups.entries()).map(([key, data]) => {
+      const coordsPart = key.slice(key.indexOf('-') + 1);
+      const [lat, lng] = coordsPart.split(',').map(Number);
+      return { lat, lng, items: data.items, isMine: data.isMine };
     });
-  }, [logs]);
+  }, [logs, user?.id]);
+
+  const filteredClusters = React.useMemo(() => {
+    return clusters.filter((c) => {
+      return filter === 'mine' ? c.isMine : !c.isMine;
+    });
+  }, [clusters, filter]);
+
+  const showLoading = isLoading || sessionsLoading;
+  const showError = !showLoading && (logsError || sessionsError);
 
   return (
     <SafeAreaView className="flex-1 bg-background" edges={['top']}>
@@ -162,18 +257,40 @@ export default function MapScreen() {
       </View>
 
       {/* Filter chips */}
-      <View className="absolute top-14 left-4 right-4 z-10 flex-row gap-2" style={{ zIndex: 1000 }}>
-        {(['mine', 'friends'] as MapFilter[]).map((f) => (
-          <Pressable
-            key={f}
-            onPress={() => setFilter(f)}
-            className={`px-4 py-2 rounded-full shadow-sm border border-border ${filter === f ? 'bg-primary' : 'bg-card'}`}
+      <View style={styles.filterContainer}>
+        <View className="flex-row gap-2">
+          {(['mine', 'friends'] as MapFilter[]).map((f) => (
+            <Pressable
+              key={f}
+              onPress={() => setFilter(f)}
+              className={`px-4 py-2 rounded-full shadow-sm border border-border ${filter === f ? 'bg-primary' : 'bg-card'}`}
+            >
+              <Text className={`font-semibold text-sm ${filter === f ? 'text-primary-foreground' : 'text-muted-foreground'}`}>
+                {f === 'mine' ? 'My Drinks' : 'Friends'}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+
+        <Pressable
+          onPress={() => setShowRoutes((prev) => !prev)}
+          className={`px-4 py-2 rounded-full shadow-sm border border-border flex-row items-center gap-1.5 ${
+            showRoutes ? 'bg-primary' : 'bg-card'
+          }`}
+        >
+          <Ionicons
+            name={showRoutes ? 'eye' : 'eye-off'}
+            size={16}
+            color={showRoutes ? '#ffffff' : '#6b7280'}
+          />
+          <Text
+            className={`font-semibold text-sm ${
+              showRoutes ? 'text-primary-foreground' : 'text-muted-foreground'
+            }`}
           >
-            <Text className={`font-semibold text-sm ${filter === f ? 'text-primary-foreground' : 'text-muted-foreground'}`}>
-              {f === 'mine' ? 'My Drinks' : 'Friends'}
-            </Text>
-          </Pressable>
-        ))}
+            {showRoutes ? 'Hide Routes' : 'Show Routes'}
+          </Text>
+        </Pressable>
       </View>
 
       {!L ? (
@@ -192,7 +309,62 @@ export default function MapScreen() {
           />
           <MapLocationCenterer useMap={L.useMap} />
           <MapClickHandler onMapClick={handleMapClick} />
-          {clusters.map(({ lat, lng, items }) => {
+
+          {/* Render Route Polylines */}
+          {showRoutes && filteredSessions?.map((session) => {
+            if (!session.route || session.route.length < 2) return null;
+            const strokeColor = getPredictableColor(session.id);
+            const dashArray = session.ended_at ? '5, 5' : undefined;
+
+            return (
+              <L.Polyline
+                key={`polyline-${session.id}`}
+                positions={session.route.map((coord) => [coord.latitude, coord.longitude])}
+                color={strokeColor}
+                weight={4}
+                dashArray={dashArray}
+                eventHandlers={{
+                  click: () => {
+                    router.push(`/session/${session.id}`);
+                  }
+                }}
+              >
+                <L.Popup>
+                  <div className="min-w-[160px] p-1 font-sans">
+                    <h3 className="font-bold text-sm text-gray-900 m-0 leading-tight">
+                      {session.title || 'Drink Route'}
+                    </h3>
+                    <p className="text-blue-600 font-semibold text-xs mt-1 mb-1">
+                      {session.ended_at ? 'Completed Session' : 'Active Session'}
+                    </p>
+                    <p className="text-gray-600 text-xs my-0.5">
+                      🕒 Started: {formatDateTime(session.started_at)}
+                    </p>
+                    {session.ended_at && (
+                      <p className="text-gray-600 text-xs my-0.5">
+                        🏁 Ended: {formatDateTime(session.ended_at)}
+                      </p>
+                    )}
+                    <p className="text-gray-400 text-[11px] mt-1 mb-2">
+                      🍺 {session.route.length} stops logged
+                    </p>
+                    
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        router.push(`/session/${session.id}`);
+                      }}
+                      className="mt-2 w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold text-xs text-center py-1.5 px-3 rounded block transition-colors border-0 cursor-pointer"
+                    >
+                      View Session Detail
+                    </button>
+                  </div>
+                </L.Popup>
+              </L.Polyline>
+            );
+          })}
+
+          {filteredClusters.map(({ lat, lng, items }) => {
             if (items.length === 1) {
               const log = items[0];
               const info = DRINK_TYPE_MAP[log.drink_type as DrinkType] ?? DRINK_TYPE_MAP['other'];
@@ -218,22 +390,41 @@ export default function MapScreen() {
               return (
                 <L.Marker key={log.id} position={[lat, lng]} icon={divIcon}>
                   <L.Popup>
-                    <View style={{ minWidth: 160 }}>
-                      <Text style={{ fontWeight: '700', fontSize: 14 }}>
+                    <div className="min-w-[160px] p-1 font-sans">
+                      <h3 className="font-bold text-sm text-gray-900 m-0">
                         {log.drink_name || info.label}
-                      </Text>
-                      <Text style={{ color: '#6b7280', fontSize: 12 }}>
+                      </h3>
+                      <p className="text-gray-600 text-xs my-0.5 font-medium">
                         @{log.profile?.username}
-                      </Text>
+                      </p>
                       {log.location_name && (
-                        <Text style={{ color: '#6b7280', fontSize: 12 }}>
+                        <p className="text-gray-600 text-xs my-0.5">
                           📍 {log.location_name}
-                        </Text>
+                        </p>
                       )}
-                      <Text style={{ color: '#9ca3af', fontSize: 11, marginTop: 2 }}>
+                      <p className="text-gray-400 text-[11px] mt-1 mb-2">
                         {formatDateTime(log.logged_at)}
-                      </Text>
-                    </View>
+                      </p>
+
+                      {log.session_id ? (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            router.push(`/session/${log.session_id}`);
+                          }}
+                          className="mt-2 w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold text-xs text-center py-1.5 px-3 rounded block transition-colors border-0 cursor-pointer"
+                        >
+                          View Session Detail
+                        </button>
+                      ) : (
+                        <button
+                          disabled
+                          className="mt-2 w-full bg-gray-300 text-gray-500 font-semibold text-xs text-center py-1.5 px-3 rounded block border-0 cursor-not-allowed"
+                        >
+                          No Associated Session
+                        </button>
+                      )}
+                    </div>
                   </L.Popup>
                 </L.Marker>
               );
@@ -247,29 +438,52 @@ export default function MapScreen() {
                     className: 'border-card',
                     iconSize: [44, 44],
                     iconAnchor: [22, 22],
-                  })
+                    })
                 : undefined;
+
+            const sessionLog = items.find((item) => item.session_id);
+            const clusterSessionId = sessionLog?.session_id;
+
             return (
               <L.Marker key={`cluster-${lat}-${lng}`} position={[lat, lng]} icon={clusterIcon}>
                 <L.Popup>
-                  <View style={{ minWidth: 180 }}>
-                    <Text style={{ fontWeight: '700', fontSize: 14, marginBottom: 4 }}>
+                  <div className="min-w-[180px] p-1 font-sans">
+                    <h3 className="font-bold text-sm text-gray-900 m-0 mb-1">
                       {items.length} drinks here
-                    </Text>
+                    </h3>
                     {items.slice(0, 3).map((log) => {
                       const info = DRINK_TYPE_MAP[log.drink_type as DrinkType] ?? DRINK_TYPE_MAP['other'];
                       return (
-                        <Text key={log.id} style={{ color: '#6b7280', fontSize: 12 }}>
+                        <p key={log.id} className="text-gray-600 text-xs my-0.5 leading-tight">
                           • {log.drink_name || info.label} · @{log.profile?.username}
-                        </Text>
+                        </p>
                       );
                     })}
                     {items.length > 3 && (
-                      <Text style={{ color: '#9ca3af', fontSize: 11, marginTop: 2 }}>
+                      <p className="text-gray-400 text-[11px] mt-1 mb-2">
                         +{items.length - 3} more
-                      </Text>
+                      </p>
                     )}
-                  </View>
+
+                    {clusterSessionId ? (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          router.push(`/session/${clusterSessionId}`);
+                        }}
+                        className="mt-2 w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold text-xs text-center py-1.5 px-3 rounded block transition-colors border-0 cursor-pointer"
+                      >
+                        View Session Detail
+                      </button>
+                    ) : (
+                      <button
+                        disabled
+                        className="mt-2 w-full bg-gray-300 text-gray-500 font-semibold text-xs text-center py-1.5 px-3 rounded block border-0 cursor-not-allowed"
+                      >
+                        No Associated Session
+                      </button>
+                    )}
+                  </div>
                 </L.Popup>
               </L.Marker>
             );
@@ -278,9 +492,22 @@ export default function MapScreen() {
       )}
 
       {/* Loading overlay — keeps MapContainer mounted so position is preserved */}
-      {isLoading && L && (
+      {showLoading && L && (
         <View className="absolute inset-0 items-center justify-center bg-black/10" style={{ zIndex: 999 }}>
           <ActivityIndicator size="large" color="#f59e0b" />
+        </View>
+      )}
+
+      {/* Error overlay */}
+      {showError && (
+        <View className="absolute inset-0 items-center justify-center" style={{ zIndex: 999 }}>
+          <View className="bg-card rounded-2xl px-8 py-6 mx-8 items-center shadow-lg border border-border">
+            <Text className="text-3xl mb-2">⚠️</Text>
+            <Text className="text-foreground font-semibold text-center">Could not load drinks or routes</Text>
+            <Text className="text-muted-foreground text-sm text-center mt-1">
+              {((logsError || sessionsError) as Error)?.message ?? 'Something went wrong.'}
+            </Text>
+          </View>
         </View>
       )}
 
@@ -298,3 +525,18 @@ export default function MapScreen() {
     </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  filterContainer: {
+    position: 'absolute',
+    top: 16,
+    left: 60, // Avoid overlapping Leaflet zoom controls on the left on Web
+    right: 16,
+    zIndex: 1000,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 8,
+  },
+});
