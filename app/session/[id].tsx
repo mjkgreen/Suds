@@ -24,6 +24,7 @@ import { useAuthStore } from "@/stores/authStore";
 import { DrinkComment, DrinkLog, DrinkType, Profile, Session } from "@/types/models";
 import { formatDate, formatDateTime, formatDuration, formatTime, relativeTime } from "@/utils/dateHelpers";
 import { getDisplayName, getUsername } from "@/utils/profileHelpers";
+import { NightOutBACProfile } from "@/components/session/NightOutBACProfile";
 
 export default function SessionDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -191,6 +192,9 @@ export default function SessionDetailScreen() {
               <Text className="text-muted-foreground text-sm">{locations.join(" → ")}</Text>
             </View>
           )}
+
+          {/* Night Out BAC Profile Card */}
+          <NightOutBACProfile session={session} drinks={drinks} />
 
           {/* Drinks list */}
           <Text className="text-muted-foreground text-xs font-semibold uppercase tracking-wide mb-3">
