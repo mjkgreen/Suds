@@ -2,7 +2,6 @@ import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
-import { Polyline, Popup } from 'react-leaflet';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/lib/supabase';
@@ -318,7 +317,7 @@ export default function MapScreen() {
             const dashArray = session.ended_at ? '5, 5' : undefined;
 
             return (
-              <Polyline
+              <L.Polyline
                 key={`polyline-${session.id}`}
                 positions={session.route.map((coord) => [coord.latitude, coord.longitude])}
                 color={strokeColor}
@@ -330,7 +329,7 @@ export default function MapScreen() {
                   }
                 }}
               >
-                <Popup>
+                <L.Popup>
                   <div className="min-w-[160px] p-1 font-sans">
                     <h3 className="font-bold text-sm text-gray-900 m-0 leading-tight">
                       {session.title || 'Drink Route'}
@@ -360,8 +359,8 @@ export default function MapScreen() {
                       View Session Detail
                     </button>
                   </div>
-                </Popup>
-              </Polyline>
+                </L.Popup>
+              </L.Polyline>
             );
           })}
 
@@ -390,7 +389,7 @@ export default function MapScreen() {
                   : undefined;
               return (
                 <L.Marker key={log.id} position={[lat, lng]} icon={divIcon}>
-                  <Popup>
+                  <L.Popup>
                     <div className="min-w-[160px] p-1 font-sans">
                       <h3 className="font-bold text-sm text-gray-900 m-0">
                         {log.drink_name || info.label}
@@ -426,7 +425,7 @@ export default function MapScreen() {
                         </button>
                       )}
                     </div>
-                  </Popup>
+                  </L.Popup>
                 </L.Marker>
               );
             }
@@ -447,7 +446,7 @@ export default function MapScreen() {
 
             return (
               <L.Marker key={`cluster-${lat}-${lng}`} position={[lat, lng]} icon={clusterIcon}>
-                <Popup>
+                <L.Popup>
                   <div className="min-w-[180px] p-1 font-sans">
                     <h3 className="font-bold text-sm text-gray-900 m-0 mb-1">
                       {items.length} drinks here
@@ -485,7 +484,7 @@ export default function MapScreen() {
                       </button>
                     )}
                   </div>
-                </Popup>
+                </L.Popup>
               </L.Marker>
             );
           })}
