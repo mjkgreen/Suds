@@ -21,7 +21,7 @@ export function PremiumGate({ children, preview, featureName }: PremiumGateProps
   const { isPremium } = useAuthStore();
   const router = useRouter();
 
-  if (isPremium) return <>{children}</>;
+  return <>{children}</>;
 
   return (
     <View style={{ position: "relative" }} className="bg-card">

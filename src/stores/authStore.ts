@@ -20,11 +20,11 @@ export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   profile: null,
   isLoading: true,
-  isPremium: false,
+  isPremium: true,
   setSession: (session) =>
     set({ session, user: session?.user ?? null }),
   setProfile: (profile) => set({ profile }),
   setLoading: (isLoading) => set({ isLoading }),
-  setIsPremium: (isPremium) => set({ isPremium }),
-  signOut: () => set({ session: null, user: null, profile: null, isPremium: false }),
+  setIsPremium: (_isPremium) => set({ isPremium: true }),
+  signOut: () => set({ session: null, user: null, profile: null, isPremium: true }),
 }));
