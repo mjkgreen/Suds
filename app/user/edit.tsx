@@ -22,6 +22,15 @@ import { useUpdateProfile } from "@/hooks/useProfile";
 import { useAuthStore } from "@/stores/authStore";
 import { useColorScheme } from "nativewind";
 import { Profile } from "@/types/models";
+import { BirthdatePicker } from "@/components/profile/BirthdatePicker";
+
+function formatDisplayDate(dateStr: string | null | undefined): string {
+  if (!dateStr) return "";
+  const parts = dateStr.split("-");
+  if (parts.length !== 3) return dateStr;
+  const [y, m, d] = parts;
+  return `${m}/${d}/${y}`;
+}
 
 export default function EditProfileScreen() {
   const router = useRouter();
@@ -42,12 +51,10 @@ export default function EditProfileScreen() {
   const [weightValue, setWeightValue] = useState(profile?.weight?.toString() ?? "");
   const [weightUnit, setWeightUnit] = useState<'lb' | 'kg'>(profile?.weight_unit || 'lb');
 
-  // Date of Birth State (display as MM/DD/YYYY, store as YYYY-MM-DD)
-  const [birthdate, setBirthdate] = useState(() => {
-    if (!profile?.birthdate) return "";
-    const [y, m, d] = profile.birthdate.split('-');
-    return `${m}/${d}/${y}`;
-  });
+  // Date of Birth State (store directly as YYYY-MM-DD or null)
+  const [birthdate, setBirthdate] = useState<string | null>(profile?.birthdate ?? null);
+
+  const [isDatePickerVisible, setIsDatePickerVisible] = useState(false);
 
   const [avatarUri, setAvatarUri] = useState<string | null>(null);
   const [avatarBase64, setAvatarBase64] = useState<string | null>(null);
@@ -58,11 +65,7 @@ export default function EditProfileScreen() {
     setDisplayName(profile?.display_name ?? "");
     setUsername(profile?.username ?? "");
     setBio(profile?.bio ?? "");
-    setBirthdate(() => {
-      if (!profile?.birthdate) return "";
-      const [y, m, d] = profile.birthdate.split('-');
-      return `${m}/${d}/${y}`;
-    });
+    setBirthdate(profile?.birthdate ?? null);
     setHeightUnit(profile?.height_unit || 'in');
     setWeightUnit(profile?.weight_unit || 'lb');
     setWeightValue(profile?.weight?.toString() ?? "");
@@ -106,6 +109,10 @@ export default function EditProfileScreen() {
     ]);
   }
 
+  const handleSaveBirthdate = (dateStr: string | null) => {
+    setBirthdate(dateStr);
+  };
+
   async function handleSave() {
     if (!user) return;
     setError(null);
@@ -145,7 +152,7 @@ export default function EditProfileScreen() {
           height_unit: heightUnit,
           weight: weightValue ? parseFloat(weightValue) : null,
           weight_unit: weightUnit,
-          birthdate: birthdate ? new Date(birthdate).toISOString().split('T')[0] : null,
+          birthdate: birthdate,
         },
       });
       
@@ -260,14 +267,16 @@ export default function EditProfileScreen() {
           <View>
             <Text className="text-foreground font-semibold mb-0.5 text-sm">Date of Birth</Text>
             <Text className="text-muted-foreground text-xs mb-1.5">Private — only used for BAC estimates</Text>
-            <TextInput
-              className="bg-card border border-border rounded-xl px-4 py-3 text-base text-foreground"
-              placeholder="MM/DD/YYYY"
-              placeholderTextColor="hsl(var(--muted-foreground))"
-              value={birthdate}
-              onChangeText={setBirthdate}
-              keyboardType="numbers-and-punctuation"
-            />
+            <TouchableOpacity
+              onPress={() => setIsDatePickerVisible(true)}
+              activeOpacity={0.7}
+              className="flex-row items-center justify-between bg-card border border-border rounded-xl px-4 py-3"
+            >
+              <Text className={birthdate ? "text-foreground text-base" : "text-muted-foreground text-base"}>
+                {birthdate ? formatDisplayDate(birthdate) : "Select Date of Birth"}
+              </Text>
+              <Ionicons name="calendar-outline" size={20} color="orange" />
+            </TouchableOpacity>
           </View>
 
           <View>
@@ -340,6 +349,13 @@ export default function EditProfileScreen() {
           <Button label="Save Changes" onPress={handleSave} loading={isPending} size="lg" />
         </ScrollView>
       </KeyboardAvoidingView>
+
+      <BirthdatePicker
+        isVisible={isDatePickerVisible}
+        onClose={() => setIsDatePickerVisible(false)}
+        currentDate={birthdate}
+        onSave={handleSaveBirthdate}
+      />
     </SafeAreaView>
   );
 }
