@@ -2,7 +2,7 @@ import * as Haptics from "expo-haptics";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
-import { ActivityIndicator, Platform, Pressable, Text, View } from "react-native";
+import { ActivityIndicator, Platform, Pressable, Text, View, useWindowDimensions } from "react-native";
 import { Avatar } from "@/components/common/Avatar";
 import { PressableCard } from "@/components/common/Card";
 import { ImageCarousel } from "@/components/common/ImageCarousel";
@@ -28,6 +28,8 @@ interface SessionCardProps {
 
 export function SessionCard({ group, currentUserId, isActive, onEnd, isEnding, onQuickLog }: SessionCardProps) {
   const router = useRouter();
+  const { width } = useWindowDimensions();
+  const imageHeight = Platform.OS === "web" && width >= 1024 ? 280 : 180;
   const [loggingId, setLoggingId] = useState<string | null>(null);
   const [loggedId, setLoggedId] = useState<string | null>(null);
   // Use the oldest drink log as the representative for social interactions —
@@ -202,7 +204,7 @@ export function SessionCard({ group, currentUserId, isActive, onEnd, isEnding, o
       )}
 
       {/* Photos from drinks */}
-      {photos.length > 0 && <ImageCarousel images={photos} height={180} borderRadius={10} style={{ marginTop: 8 }} />}
+      {photos.length > 0 && <ImageCarousel images={photos} height={imageHeight} borderRadius={10} style={{ marginTop: 8 }} />}
 
       {/* Expanded drink-by-drink list — active sessions only */}
       {isActive && (

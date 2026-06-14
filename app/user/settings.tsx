@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   Alert,
   KeyboardAvoidingView,
@@ -12,6 +12,7 @@ import {
   Text,
   TextInput,
   View,
+  useWindowDimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useThemeStore } from "@/stores/themeStore";
@@ -29,16 +30,10 @@ export default function SettingsScreen() {
     setHideAddresses,
     sex,
     setSex,
-    weight,
-    setWeight,
-    weightUnit,
-    setWeightUnit,
   } = usePrefsStore();
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === "dark";
   const { changePassword, deleteAccount, user } = useAuth();
-
-  const [weightInput, setWeightInput] = useState(weight.toString());
 
   const [showChangePassword, setShowChangePassword] = useState(false);
   const [newPassword, setNewPassword] = useState("");
@@ -50,28 +45,10 @@ export default function SettingsScreen() {
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const [deleteLoading, setDeleteLoading] = useState(false);
 
+  const { width } = useWindowDimensions();
+  const isDesktop = Platform.OS === "web" && width >= 1024;
+
   const isOAuthUser = !user?.email || (user?.app_metadata?.provider !== "email" && !user?.app_metadata?.providers?.includes("email"));
-
-  useEffect(() => {
-    setWeightInput(weight.toString());
-  }, [weight]);
-
-  const handleWeightChange = (text: string) => {
-    setWeightInput(text);
-    const val = parseFloat(text);
-    if (!isNaN(val) && val > 0) {
-      setWeight(val);
-    }
-  };
-
-  const handleWeightBlur = () => {
-    const val = parseFloat(weightInput);
-    if (isNaN(val) || val <= 0) {
-      setWeightInput(weight.toString());
-    } else {
-      setWeightInput(val.toString());
-    }
-  };
 
   const themeOptions: { label: string; value: "light" | "dark" | "system"; icon: string }[] = [
     { label: "Light", value: "light", icon: "sunny" },
@@ -126,6 +103,158 @@ export default function SettingsScreen() {
     setDeleteConfirmText("");
   }
 
+  const appearanceSection = (
+    <View style={{ marginBottom: 28 }}>
+      <Text className="text-muted-foreground text-xs font-bold uppercase tracking-wider mb-4 ml-1">
+        Appearance
+      </Text>
+      <View className="bg-card rounded-2xl overflow-hidden border border-border">
+        {themeOptions.map((option, index) => (
+          <Pressable
+            key={option.value}
+            onPress={() => setThemePreference(option.value)}
+            className={`flex-row items-center justify-between px-4 py-4 ${
+              index !== themeOptions.length - 1 ? "border-b border-border" : ""
+            }`}
+          >
+            <View className="flex-row items-center gap-3">
+              <View className="w-8 h-8 rounded-lg bg-accent items-center justify-center">
+                <Ionicons name={option.icon as any} size={18} color="#f59e0b" />
+              </View>
+              <Text className="text-foreground font-medium">{option.label}</Text>
+            </View>
+            {themePreference === option.value && (
+              <Ionicons name="checkmark-circle" size={22} color="#f59e0b" />
+            )}
+          </Pressable>
+        ))}
+      </View>
+    </View>
+  );
+
+  const preferencesSection = (
+    <View style={{ marginBottom: 28 }}>
+      <Text className="text-muted-foreground text-xs font-bold uppercase tracking-wider mb-4 ml-1">
+        Preferences
+      </Text>
+      <View className="bg-card rounded-2xl overflow-hidden border border-border">
+        <View className="flex-row items-center justify-between px-4 py-4 border-b border-border">
+          <View className="flex-row items-center gap-3 flex-1">
+            <View className="w-8 h-8 rounded-lg bg-accent items-center justify-center">
+              <Ionicons name="location" size={18} color="#f59e0b" />
+            </View>
+            <View className="flex-1">
+              <Text className="text-foreground font-medium">Location Services</Text>
+              <Text className="text-muted-foreground text-xs">Tag your drinks with your location</Text>
+            </View>
+          </View>
+          <Switch
+            value={locationEnabled}
+            onValueChange={setLocationEnabled}
+            trackColor={{ false: "#767577", true: "#f59e0b" }}
+            thumbColor={Platform.OS === "ios" ? "#fff" : locationEnabled ? "#fff" : "#f4f3f4"}
+          />
+        </View>
+        <View className="flex-row items-center justify-between px-4 py-4">
+          <View className="flex-row items-center gap-3 flex-1">
+            <View className="w-8 h-8 rounded-lg bg-accent items-center justify-center">
+              <Ionicons name="shield-checkmark" size={18} color="#f59e0b" />
+            </View>
+            <View className="flex-1">
+              <Text className="text-foreground font-medium">Privacy Mode</Text>
+              <Text className="text-muted-foreground text-xs">Auto-hide specific street addresses</Text>
+            </View>
+          </View>
+          <Switch
+            value={hideAddresses}
+            onValueChange={setHideAddresses}
+            trackColor={{ false: "#767577", true: "#f59e0b" }}
+            thumbColor={Platform.OS === "ios" ? "#fff" : hideAddresses ? "#fff" : "#f4f3f4"}
+          />
+        </View>
+      </View>
+    </View>
+  );
+
+  const bacSection = (
+    <View style={{ marginBottom: 28 }}>
+      <Text className="text-muted-foreground text-xs font-bold uppercase tracking-wider mb-4 ml-1">
+        BAC Calculator Settings
+      </Text>
+      <View className="bg-card rounded-2xl overflow-hidden border border-border">
+        <View className="flex-row items-center justify-between px-4 py-4">
+          <View className="flex-row items-center gap-3 flex-1">
+            <View className="w-8 h-8 rounded-lg bg-accent items-center justify-center">
+              <Ionicons name="male-female" size={18} color="#f59e0b" />
+            </View>
+            <View className="flex-1">
+              <Text className="text-foreground font-medium">Biological Sex</Text>
+              <Text className="text-muted-foreground text-xs">For physiological alcohol absorption rate</Text>
+            </View>
+          </View>
+          <View className="flex-row bg-accent p-1 rounded-xl">
+            <Pressable
+              onPress={() => setSex("male")}
+              className={`px-4 py-1.5 rounded-lg ${sex === "male" ? "bg-amber-500" : ""}`}
+            >
+              <Text className={`font-semibold text-sm ${sex === "male" ? "text-white" : "text-muted-foreground"}`}>
+                Male
+              </Text>
+            </Pressable>
+            <Pressable
+              onPress={() => setSex("female")}
+              className={`px-4 py-1.5 rounded-lg ${sex === "female" ? "bg-amber-500" : ""}`}
+            >
+              <Text className={`font-semibold text-sm ${sex === "female" ? "text-white" : "text-muted-foreground"}`}>
+                Female
+              </Text>
+            </Pressable>
+          </View>
+        </View>
+      </View>
+    </View>
+  );
+
+  const accountSection = (
+    <View style={{ marginBottom: 28 }}>
+      <Text className="text-muted-foreground text-xs font-bold uppercase tracking-wider mb-4 ml-1">
+        Account
+      </Text>
+      <View className="bg-card rounded-2xl overflow-hidden border border-border">
+        <Pressable
+          onPress={() => {
+            if (isOAuthUser) {
+              Alert.alert("Not available", "Password changes are not available for accounts signed in with Apple or Google.");
+              return;
+            }
+            setShowChangePassword(true);
+          }}
+          className="flex-row items-center justify-between px-4 py-4 border-b border-border"
+        >
+          <View className="flex-row items-center gap-3">
+            <View className="w-8 h-8 rounded-lg bg-accent items-center justify-center">
+              <Ionicons name="lock-closed" size={18} color="#f59e0b" />
+            </View>
+            <Text className="text-foreground font-medium">Change Password</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color="#9ca3af" />
+        </Pressable>
+        <Pressable
+          onPress={() => setShowDeleteAccount(true)}
+          className="flex-row items-center justify-between px-4 py-4"
+        >
+          <View className="flex-row items-center gap-3">
+            <View className="w-8 h-8 rounded-lg bg-red-100 items-center justify-center">
+              <Ionicons name="trash" size={18} color="#ef4444" />
+            </View>
+            <Text className="text-red-500 font-medium">Delete Account</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color="#9ca3af" />
+        </Pressable>
+      </View>
+    </View>
+  );
+
   return (
     <SafeAreaView className={`flex-1 bg-background ${isDark ? "dark" : ""}`}>
       <View className="flex-row items-center px-4 py-3 bg-background border-b border-border">
@@ -136,239 +265,27 @@ export default function SettingsScreen() {
       </View>
 
       <ScrollView className="flex-1" contentContainerStyle={{ padding: 20 }}>
-        {/* Appearance Section */}
-        <Text className="text-muted-foreground text-xs font-bold uppercase tracking-wider mb-4 ml-1">
-          Appearance
-        </Text>
-        <View className="bg-card rounded-2xl overflow-hidden border border-border mb-8">
-          {themeOptions.map((option, index) => (
-            <Pressable
-              key={option.value}
-              onPress={() => setThemePreference(option.value)}
-              className={`flex-row items-center justify-between px-4 py-4 ${
-                index !== themeOptions.length - 1 ? "border-b border-border" : ""
-              }`}
-            >
-              <View className="flex-row items-center gap-3">
-                <View className="w-8 h-8 rounded-lg bg-accent items-center justify-center">
-                  <Ionicons name={option.icon as any} size={18} color="#f59e0b" />
-                </View>
-                <Text className="text-foreground font-medium">{option.label}</Text>
+        {isDesktop ? (
+          <View style={{ maxWidth: 900, alignSelf: "center", width: "100%" }}>
+            <View style={{ flexDirection: "row", gap: 24 }}>
+              <View style={{ flex: 1 }}>
+                {appearanceSection}
+                {preferencesSection}
               </View>
-              {themePreference === option.value && (
-                <Ionicons name="checkmark-circle" size={22} color="#f59e0b" />
-              )}
-            </Pressable>
-          ))}
-        </View>
-
-        {/* Preferences Section */}
-        <Text className="text-muted-foreground text-xs font-bold uppercase tracking-wider mb-4 ml-1">
-          Preferences
-        </Text>
-        <View className="bg-card rounded-2xl overflow-hidden border border-border mb-8">
-          <View className="flex-row items-center justify-between px-4 py-4 border-b border-border">
-            <View className="flex-row items-center gap-3 flex-1">
-              <View className="w-8 h-8 rounded-lg bg-accent items-center justify-center">
-                <Ionicons name="location" size={18} color="#f59e0b" />
+              <View style={{ flex: 1 }}>
+                {bacSection}
+                {accountSection}
               </View>
-              <View className="flex-1">
-                <Text className="text-foreground font-medium">Location Services</Text>
-                <Text className="text-muted-foreground text-xs">
-                  Tag your drinks with your location
-                </Text>
-              </View>
-            </View>
-            <Switch
-              value={locationEnabled}
-              onValueChange={setLocationEnabled}
-              trackColor={{ false: "#767577", true: "#f59e0b" }}
-              thumbColor={Platform.OS === "ios" ? "#fff" : locationEnabled ? "#fff" : "#f4f3f4"}
-            />
-          </View>
-          <View className="flex-row items-center justify-between px-4 py-4">
-            <View className="flex-row items-center gap-3 flex-1">
-              <View className="w-8 h-8 rounded-lg bg-accent items-center justify-center">
-                <Ionicons name="shield-checkmark" size={18} color="#f59e0b" />
-              </View>
-              <View className="flex-1">
-                <Text className="text-foreground font-medium">Privacy Mode</Text>
-                <Text className="text-muted-foreground text-xs">
-                  Auto-hide specific street addresses
-                </Text>
-              </View>
-            </View>
-            <Switch
-              value={hideAddresses}
-              onValueChange={setHideAddresses}
-              trackColor={{ false: "#767577", true: "#f59e0b" }}
-              thumbColor={Platform.OS === "ios" ? "#fff" : hideAddresses ? "#fff" : "#f4f3f4"}
-            />
-          </View>
-        </View>
-
-        {/* BAC Calculator Settings Section */}
-        <Text className="text-muted-foreground text-xs font-bold uppercase tracking-wider mb-4 ml-1">
-          BAC Calculator Settings
-        </Text>
-        <View className="bg-card rounded-2xl overflow-hidden border border-border mb-8">
-          {/* Sex Control */}
-          <View className="flex-row items-center justify-between px-4 py-4 border-b border-border">
-            <View className="flex-row items-center gap-3 flex-1">
-              <View className="w-8 h-8 rounded-lg bg-accent items-center justify-center">
-                <Ionicons name="male-female" size={18} color="#f59e0b" />
-              </View>
-              <View className="flex-1">
-                <Text className="text-foreground font-medium">Biological Sex</Text>
-                <Text className="text-muted-foreground text-xs">
-                  For physiological alcohol absorption rate
-                </Text>
-              </View>
-            </View>
-            <View className="flex-row bg-accent p-1 rounded-xl">
-              <Pressable
-                onPress={() => setSex("male")}
-                className={`px-4 py-1.5 rounded-lg ${
-                  sex === "male" ? "bg-amber-500" : ""
-                }`}
-              >
-                <Text
-                  className={`font-semibold text-sm ${
-                    sex === "male" ? "text-white" : "text-muted-foreground"
-                  }`}
-                >
-                  Male
-                </Text>
-              </Pressable>
-              <Pressable
-                onPress={() => setSex("female")}
-                className={`px-4 py-1.5 rounded-lg ${
-                  sex === "female" ? "bg-amber-500" : ""
-                }`}
-              >
-                <Text
-                  className={`font-semibold text-sm ${
-                    sex === "female" ? "text-white" : "text-muted-foreground"
-                  }`}
-                >
-                  Female
-                </Text>
-              </Pressable>
             </View>
           </View>
-
-          {/* Weight Control */}
-          <View className="flex-row items-center justify-between px-4 py-4 border-b border-border">
-            <View className="flex-row items-center gap-3 flex-1">
-              <View className="w-8 h-8 rounded-lg bg-accent items-center justify-center">
-                <Ionicons name="fitness" size={18} color="#f59e0b" />
-              </View>
-              <View className="flex-1">
-                <Text className="text-foreground font-medium">Weight</Text>
-                <Text className="text-muted-foreground text-xs">
-                  Your current body weight
-                </Text>
-              </View>
-            </View>
-            <View className="flex-row items-center gap-2">
-              <TextInput
-                keyboardType="numeric"
-                value={weightInput}
-                onChangeText={handleWeightChange}
-                onBlur={handleWeightBlur}
-                className="bg-accent border border-border rounded-xl px-3 py-1.5 text-base text-foreground text-center font-semibold w-24"
-                maxLength={5}
-                placeholder="150"
-                placeholderTextColor="#9ca3af"
-              />
-              <Text className="text-muted-foreground text-sm font-medium w-8 text-left">
-                {weightUnit}
-              </Text>
-            </View>
-          </View>
-
-          {/* Weight Unit Control */}
-          <View className="flex-row items-center justify-between px-4 py-4">
-            <View className="flex-row items-center gap-3 flex-1">
-              <View className="w-8 h-8 rounded-lg bg-accent items-center justify-center">
-                <Ionicons name="options" size={18} color="#f59e0b" />
-              </View>
-              <View className="flex-1">
-                <Text className="text-foreground font-medium">Weight Unit</Text>
-                <Text className="text-muted-foreground text-xs">
-                  Preferred weight metric system
-                </Text>
-              </View>
-            </View>
-            <View className="flex-row bg-accent p-1 rounded-xl">
-              <Pressable
-                onPress={() => setWeightUnit("lb")}
-                className={`px-4 py-1.5 rounded-lg ${
-                  weightUnit === "lb" ? "bg-amber-500" : ""
-                }`}
-              >
-                <Text
-                  className={`font-semibold text-sm ${
-                    weightUnit === "lb" ? "text-white" : "text-muted-foreground"
-                  }`}
-                >
-                  lbs
-                </Text>
-              </Pressable>
-              <Pressable
-                onPress={() => setWeightUnit("kg")}
-                className={`px-4 py-1.5 rounded-lg ${
-                  weightUnit === "kg" ? "bg-amber-500" : ""
-                }`}
-              >
-                <Text
-                  className={`font-semibold text-sm ${
-                    weightUnit === "kg" ? "text-white" : "text-muted-foreground"
-                  }`}
-                >
-                  kg
-                </Text>
-              </Pressable>
-            </View>
-          </View>
-        </View>
-
-        {/* Account Section */}
-        <Text className="text-muted-foreground text-xs font-bold uppercase tracking-wider mb-4 ml-1">
-          Account
-        </Text>
-        <View className="bg-card rounded-2xl overflow-hidden border border-border mb-8">
-          <Pressable
-            onPress={() => {
-              if (isOAuthUser) {
-                Alert.alert("Not available", "Password changes are not available for accounts signed in with Apple or Google.");
-                return;
-              }
-              setShowChangePassword(true);
-            }}
-            className="flex-row items-center justify-between px-4 py-4 border-b border-border"
-          >
-            <View className="flex-row items-center gap-3">
-              <View className="w-8 h-8 rounded-lg bg-accent items-center justify-center">
-                <Ionicons name="lock-closed" size={18} color="#f59e0b" />
-              </View>
-              <Text className="text-foreground font-medium">Change Password</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={18} color="#9ca3af" />
-          </Pressable>
-          <Pressable
-            onPress={() => setShowDeleteAccount(true)}
-            className="flex-row items-center justify-between px-4 py-4"
-          >
-            <View className="flex-row items-center gap-3">
-              <View className="w-8 h-8 rounded-lg bg-red-100 items-center justify-center">
-                <Ionicons name="trash" size={18} color="#ef4444" />
-              </View>
-              <Text className="text-red-500 font-medium">Delete Account</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={18} color="#9ca3af" />
-          </Pressable>
-        </View>
+        ) : (
+          <>
+            {appearanceSection}
+            {preferencesSection}
+            {bacSection}
+            {accountSection}
+          </>
+        )}
       </ScrollView>
 
       {/* Change Password Modal */}

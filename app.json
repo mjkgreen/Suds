@@ -2,7 +2,7 @@
   "expo": {
     "name": "Suds",
     "slug": "suds",
-    "version": "1.0.3",
+    "version": "1.1.0",
     "orientation": "portrait",
     "icon": "./assets/Suds.png",
     "userInterfaceStyle": "automatic",
@@ -43,6 +43,7 @@
       "favicon": "./assets/Suds.png"
     },
     "plugins": [
+      "./plugins/withModularHeaders",
       ["expo-router", { "origin": "https://drink-with-suds.com" }],
       "expo-location",
       [

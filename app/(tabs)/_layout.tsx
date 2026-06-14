@@ -6,6 +6,7 @@ import { SessionBanner } from "@/components/session/SessionBanner";
 import { useMyOpenSession } from "@/hooks/useSession";
 import { useAuthStore } from "@/stores/authStore";
 import { WebNavBar } from "@/components/web/WebNavBar";
+import { WebDesktopLayout } from "@/components/web/WebDesktopLayout";
 
 function TabsLayoutInner() {
   const { colorScheme } = useColorScheme();
@@ -96,9 +97,9 @@ export default function TabsLayout() {
       {Platform.OS === "web" && <WebNavBar />}
       <SessionBanner />
       {Platform.OS === "web" ? (
-        <View style={{ flex: 1, maxWidth: 860, width: "100%", alignSelf: "center" }}>
+        <WebDesktopLayout>
           <TabsLayoutInner />
-        </View>
+        </WebDesktopLayout>
       ) : (
         <TabsLayoutInner />
       )}

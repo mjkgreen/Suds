@@ -201,11 +201,12 @@ export default function MapScreen() {
     enabled: !!user,
   });
 
-  const filteredSessions = useMemo(() => {
+  const sessionsForRoutes = useMemo(() => {
     if (!sessionsWithRoutes) return [];
-    return sessionsWithRoutes.filter((session) => {
+    return sessionsWithRoutes.map((session) => {
       const isMine = session.user_id === user?.id;
-      return filter === 'mine' ? isMine : !isMine;
+      const isVisible = filter === 'mine' ? isMine : !isMine;
+      return { ...session, isVisible };
     });
   }, [sessionsWithRoutes, filter, user?.id]);
 
@@ -302,22 +303,23 @@ export default function MapScreen() {
         }}
         onLongPress={handleLongPress}
       >
-        {/* Render Route Polylines */}
-        {showRoutes && filteredSessions.map((session) => {
+        {/* Render Route Polylines — always mounted, visibility via strokeOpacity to avoid map crashes on toggle */}
+        {sessionsForRoutes.map((session) => {
           if (!session.route || session.route.length < 2) return null;
-          const strokeColor = getPredictableColor(session.id);
+          const baseColor = getPredictableColor(session.id);
           const lineDashPattern = session.ended_at ? [5, 5] : undefined;
+          const visible = showRoutes && session.isVisible;
 
           return (
             <Polyline
               key={`polyline-${session.id}`}
               coordinates={session.route}
-              strokeColor={strokeColor}
+              strokeColor={visible ? baseColor : '#00000000'}
               strokeWidth={4}
               lineDashPattern={lineDashPattern}
-              tappable={true}
+              tappable={visible}
               onPress={() => {
-                router.push(`/session/${session.id}`);
+                if (visible) router.push(`/session/${session.id}`);
               }}
             />
           );

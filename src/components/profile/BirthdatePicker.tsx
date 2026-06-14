@@ -1,12 +1,14 @@
 import React, { useState, useEffect, useRef } from "react";
 import {
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   Text,
   View,
   SafeAreaView,
   TouchableOpacity,
+  useWindowDimensions,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useColorScheme } from "nativewind";
@@ -194,12 +196,24 @@ export function BirthdatePicker({
 
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === "dark";
+  const { width } = useWindowDimensions();
+  const isDesktop = Platform.OS === "web" && width >= 1024;
 
   return (
     <Modal visible={isVisible} transparent animationType="fade" onRequestClose={onClose}>
-      <Pressable className="flex-1 bg-black/60 justify-end" onPress={onClose}>
+      <Pressable
+        style={[
+          { flex: 1, backgroundColor: "rgba(0,0,0,0.6)" },
+          isDesktop ? { justifyContent: "center", alignItems: "center" } : { justifyContent: "flex-end" },
+        ]}
+        onPress={onClose}
+      >
         <Pressable
-          className="bg-card rounded-t-3xl p-6 h-[72%]"
+          style={isDesktop
+            ? { width: 420, height: "85%", borderRadius: 24, padding: 24, backgroundColor: undefined }
+            : { borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, height: "72%" }
+          }
+          className="bg-card"
           onPress={(e) => e.stopPropagation()}
         >
           {/* Header */}
@@ -217,6 +231,15 @@ export function BirthdatePicker({
                 <Ionicons name="refresh" size={14} color={isDark ? "#9ca3af" : "#4b5563"} />
                 <Text className="text-muted-foreground text-xs font-semibold">Reset</Text>
               </TouchableOpacity>
+              {isDesktop && (
+                <TouchableOpacity
+                  onPress={handleConfirm}
+                  className="bg-primary rounded-full px-3 py-1.5"
+                  activeOpacity={0.7}
+                >
+                  <Text className="text-primary-foreground text-xs font-semibold">Confirm</Text>
+                </TouchableOpacity>
+              )}
               <TouchableOpacity
                 onPress={onClose}
                 className="bg-accent rounded-full p-2"
@@ -256,7 +279,7 @@ export function BirthdatePicker({
               <TouchableOpacity
                 onPress={() => setMode("days")}
                 className={`px-3 py-1.5 rounded-lg ${
-                  mode === "days" ? "bg-card shadow-sm" : ""
+                  mode === "days" ? "bg-card" : ""
                 }`}
               >
                 <Text
@@ -270,7 +293,7 @@ export function BirthdatePicker({
               <TouchableOpacity
                 onPress={() => setMode("months")}
                 className={`px-3 py-1.5 rounded-lg ${
-                  mode === "months" ? "bg-card shadow-sm" : ""
+                  mode === "months" ? "bg-card" : ""
                 }`}
               >
                 <Text
@@ -284,7 +307,7 @@ export function BirthdatePicker({
               <TouchableOpacity
                 onPress={() => setMode("years")}
                 className={`px-3 py-1.5 rounded-lg ${
-                  mode === "years" ? "bg-card shadow-sm" : ""
+                  mode === "years" ? "bg-card" : ""
                 }`}
               >
                 <Text
@@ -392,7 +415,7 @@ export function BirthdatePicker({
                         className={`w-[31%] py-4 rounded-2xl items-center justify-center my-1 ${
                           isCurrentMonthSelection
                             ? "bg-primary"
-                            : "bg-accent/40 hover:bg-accent/60"
+                            : "bg-accent/40"
                         }`}
                       >
                         <Text
@@ -452,25 +475,27 @@ export function BirthdatePicker({
             )}
           </View>
 
-          {/* Bottom Action Footer */}
-          <View className="border-t border-border pt-4 flex-row gap-3">
-            <TouchableOpacity
-              onPress={onClose}
-              className="flex-1 bg-accent/60 py-3.5 rounded-2xl items-center"
-              activeOpacity={0.7}
-            >
-              <Text className="text-foreground text-sm font-bold">Cancel</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={handleConfirm}
-              className="flex-1 bg-primary py-3.5 rounded-2xl items-center shadow-sm"
-              activeOpacity={0.7}
-            >
-              <Text className="text-primary-foreground text-sm font-bold">Confirm</Text>
-            </TouchableOpacity>
-          </View>
+          {/* Bottom Action Footer — mobile only */}
+          {!isDesktop && (
+            <View className="border-t border-border pt-4 flex-row gap-3">
+              <TouchableOpacity
+                onPress={onClose}
+                className="flex-1 bg-accent/60 py-3.5 rounded-2xl items-center"
+                activeOpacity={0.7}
+              >
+                <Text className="text-foreground text-sm font-bold">Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={handleConfirm}
+                className="flex-1 bg-primary py-3.5 rounded-2xl items-center shadow-sm"
+                activeOpacity={0.7}
+              >
+                <Text className="text-primary-foreground text-sm font-bold">Confirm</Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </Pressable>
-        <SafeAreaView className="bg-card" />
+        {!isDesktop && <SafeAreaView className="bg-card" />}
       </Pressable>
     </Modal>
   );

@@ -13,6 +13,7 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  useWindowDimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Avatar } from "@/components/common/Avatar";
@@ -195,158 +196,194 @@ export default function EditProfileScreen() {
   const previewUri = avatarUri ?? profile?.avatar_url ?? null;
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === "dark";
+  const { width } = useWindowDimensions();
+  const isDesktop = Platform.OS === "web" && width >= 1024;
+
+  const avatarSection = (
+    <View className="items-center" style={{ marginBottom: 4 }}>
+      <Pressable onPress={handlePickAvatar} className="relative">
+        <Avatar uri={previewUri} name={displayName || username || "U"} size={88} />
+        <View
+          className="absolute bottom-0 right-0 bg-primary rounded-full p-1.5"
+          style={{ borderWidth: 2, borderColor: isDark ? "hsl(var(--background))" : "#f9fafb" }}
+        >
+          <Ionicons name="camera" size={14} color="#fff" />
+        </View>
+      </Pressable>
+    </View>
+  );
+
+  const identitySection = (
+    <View style={{ gap: 16 }}>
+      <View>
+        <Text className="text-foreground font-semibold mb-1.5 text-sm">Display Name</Text>
+        <TextInput
+          className="bg-card border border-border rounded-xl px-4 py-3 text-base text-foreground"
+          placeholder="Your name"
+          placeholderTextColor="hsl(var(--muted-foreground))"
+          value={displayName}
+          onChangeText={setDisplayName}
+        />
+      </View>
+
+      <View>
+        <Text className="text-foreground font-semibold mb-1.5 text-sm">Username</Text>
+        <View className="flex-row items-center bg-card border border-border rounded-xl px-4 py-3">
+          <Text className="text-muted-foreground text-base mr-0.5">@</Text>
+          <TextInput
+            className="flex-1 text-base text-foreground"
+            placeholder="username"
+            placeholderTextColor="hsl(var(--muted-foreground))"
+            value={username}
+            onChangeText={(t) => setUsername(t.toLowerCase())}
+            autoCapitalize="none"
+          />
+        </View>
+      </View>
+
+      <View>
+        <Text className="text-foreground font-semibold mb-1.5 text-sm">Bio</Text>
+        <TextInput
+          className="bg-card border border-border rounded-xl px-4 py-3 text-base text-foreground"
+          placeholder="Tell people what you drink…"
+          placeholderTextColor="hsl(var(--muted-foreground))"
+          value={bio}
+          onChangeText={setBio}
+          multiline
+          numberOfLines={3}
+          style={{ minHeight: 80 }}
+        />
+      </View>
+
+      <View>
+        <Text className="text-foreground font-semibold mb-0.5 text-sm">Date of Birth</Text>
+        <Text className="text-muted-foreground text-xs mb-1.5">Private — only used for BAC estimates</Text>
+        <TouchableOpacity
+          onPress={() => setIsDatePickerVisible(true)}
+          activeOpacity={0.7}
+          className="flex-row items-center justify-between bg-card border border-border rounded-xl px-4 py-3"
+        >
+          <Text className={birthdate ? "text-foreground text-base" : "text-muted-foreground text-base"}>
+            {birthdate ? formatDisplayDate(birthdate) : "Select Date of Birth"}
+          </Text>
+          <Ionicons name="calendar-outline" size={20} color="orange" />
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+
+  const physicalSection = (
+    <View style={{ gap: 16 }}>
+      <View>
+        <Text className="text-foreground font-semibold mb-1.5 text-sm">Height</Text>
+        <UnitToggle
+          value={heightUnit}
+          onChange={setHeightUnit}
+          options={[{ label: 'Imperial (ft/in)', value: 'in' }, { label: 'Metric (cm)', value: 'cm' }]}
+        />
+        {heightUnit === 'in' ? (
+          <View className="flex-row gap-2">
+            <TextInput
+              className="flex-1 bg-card border border-border rounded-xl px-4 py-3 text-base text-foreground"
+              placeholder="ft"
+              placeholderTextColor="hsl(var(--muted-foreground))"
+              value={heightFt}
+              onChangeText={setHeightFt}
+              keyboardType="numeric"
+            />
+            <TextInput
+              className="flex-1 bg-card border border-border rounded-xl px-4 py-3 text-base text-foreground"
+              placeholder="in"
+              placeholderTextColor="hsl(var(--muted-foreground))"
+              value={heightIn}
+              onChangeText={setHeightIn}
+              keyboardType="numeric"
+            />
+          </View>
+        ) : (
+          <TextInput
+            className="bg-card border border-border rounded-xl px-4 py-3 text-base text-foreground"
+            placeholder="cm"
+            placeholderTextColor="hsl(var(--muted-foreground))"
+            value={heightCm}
+            onChangeText={setHeightCm}
+            keyboardType="numeric"
+          />
+        )}
+      </View>
+
+      <View>
+        <Text className="text-foreground font-semibold mb-1.5 text-sm">Weight</Text>
+        <UnitToggle
+          value={weightUnit}
+          onChange={setWeightUnit}
+          options={[{ label: 'lbs', value: 'lb' }, { label: 'kg', value: 'kg' }]}
+        />
+        <TextInput
+          className="bg-card border border-border rounded-xl px-4 py-3 text-base text-foreground"
+          placeholder={`Weight in ${weightUnit}`}
+          placeholderTextColor="hsl(var(--muted-foreground))"
+          value={weightValue}
+          onChangeText={setWeightValue}
+          keyboardType="numeric"
+        />
+      </View>
+    </View>
+  );
+
+  const footerSection = (
+    <View style={{ gap: 12 }}>
+      {error && (
+        <View className="bg-destructive/10 border border-destructive/20 rounded-xl px-4 py-3">
+          <Text className="text-destructive text-sm">{error}</Text>
+        </View>
+      )}
+      {saved && (
+        <View className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl px-4 py-3">
+          <Text className="text-green-700 dark:text-green-400 text-sm font-medium">Profile saved!</Text>
+        </View>
+      )}
+      <Button label="Save Changes" onPress={handleSave} loading={isPending} size="lg" />
+    </View>
+  );
 
   return (
-    <SafeAreaView className={`flex-1 bg-background ${isDark ? "dark" : ""}`}>
+    <SafeAreaView className={`flex-1 bg-background ${isDark ? "dark" : ""}`} style={{ zIndex: 200 }}>
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} className="flex-1">
-        <View className="flex-row items-center px-4 py-3 bg-background border-b border-border">
-          <Pressable onPress={() => router.back()} className="p-2 mr-2">
+        <View className="flex-row items-center px-4 py-3 bg-background border-b border-border" style={{ zIndex: 200 }}>
+          <TouchableOpacity
+            onPress={() => router.canGoBack() ? router.back() : router.push("/(tabs)/profile" as never)}
+            style={{ padding: 8, marginRight: 8 }}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          >
             <Ionicons name="arrow-back" size={22} color="orange" />
-          </Pressable>
+          </TouchableOpacity>
           <Text className="font-bold text-foreground text-base flex-1">Edit Profile</Text>
           {isPending && <ActivityIndicator size="small" color="#f59e0b" />}
         </View>
 
         <ScrollView
           className="flex-1"
-          contentContainerStyle={{ padding: 24, gap: 20 }}
+          contentContainerStyle={{ padding: 24, paddingBottom: 40 }}
           keyboardShouldPersistTaps="handled"
         >
-          <View className="items-center">
-            <Pressable onPress={handlePickAvatar} className="relative">
-              <Avatar uri={previewUri} name={displayName || username || "U"} size={88} />
-              <View
-                className="absolute bottom-0 right-0 bg-primary rounded-full p-1.5"
-                style={{ borderWidth: 2, borderColor: isDark ? "hsl(var(--background))" : "#f9fafb" }}
-              >
-                <Ionicons name="camera" size={14} color="#fff" />
+          {isDesktop ? (
+            <View style={{ maxWidth: 900, alignSelf: "center", width: "100%", gap: 24 }}>
+              {avatarSection}
+              <View style={{ flexDirection: "row", gap: 24, alignItems: "flex-start" }}>
+                <View style={{ flex: 1 }}>{identitySection}</View>
+                <View style={{ flex: 1 }}>{physicalSection}</View>
               </View>
-            </Pressable>
-          </View>
-
-          <View>
-            <Text className="text-foreground font-semibold mb-1.5 text-sm">Display Name</Text>
-            <TextInput
-              className="bg-card border border-border rounded-xl px-4 py-3 text-base text-foreground"
-              placeholder="Your name"
-              placeholderTextColor="hsl(var(--muted-foreground))"
-              value={displayName}
-              onChangeText={setDisplayName}
-            />
-          </View>
-
-          <View>
-            <Text className="text-foreground font-semibold mb-1.5 text-sm">Username</Text>
-            <View className="flex-row items-center bg-card border border-border rounded-xl px-4 py-3">
-              <Text className="text-muted-foreground text-base mr-0.5">@</Text>
-              <TextInput
-                className="flex-1 text-base text-foreground"
-                placeholder="username"
-                placeholderTextColor="hsl(var(--muted-foreground))"
-                value={username}
-                onChangeText={(t) => setUsername(t.toLowerCase())}
-                autoCapitalize="none"
-              />
+              {footerSection}
             </View>
-          </View>
-
-          <View>
-            <Text className="text-foreground font-semibold mb-1.5 text-sm">Bio</Text>
-            <TextInput
-              className="bg-card border border-border rounded-xl px-4 py-3 text-base text-foreground"
-              placeholder="Tell people what you drink…"
-              placeholderTextColor="hsl(var(--muted-foreground))"
-              value={bio}
-              onChangeText={setBio}
-              multiline
-              numberOfLines={3}
-              style={{ minHeight: 80 }}
-            />
-          </View>
-
-          <View>
-            <Text className="text-foreground font-semibold mb-0.5 text-sm">Date of Birth</Text>
-            <Text className="text-muted-foreground text-xs mb-1.5">Private — only used for BAC estimates</Text>
-            <TouchableOpacity
-              onPress={() => setIsDatePickerVisible(true)}
-              activeOpacity={0.7}
-              className="flex-row items-center justify-between bg-card border border-border rounded-xl px-4 py-3"
-            >
-              <Text className={birthdate ? "text-foreground text-base" : "text-muted-foreground text-base"}>
-                {birthdate ? formatDisplayDate(birthdate) : "Select Date of Birth"}
-              </Text>
-              <Ionicons name="calendar-outline" size={20} color="orange" />
-            </TouchableOpacity>
-          </View>
-
-          <View>
-            <Text className="text-foreground font-semibold mb-1.5 text-sm">Height</Text>
-            <UnitToggle 
-              value={heightUnit} 
-              onChange={setHeightUnit} 
-              options={[{ label: 'Imperial (ft/in)', value: 'in' }, { label: 'Metric (cm)', value: 'cm' }]} 
-            />
-            {heightUnit === 'in' ? (
-              <View className="flex-row gap-2">
-                <TextInput
-                  className="flex-1 bg-card border border-border rounded-xl px-4 py-3 text-base text-foreground"
-                  placeholder="ft"
-                  placeholderTextColor="hsl(var(--muted-foreground))"
-                  value={heightFt}
-                  onChangeText={setHeightFt}
-                  keyboardType="numeric"
-                />
-                <TextInput
-                  className="flex-1 bg-card border border-border rounded-xl px-4 py-3 text-base text-foreground"
-                  placeholder="in"
-                  placeholderTextColor="hsl(var(--muted-foreground))"
-                  value={heightIn}
-                  onChangeText={setHeightIn}
-                  keyboardType="numeric"
-                />
-              </View>
-            ) : (
-              <TextInput
-                className="bg-card border border-border rounded-xl px-4 py-3 text-base text-foreground"
-                placeholder="cm"
-                placeholderTextColor="hsl(var(--muted-foreground))"
-                value={heightCm}
-                onChangeText={setHeightCm}
-                keyboardType="numeric"
-              />
-            )}
-          </View>
-
-          <View>
-            <Text className="text-foreground font-semibold mb-1.5 text-sm">Weight</Text>
-            <UnitToggle 
-              value={weightUnit} 
-              onChange={setWeightUnit} 
-              options={[{ label: 'lbs', value: 'lb' }, { label: 'kg', value: 'kg' }]} 
-            />
-            <TextInput
-              className="bg-card border border-border rounded-xl px-4 py-3 text-base text-foreground"
-              placeholder={`Weight in ${weightUnit}`}
-              placeholderTextColor="hsl(var(--muted-foreground))"
-              value={weightValue}
-              onChangeText={setWeightValue}
-              keyboardType="numeric"
-            />
-          </View>
-
-          {error && (
-            <View className="bg-destructive/10 border border-destructive/20 rounded-xl px-4 py-3">
-              <Text className="text-destructive text-sm">{error}</Text>
+          ) : (
+            <View style={{ gap: 20 }}>
+              {avatarSection}
+              {identitySection}
+              {physicalSection}
+              {footerSection}
             </View>
           )}
-
-          {saved && (
-            <View className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl px-4 py-3">
-              <Text className="text-green-700 dark:text-green-400 text-sm font-medium">Profile saved!</Text>
-            </View>
-          )}
-
-          <Button label="Save Changes" onPress={handleSave} loading={isPending} size="lg" />
         </ScrollView>
       </KeyboardAvoidingView>
 

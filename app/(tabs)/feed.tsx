@@ -1,9 +1,8 @@
 import Head from "expo-router/head";
-import { useQueryClient } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useCallback, useState } from "react";
-import { ActivityIndicator, FlatList, Modal, Pressable, RefreshControl, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, FlatList, Modal, Platform, Pressable, RefreshControl, Text, TextInput, View, useWindowDimensions } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Button } from "@/components/common/Button";
 import { EmptyState } from "@/components/common/EmptyState";
@@ -18,8 +17,9 @@ import { FeedEntry } from "@/types/models";
 export default function FeedScreen() {
   const { user } = useAuthStore();
   const router = useRouter();
-  const queryClient = useQueryClient();
   const activeSession = useActiveSession();
+  const { width } = useWindowDimensions();
+  const isDesktop = Platform.OS === "web" && width >= 1024;
 
   const [showStartModal, setShowStartModal] = useState(false);
   const [sessionTitle, setSessionTitle] = useState("");
@@ -108,10 +108,12 @@ export default function FeedScreen() {
           }}
           ListHeaderComponent={
             <View className="px-4 pt-0 mt-0 pb-3 gap-3">
-              <View>
-                <Text className="text-2xl font-bold text-foreground"> Suds</Text>
-                <Text className="text-muted-foreground text-sm">What your crew is drinking</Text>
-              </View>
+              {!isDesktop && (
+                <View>
+                  <Text className="text-2xl font-bold text-foreground"> Suds</Text>
+                  <Text className="text-muted-foreground text-sm">What your crew is drinking</Text>
+                </View>
+              )}
 
               {/* Night out CTA */}
               {!activeSession && (

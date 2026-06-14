@@ -1,6 +1,7 @@
 import React, { useMemo, useState, useEffect } from "react";
 import { Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useAuthStore } from "@/stores/authStore";
 import { usePrefsStore } from "@/stores/prefsStore";
 import { calculateBAC, getSoberTime, ProfileInput, DrinkInput } from "@/utils/bacHelpers";
 import { DrinkLog, Session } from "@/types/models";
@@ -30,7 +31,10 @@ function BACProgressCircle({ bac, isDark }: { bac: number; isDark: boolean }) {
 }
 
 export function NightOutBACProfile({ session, drinks }: NightOutBACProfileProps) {
-  const { sex, weight, weightUnit } = usePrefsStore();
+  const { sex } = usePrefsStore();
+  const { profile } = useAuthStore();
+  const weight = profile?.weight ?? 150;
+  const weightUnit = (profile?.weight_unit ?? 'lb') as 'lb' | 'kg';
   const isActive = !session.ended_at;
 
   // Timer for active sessions (ticks every 30 seconds)
@@ -276,11 +280,11 @@ export function NightOutBACProfile({ session, drinks }: NightOutBACProfileProps)
             </View>
           </View>
 
-          {/* Settings reference footnote */}
+          {/* Profile reference footnote */}
           <View className="flex-row items-center justify-center gap-1 mt-3">
             <Ionicons name="person-circle-outline" size={12} color="gray" />
             <Text className="text-[9px] text-muted-foreground text-center">
-              Based on BAC settings: {sex === "male" ? "Male" : "Female"}, {weight} {weightUnit}
+              Based on your profile: {sex === "male" ? "Male" : "Female"}, {weight} {weightUnit}
             </Text>
           </View>
         </View>

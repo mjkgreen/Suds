@@ -12,15 +12,13 @@
  */
 
 import React, { useMemo, useState, useEffect, useRef } from "react";
-import { Pressable, ScrollView, Text, TextInput, View, ActivityIndicator } from "react-native";
+import { Text, TextInput, View, ActivityIndicator, Pressable } from "react-native";
 import { useAuthStore } from "@/stores/authStore";
 import { usePrefsStore } from "@/stores/prefsStore";
 import { useActiveSession, useSessionDrinks } from "@/hooks/useSession";
 import { calculateBAC, getSoberTime, ProfileInput, DrinkInput } from "@/utils/bacHelpers";
 import { DrinkLog } from "@/types/models";
 import { Ionicons } from "@expo/vector-icons";
-
-type Sex = "male" | "female";
 
 function BACBar({ bac }: { bac: number }) {
   // Scale: 0.00 (sober) → 0.25+ (very drunk), color-coded
@@ -42,7 +40,10 @@ function BACBar({ bac }: { bac: number }) {
 }
 
 export function BACEstimator() {
-  const { sex, weight, weightUnit } = usePrefsStore();
+  const { sex } = usePrefsStore();
+  const { profile } = useAuthStore();
+  const weight = profile?.weight ?? 150;
+  const weightUnit = (profile?.weight_unit ?? 'lb') as 'lb' | 'kg';
   const activeSession = useActiveSession();
   const { data: sessionDrinks, isLoading: isLoadingDrinks } = useSessionDrinks(activeSession?.id);
 
@@ -158,35 +159,24 @@ export function BACEstimator() {
         : "text-red-500 dark:text-red-400";
 
 
-  // Manual Mode State (Initialized using the preferences)
+  // Manual Mode State
   const [manualDrinks, setManualDrinks] = useState("2");
-  const [manualWeight, setManualWeight] = useState(() => weight.toString());
-  const [manualWeightUnit, setManualWeightUnit] = useState<'lb' | 'kg'>(() => weightUnit);
-  const [manualSex, setManualSex] = useState<'male' | 'female'>(() => sex);
   const [manualHours, setManualHours] = useState("1");
-
-  // Keep manual inputs synced with preferences if preferences change
-  useEffect(() => {
-    setManualWeight(weight.toString());
-    setManualWeightUnit(weightUnit);
-    setManualSex(sex);
-  }, [weight, weightUnit, sex]);
 
   const manualBAC = useMemo(() => {
     const d = parseFloat(manualDrinks);
-    let w = parseFloat(manualWeight);
-    if (manualWeightUnit === 'lb') {
-      w = w * 0.45359237; // lbs → kg
+    let w = weight;
+    if (weightUnit === 'lb') {
+      w = w * 0.45359237;
     }
     const h = parseFloat(manualHours);
     if (isNaN(d) || isNaN(w) || isNaN(h) || w <= 0) return 0;
-    
-    // Simple basic Widmark formula for manual estimation
-    const r = manualSex === "male" ? 0.68 : 0.55;
+
+    const r = sex === "male" ? 0.68 : 0.55;
     const raw = ((d * 14) / (w * r * 1000)) * 100;
     const metabolized = 0.015 * h;
     return Math.max(raw - metabolized, 0);
-  }, [manualDrinks, manualWeight, manualWeightUnit, manualSex, manualHours]);
+  }, [manualDrinks, manualHours, weight, weightUnit, sex]);
 
   const manualStatusText =
     manualBAC === 0
@@ -331,11 +321,11 @@ export function BACEstimator() {
               </View>
             </View>
 
-            {/* User Preference metadata footnote */}
+            {/* Profile metadata footnote */}
             <View className="flex-row items-center justify-center gap-1 mb-3">
               <Ionicons name="person-circle-outline" size={12} color="#9ca3af" />
               <Text className="text-[10px] text-gray-400 dark:text-gray-500 text-center">
-                Est. using settings: {sex === 'male' ? 'Male' : 'Female'}, {weight} {weightUnit}
+                Est. using your profile: {sex === 'male' ? 'Male' : 'Female'}, {weight} {weightUnit}
               </Text>
             </View>
           </View>
@@ -355,62 +345,33 @@ export function BACEstimator() {
           </View>
 
           {/* Inputs */}
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ gap: 12 }}
-            className="mb-3"
-          >
-            <View className="items-center">
+          <View className="flex-row gap-3 mb-3">
+            <View className="flex-1 items-center">
               <Text className="text-xs text-gray-400 dark:text-gray-500 mb-1">Drinks</Text>
               <TextInput
-                className="bg-gray-100 dark:bg-zinc-800 rounded-xl px-3 py-2 text-center text-gray-900 dark:text-white w-16 font-semibold"
+                className="bg-gray-100 dark:bg-zinc-800 rounded-xl px-3 py-2 text-center text-gray-900 dark:text-white w-full font-semibold"
                 keyboardType="decimal-pad"
                 value={manualDrinks}
                 onChangeText={setManualDrinks}
               />
             </View>
-            <View className="items-center">
-              <Text className="text-xs text-gray-400 dark:text-gray-500 mb-1">
-                Weight ({manualWeightUnit})
-              </Text>
-              <TextInput
-                className="bg-gray-100 dark:bg-zinc-800 rounded-xl px-3 py-2 text-center text-gray-900 dark:text-white w-20 font-semibold"
-                keyboardType="decimal-pad"
-                value={manualWeight}
-                onChangeText={setManualWeight}
-              />
-            </View>
-            <View className="items-center">
+            <View className="flex-1 items-center">
               <Text className="text-xs text-gray-400 dark:text-gray-500 mb-1">Hours drinking</Text>
               <TextInput
-                className="bg-gray-100 dark:bg-zinc-800 rounded-xl px-3 py-2 text-center text-gray-900 dark:text-white w-20 font-semibold"
+                className="bg-gray-100 dark:bg-zinc-800 rounded-xl px-3 py-2 text-center text-gray-900 dark:text-white w-full font-semibold"
                 keyboardType="decimal-pad"
                 value={manualHours}
                 onChangeText={setManualHours}
               />
             </View>
-            <View className="items-center">
-              <Text className="text-xs text-gray-400 dark:text-gray-500 mb-1">Sex</Text>
-              <View className="flex-row bg-gray-100 dark:bg-zinc-800 rounded-xl overflow-hidden">
-                {(["male", "female"] as Sex[]).map((s) => (
-                  <Pressable
-                    key={s}
-                    className={`px-3 py-2 ${manualSex === s ? "bg-amber-500" : ""}`}
-                    onPress={() => setManualSex(s)}
-                  >
-                    <Text
-                      className={`text-xs font-semibold ${
-                        manualSex === s ? "text-white" : "text-gray-500 dark:text-gray-400"
-                      }`}
-                    >
-                      {s === "male" ? "M" : "F"}
-                    </Text>
-                  </Pressable>
-                ))}
-              </View>
-            </View>
-          </ScrollView>
+          </View>
+          {/* Profile metadata footnote */}
+          <View className="flex-row items-center justify-center gap-1 mb-1">
+            <Ionicons name="person-circle-outline" size={12} color="#9ca3af" />
+            <Text className="text-[10px] text-gray-400 dark:text-gray-500 text-center">
+              Using your profile: {sex === 'male' ? 'Male' : 'Female'}, {weight} {weightUnit}
+            </Text>
+          </View>
         </View>
       )}
 
