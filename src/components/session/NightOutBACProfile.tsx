@@ -165,27 +165,33 @@ export function NightOutBACProfile({ session, drinks }: NightOutBACProfileProps)
       return {
         status: "Safe to Drive (Est.)",
         description: "Your BAC is under the typical driving safety threshold.",
-        color: "text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/20",
-        badgeColor: "bg-emerald-500",
-        textColor: "text-emerald-500",
+        bgColor: "bg-emerald-50 dark:bg-emerald-950/50",
+        borderColor: "border border-emerald-200 dark:border-emerald-800",
+        titleColor: "text-emerald-700 dark:text-emerald-300",
+        bodyColor: "text-emerald-600 dark:text-emerald-400",
+        iconColor: "#10B981",
         icon: "car-outline" as const,
       };
     } else if (bac < 0.05) {
       return {
         status: "Caution: Impaired",
         description: "Driving is not recommended. Performance and judgment are altered.",
-        color: "text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/20",
-        badgeColor: "bg-amber-500",
-        textColor: "text-amber-500",
+        bgColor: "bg-amber-50 dark:bg-amber-950/50",
+        borderColor: "border border-amber-200 dark:border-amber-800",
+        titleColor: "text-amber-700 dark:text-amber-300",
+        bodyColor: "text-amber-600 dark:text-amber-400",
+        iconColor: "#F59E0B",
         icon: "warning-outline" as const,
       };
     } else {
       return {
         status: "Unsafe to Drive",
         description: "DO NOT DRIVE! BAC exceeds safety limits. Please arrange a ride or call a cab.",
-        color: "text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/20",
-        badgeColor: "bg-rose-500",
-        textColor: "text-rose-500",
+        bgColor: "bg-rose-50 dark:bg-rose-950/50",
+        borderColor: "border border-rose-200 dark:border-rose-800",
+        titleColor: "text-rose-700 dark:text-rose-300",
+        bodyColor: "text-rose-600 dark:text-rose-400",
+        iconColor: "#F43F5E",
         icon: "alert-circle-outline" as const,
       };
     }
@@ -233,7 +239,7 @@ export function NightOutBACProfile({ session, drinks }: NightOutBACProfileProps)
               <Text className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">
                 Peak BAC
               </Text>
-              <Text className="text-3xl font-black text-amber-500 mt-1">
+              <Text className="text-3xl font-black text-amber-500 dark:text-amber-400 mt-1">
                 {peakBAC.toFixed(3)}
               </Text>
               <Text className="text-[11px] font-semibold text-muted-foreground mt-0.5">
@@ -246,13 +252,13 @@ export function NightOutBACProfile({ session, drinks }: NightOutBACProfileProps)
           <BACProgressCircle bac={currentBAC} isDark={false} />
 
           {/* Driving Status Banner */}
-          <View className={`rounded-xl p-3 mt-4 flex-row items-start gap-2.5 ${drivingStatus.color}`}>
-            <Ionicons name={drivingStatus.icon} size={20} className="mt-0.5" />
+          <View className={`rounded-xl p-3 mt-4 flex-row items-start gap-2.5 ${drivingStatus.bgColor} ${drivingStatus.borderColor}`}>
+            <Ionicons name={drivingStatus.icon} size={20} color={drivingStatus.iconColor} style={{ marginTop: 2 }} />
             <View className="flex-1">
-              <Text className="text-sm font-bold leading-tight">
+              <Text className={`text-sm font-bold leading-tight ${drivingStatus.titleColor}`}>
                 {drivingStatus.status}
               </Text>
-              <Text className="text-xs mt-0.5 opacity-90 leading-normal">
+              <Text className={`text-xs mt-0.5 leading-normal ${drivingStatus.bodyColor}`}>
                 {drivingStatus.description}
               </Text>
             </View>
