@@ -2,7 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useRef, useState } from "react";
-import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View, useWindowDimensions } from "react-native";
 import { useColorScheme } from "nativewind";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Avatar } from "@/components/common/Avatar";
@@ -28,6 +28,8 @@ export default function DrinkDetailScreen() {
   const { mutateAsync: deleteDrink } = useDeleteDrinkLog();
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === "dark";
+  const { width } = useWindowDimensions();
+  const isDesktop = Platform.OS === "web" && width >= 1024;
   const [commentText, setCommentText] = useState("");
   const [showLikers, setShowLikers] = useState(false);
   const inputRef = useRef<TextInput>(null);
@@ -93,6 +95,10 @@ export default function DrinkDetailScreen() {
 
   return (
     <SafeAreaView className={`flex-1 bg-background ${isDark ? "dark" : ""}`}>
+      <View
+        className={isDesktop ? "border-l border-r border-border" : ""}
+        style={{ flex: 1, width: "100%", maxWidth: isDesktop ? 680 : undefined, alignSelf: "center" }}
+      >
       {/* Nav bar */}
       <View className="flex-row items-center justify-between px-4 py-3 border-b border-border">
         <Pressable onPress={() => router.back()} className="p-2">
@@ -275,6 +281,7 @@ export default function DrinkDetailScreen() {
         </View>
       </ScrollView>
       </KeyboardAvoidingView>
+      </View>
     </SafeAreaView>
   );
 }
