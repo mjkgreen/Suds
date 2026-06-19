@@ -1,7 +1,7 @@
 import * as Haptics from "expo-haptics";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { ActivityIndicator, Platform, Pressable, Text, View, useWindowDimensions } from "react-native";
 import { Avatar } from "@/components/common/Avatar";
 import { PressableCard } from "@/components/common/Card";
@@ -82,9 +82,20 @@ export function SessionCard({ group, currentUserId, isActive, onEnd, isEnding, o
   const totalQuantity = group.items.reduce((s, i) => s + i.quantity, 0);
   const locations = [...new Set(group.items.map((i) => i.location_name).filter(Boolean))];
   const drinkTypes = [...new Set(group.items.map((i) => i.drink_type))];
-  const duration = formatDuration(group.started_at, group.ended_at ?? undefined);
+
+  const [currentTime, setCurrentTime] = useState(() => new Date());
+  useEffect(() => {
+    if (!isActive) return;
+    setCurrentTime(new Date());
+    const interval = setInterval(() => setCurrentTime(new Date()), 30000);
+    return () => clearInterval(interval);
+  }, [isActive]);
+
+  const endTime = isActive ? currentTime.toISOString() : (group.ended_at ?? undefined);
+  const duration = formatDuration(group.started_at, endTime);
   const hoursElapsed =
-    ((group.ended_at ? new Date(group.ended_at) : new Date()).getTime() - new Date(group.started_at).getTime()) /
+    ((isActive ? currentTime : (group.ended_at ? new Date(group.ended_at) : new Date())).getTime() -
+      new Date(group.started_at).getTime()) /
     (1000 * 60 * 60);
   const drinksPerHour = hoursElapsed >= 0.25 && totalQuantity > 0 ? (totalQuantity / hoursElapsed).toFixed(1) : "—";
 
@@ -94,7 +105,7 @@ export function SessionCard({ group, currentUserId, isActive, onEnd, isEnding, o
     <PressableCard
       className={`${Platform.OS === "web" ? "mx-4" : ""} my-2 p-4`}
       flush={Platform.OS !== "web"}
-      onPress={isActive ? undefined : () => router.push(`/session/${group.session_id}`)}
+      onPress={() => router.push(`/session/${group.session_id}`)}
     >
       {/* Active in-progress banner */}
       {isActive && (
@@ -217,7 +228,7 @@ export function SessionCard({ group, currentUserId, isActive, onEnd, isEnding, o
               <Pressable
                 key={item.id}
                 className="flex-row items-center gap-2"
-                onPress={() => router.push(`/drink/${item.id}`)}
+                onPress={(e) => { e.stopPropagation(); router.push(`/drink/${item.id}`); }}
               >
                 <DrinkIcon type={item.drink_type as DrinkType} size={20} color={info.color} />
                 <View className="flex-1">
@@ -272,13 +283,13 @@ export function SessionCard({ group, currentUserId, isActive, onEnd, isEnding, o
         <View className="flex-row gap-2 mt-3 pt-3 border-t border-border/50">
           <Pressable
             className="flex-1 bg-primary rounded-xl py-2.5 items-center"
-            onPress={() => router.push("/(tabs)/log")}
+            onPress={(e) => { e.stopPropagation(); router.push("/(tabs)/log"); }}
           >
             <Text className="text-primary-foreground font-semibold text-sm">+ Log a Drink</Text>
           </Pressable>
           <Pressable
             className="flex-1 bg-card border border-primary/30 rounded-xl py-2.5 items-center"
-            onPress={onEnd}
+            onPress={(e) => { e.stopPropagation(); onEnd?.(); }}
             disabled={isEnding}
           >
             <Text className="text-primary font-semibold text-sm">{isEnding ? "Ending…" : "End Night Out"}</Text>

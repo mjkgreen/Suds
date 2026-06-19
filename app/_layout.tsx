@@ -91,6 +91,7 @@ function AuthGuard() {
         <Stack.Screen name="(auth)" />
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="drink/[id]" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="session/[id]" options={{ presentation: 'modal' }} />
         <Stack.Screen name="drink/edit/[id]" />
         <Stack.Screen name="user/[id]" />
         <Stack.Screen name="user/edit" />
