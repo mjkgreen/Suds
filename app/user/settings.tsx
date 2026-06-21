@@ -1,6 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import * as Notifications from "expo-notifications";
 import React, { useEffect, useState } from "react";
 import {
   Alert,
@@ -56,10 +55,14 @@ export default function SettingsScreen() {
   const [notifPermission, setNotifPermission] = useState<string | null>(null);
 
   useEffect(() => {
-    if (Platform.OS !== "web") {
+    if (Platform.OS === "web") return;
+    try {
+      const Notifications = require("expo-notifications") as typeof import("expo-notifications");
       Notifications.getPermissionsAsync().then(({ status }) => {
         setNotifPermission(status);
       });
+    } catch {
+      // expo-notifications native module not available in Expo Go
     }
   }, []);
 
