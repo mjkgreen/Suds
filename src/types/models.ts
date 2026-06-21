@@ -118,6 +118,7 @@ export interface SessionFeedGroup {
   items: FeedItem[];
   started_at: string;
   ended_at?: string | null;
+  members?: SessionMember[];
 }
 
 export type FeedEntry =
@@ -131,6 +132,33 @@ export interface Session {
   started_at: string;
   ended_at: string | null;
   created_at: string;
+}
+
+export type SessionMemberRole = 'host' | 'guest';
+
+export interface SessionMember {
+  session_id: string;
+  user_id: string;
+  role: SessionMemberRole;
+  joined_at: string;
+  username?: string;
+  display_name?: string | null;
+  avatar_url?: string | null;
+}
+
+export interface SessionInvite {
+  id: string;
+  session_id: string;
+  inviter_id: string;
+  invitee_id: string;
+  status: 'pending' | 'accepted' | 'declined';
+  token: string;
+  expires_at: string;
+  created_at: string;
+}
+
+export interface SessionWithRole extends Session {
+  my_role: SessionMemberRole;
 }
 
 // ── Route & Map Planning Types ────────────────────────────────

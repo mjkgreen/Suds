@@ -6,10 +6,12 @@ interface PushPayload {
   actor_id: string;
   actor_name: string;
   recipient_id: string;
-  type: "like" | "comment" | "follow";
+  type: "like" | "comment" | "follow" | "session_invite";
   context: {
     drink_log_id?: string;
     comment_preview?: string;
+    session_id?: string;
+    invite_token?: string;
   };
 }
 
@@ -17,6 +19,7 @@ interface NotificationPreferences {
   notify_likes: boolean;
   notify_comments: boolean;
   notify_follows: boolean;
+  notify_session_invites: boolean;
 }
 
 interface PushTokenRow {
@@ -57,6 +60,8 @@ function buildNotification(
       };
     case "follow":
       return { title: "New Follower", body: `${actorName} started following you` };
+    case "session_invite":
+      return { title: "Session Invite", body: `${actorName} invited you to join their session` };
   }
 }
 
@@ -91,7 +96,7 @@ serve(async (req) => {
 
     const { data: prefs } = await supabase
       .from("notification_preferences")
-      .select("notify_likes, notify_comments, notify_follows")
+      .select("notify_likes, notify_comments, notify_follows, notify_session_invites")
       .eq("user_id", recipient_id)
       .single();
 
@@ -106,6 +111,7 @@ serve(async (req) => {
       like: "notify_likes",
       comment: "notify_comments",
       follow: "notify_follows",
+      session_invite: "notify_session_invites",
     };
 
     if (!(prefs as NotificationPreferences)[prefsByType[type]]) {
@@ -139,7 +145,9 @@ serve(async (req) => {
       data: {
         type,
         actor_id,
-        drink_log_id: context.drink_log_id ?? "",
+        drink_log_id:  context.drink_log_id  ?? "",
+        session_id:    context.session_id    ?? "",
+        invite_token:  context.invite_token  ?? "",
       },
     }));
 

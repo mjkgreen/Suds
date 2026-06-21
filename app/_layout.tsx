@@ -1,8 +1,9 @@
 import '../global.css';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { Stack, useRouter, useSegments } from 'expo-router';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { ActivityIndicator, View, useColorScheme as useReactNativeColorScheme } from 'react-native';
+import * as Linking from 'expo-linking';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { queryClient } from '@/lib/queryClient';
@@ -12,6 +13,9 @@ import { useAuthStore } from '@/stores/authStore';
 import { useColorScheme } from 'nativewind';
 import { useThemeStore } from '@/stores/themeStore';
 import { useNotifications } from '@/hooks/useNotifications';
+
+// Module-level store for deep links that arrive before auth resolves
+let pendingDeepLink: string | null = null;
 
 function ThemeSync() {
   const { themePreference } = useThemeStore();
@@ -43,6 +47,30 @@ function AuthGuard() {
   }, [user?.id]);
 
   useNotifications({ userId: user?.id });
+
+  // Deep link handler: suds://session/join?token=xxx and suds://log
+  const url = Linking.useURL();
+  const handledUrlRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    const target = url ?? pendingDeepLink;
+    if (!target || !session) {
+      // Store link so we can process it once auth resolves
+      if (url && !session) pendingDeepLink = url;
+      return;
+    }
+    if (handledUrlRef.current === target) return;
+    handledUrlRef.current = target;
+    pendingDeepLink = null;
+
+    const parsed = Linking.parse(target);
+    if (parsed.hostname === 'session' && parsed.path === '/join') {
+      const token = parsed.queryParams?.token as string | undefined;
+      if (token) router.push(`/session/join/${token}` as never);
+    } else if (parsed.hostname === 'log') {
+      router.push('/(tabs)/log' as never);
+    }
+  }, [url, session]);
 
   useEffect(() => {
     if (isLoading) return;
@@ -95,6 +123,7 @@ function AuthGuard() {
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="drink/[id]" options={{ presentation: 'modal' }} />
         <Stack.Screen name="session/[id]" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="session/join/[token]" options={{ presentation: 'modal', title: 'Join Session' }} />
         <Stack.Screen name="drink/edit/[id]" />
         <Stack.Screen name="user/[id]" />
         <Stack.Screen name="user/edit" />

@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { Platform } from 'react-native';
+import * as Linking from 'expo-linking';
 import { supabase } from '@/lib/supabase';
 
 // expo-notifications requires a native dev-client or production build.
@@ -35,11 +36,22 @@ export function useNotifications({ userId }: { userId: string | undefined }): vo
       registered.current = true;
     });
 
-    const subscription = Notifications.addNotificationReceivedListener(() => {
+    const receivedSub = Notifications.addNotificationReceivedListener(() => {
       // Future: update in-app badge / invalidate notification queries
     });
 
-    return () => subscription.remove();
+    const tapSub = Notifications.addNotificationResponseReceivedListener((response) => {
+      const data = response.notification.request.content.data as Record<string, string> | undefined;
+      if (data?.type === 'session_invite' && data?.invite_token) {
+        // Re-trigger through the deep link handler in _layout.tsx
+        Linking.openURL(`suds://session/join?token=${data.invite_token}`);
+      }
+    });
+
+    return () => {
+      receivedSub.remove();
+      tapSub.remove();
+    };
   }, [userId]);
 }
 

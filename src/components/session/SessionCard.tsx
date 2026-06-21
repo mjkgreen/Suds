@@ -9,6 +9,7 @@ import { ImageCarousel } from "@/components/common/ImageCarousel";
 import { DrinkIcon } from "@/components/icons/DrinkIcon";
 import { useLike } from "@/hooks/useLikes";
 import { useLikers } from "@/hooks/useLikers";
+import { useSessionMembers } from "@/hooks/useSessionMembers";
 import { AvatarStack } from "@/components/social/AvatarStack";
 import { LikersModal } from "@/components/social/LikersModal";
 import { DRINK_TYPE_MAP } from "@/lib/constants";
@@ -78,6 +79,13 @@ export function SessionCard({ group, currentUserId, isActive, onEnd, isEnding, o
       setLoggingId(null);
     }
   }
+
+  const hasCoMemberDrinks = group.items.some((i) => i.user_id !== group.profile.id);
+  const { data: members } = useSessionMembers(
+    hasCoMemberDrinks ? group.session_id : undefined,
+    { staleTime: 5 * 60 * 1000 }
+  );
+  const coMembers = (members ?? []).filter((m) => m.user_id !== group.profile.id);
 
   const totalQuantity = group.items.reduce((s, i) => s + i.quantity, 0);
   const locations = [...new Set(group.items.map((i) => i.location_name).filter(Boolean))];
@@ -163,6 +171,26 @@ export function SessionCard({ group, currentUserId, isActive, onEnd, isEnding, o
 
       {/* Session title */}
       <Text className="text-foreground font-bold text-base mb-2">{group.session_title ?? "Night Out"}</Text>
+
+      {/* Co-members row */}
+      {coMembers.length > 0 && (
+        <View className="flex-row items-center gap-1.5 mb-2">
+          <Ionicons name="people-outline" size={13} color="gray" />
+          {coMembers.slice(0, 4).map((m, i) => (
+            <View key={m.user_id} style={{ marginLeft: i > 0 ? -6 : 0 }}>
+              <Avatar uri={m.avatar_url} name={m.display_name ?? m.username} size={22} />
+            </View>
+          ))}
+          {coMembers.length > 4 && (
+            <Text className="text-muted-foreground text-xs">+{coMembers.length - 4}</Text>
+          )}
+          <Text className="text-muted-foreground text-xs" numberOfLines={1}>
+            {coMembers.length === 1
+              ? (coMembers[0].display_name ?? coMembers[0].username)
+              : `${coMembers.length} others`}
+          </Text>
+        </View>
+      )}
 
       {/* Stats row */}
       <View className="flex-row gap-4 mb-3">

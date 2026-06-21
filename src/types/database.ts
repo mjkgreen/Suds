@@ -148,6 +148,7 @@ export interface Database {
           notify_likes: boolean;
           notify_comments: boolean;
           notify_follows: boolean;
+          notify_session_invites: boolean;
           created_at: string;
           updated_at: string;
         };
@@ -156,6 +157,7 @@ export interface Database {
           notify_likes?: boolean;
           notify_comments?: boolean;
           notify_follows?: boolean;
+          notify_session_invites?: boolean;
           created_at?: string;
           updated_at?: string;
         };
@@ -163,7 +165,50 @@ export interface Database {
           notify_likes?: boolean;
           notify_comments?: boolean;
           notify_follows?: boolean;
+          notify_session_invites?: boolean;
           updated_at?: string;
+        };
+      };
+      session_members: {
+        Row: {
+          session_id: string;
+          user_id: string;
+          role: 'host' | 'guest';
+          joined_at: string;
+        };
+        Insert: {
+          session_id: string;
+          user_id: string;
+          role: 'host' | 'guest';
+          joined_at?: string;
+        };
+        Update: {
+          role?: 'host' | 'guest';
+        };
+      };
+      session_invites: {
+        Row: {
+          id: string;
+          session_id: string;
+          inviter_id: string;
+          invitee_id: string;
+          status: 'pending' | 'accepted' | 'declined';
+          token: string;
+          expires_at: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          session_id: string;
+          inviter_id: string;
+          invitee_id: string;
+          status?: 'pending' | 'accepted' | 'declined';
+          token?: string;
+          expires_at?: string;
+          created_at?: string;
+        };
+        Update: {
+          status?: 'pending' | 'accepted' | 'declined';
         };
       };
     };
@@ -203,6 +248,37 @@ export interface Database {
           drinks_this_week: number;
           drinks_this_month: number;
         }[];
+      };
+      get_my_active_session: {
+        Args: Record<string, never>;
+        Returns: {
+          id: string;
+          user_id: string;
+          title: string | null;
+          started_at: string;
+          ended_at: string | null;
+          created_at: string;
+          my_role: 'host' | 'guest';
+        }[];
+      };
+      get_session_members_with_profiles: {
+        Args: { p_session_id: string };
+        Returns: {
+          user_id: string;
+          role: 'host' | 'guest';
+          joined_at: string;
+          username: string;
+          display_name: string | null;
+          avatar_url: string | null;
+        }[];
+      };
+      get_invite_preview: {
+        Args: { p_token: string };
+        Returns: Record<string, unknown>;
+      };
+      accept_session_invite: {
+        Args: { p_token: string };
+        Returns: Record<string, unknown>;
       };
     };
     Enums: Record<string, never>;
