@@ -12,7 +12,8 @@ import {
   Text,
   View,
 } from 'react-native';
-import MapView, { Callout, LongPressEvent, Marker, Polyline, Region } from 'react-native-maps';
+import MapView, { LongPressEvent, Marker, Polyline, Region } from 'react-native-maps';
+import { MapLocationSheet } from '@/components/map/MapLocationSheet';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { DrinkIcon } from '@/components/icons/DrinkIcon';
@@ -88,6 +89,7 @@ export default function MapScreen() {
   const mapRef = useRef<MapView>(null);
   const [mapReady, setMapReady] = useState(false);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [selectedLocation, setSelectedLocation] = useState<DrinkLogWithSessionAndProfile[] | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -337,8 +339,9 @@ export default function MapScreen() {
                 <Marker
                   key={log.id}
                   coordinate={{ latitude: lat, longitude: lng }}
-                  title={log.drink_name || info.label}
                   opacity={opacity}
+                  calloutEnabled={false}
+                  onPress={() => { if (isVisible) setSelectedLocation([log]); }}
                 >
                   <View
                     pointerEvents={pointerEvents as any}
@@ -347,88 +350,44 @@ export default function MapScreen() {
                   >
                     <DrinkIcon type={log.drink_type as DrinkType} size={20} color="white" />
                   </View>
-                  <Callout
-                    onPress={() => {
-                      if (log.session_id) {
-                        router.push(`/session/${log.session_id}`);
-                      }
-                    }}
-                  >
-                    <View style={{ minWidth: 160, padding: 8 }}>
-                      <Text style={{ fontWeight: '700', fontSize: 14 }}>
-                        {log.drink_name || info.label}
-                      </Text>
-                      <Text style={{ color: '#6b7280', fontSize: 12 }}>
-                        @{log.profile?.username}
-                      </Text>
-                      {log.location_name && (
-                        <Text style={{ color: '#6b7280', fontSize: 12 }}>
-                          📍 {log.location_name}
-                        </Text>
-                      )}
-                      <Text style={{ color: '#9ca3af', fontSize: 11, marginTop: 2 }}>
-                        {formatDateTime(log.logged_at)}
-                      </Text>
-                      {log.session_id && (
-                        <Text style={{ color: '#3b82f6', fontSize: 11, fontWeight: '600', marginTop: 4 }}>
-                          👉 Tap to view session
-                        </Text>
-                      )}
-                    </View>
-                  </Callout>
                 </Marker>
               );
             }
 
             // Cluster: multiple drinks at this location
-            const preview = items.slice(0, 3);
             return (
               <Marker
                 key={`cluster-${lat}-${lng}-${isMine ? 'mine' : 'friend'}`}
                 coordinate={{ latitude: lat, longitude: lng }}
                 opacity={opacity}
+                calloutEnabled={false}
+                onPress={() => { if (isVisible) setSelectedLocation(items); }}
               >
                 <View className="items-center justify-center" pointerEvents={pointerEvents as any}>
                   <View className="w-11 h-11 rounded-full bg-primary items-center justify-center shadow border-2 border-card">
                     <Text className="text-primary-foreground font-bold text-sm">{items.length}</Text>
                   </View>
                 </View>
-                <Callout
-                  onPress={() => {
-                    const sessionLog = items.find((item) => item.session_id);
-                    if (sessionLog?.session_id) {
-                      router.push(`/session/${sessionLog.session_id}`);
-                    }
-                  }}
-                >
-                  <View style={{ minWidth: 180, padding: 8 }}>
-                    <Text style={{ fontWeight: '700', fontSize: 14, marginBottom: 4 }}>
-                      {items.length} drinks here
-                    </Text>
-                    {preview.map((log) => {
-                      const info = DRINK_TYPE_MAP[log.drink_type as DrinkType] ?? DRINK_TYPE_MAP['other'];
-                      return (
-                        <Text key={log.id} style={{ color: '#6b7280', fontSize: 12 }}>
-                          • {log.drink_name || info.label} · @{log.profile?.username}
-                        </Text>
-                      );
-                    })}
-                    {items.length > 3 && (
-                      <Text style={{ color: '#9ca3af', fontSize: 11, marginTop: 2 }}>
-                        +{items.length - 3} more
-                      </Text>
-                    )}
-                    {items.some((item) => item.session_id) && (
-                      <Text style={{ color: '#3b82f6', fontSize: 11, fontWeight: '600', marginTop: 4 }}>
-                        👉 Tap to view session
-                      </Text>
-                    )}
-                  </View>
-                </Callout>
               </Marker>
             );
         })}
       </MapView>
+
+      {/* Location bottom sheet */}
+      {selectedLocation && (
+        <MapLocationSheet
+          items={selectedLocation}
+          onClose={() => setSelectedLocation(null)}
+          onViewSession={(id) => {
+            setSelectedLocation(null);
+            router.push(`/session/${id}`);
+          }}
+          onViewDrink={(id) => {
+            setSelectedLocation(null);
+            router.push(`/drink/${id}`);
+          }}
+        />
+      )}
 
       {/* Loading overlay — keeps MapView mounted so position is preserved */}
       {showLoading && (
