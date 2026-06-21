@@ -1,9 +1,11 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import React, { useState } from "react";
+import * as Notifications from "expo-notifications";
+import React, { useEffect, useState } from "react";
 import {
   Alert,
   KeyboardAvoidingView,
+  Linking,
   Modal,
   Platform,
   Pressable,
@@ -19,6 +21,10 @@ import { useThemeStore } from "@/stores/themeStore";
 import { usePrefsStore } from "@/stores/prefsStore";
 import { useColorScheme } from "nativewind";
 import { useAuth } from "@/hooks/useAuth";
+import {
+  useNotificationPreferences,
+  useUpdateNotificationPreference,
+} from "@/hooks/useNotificationPreferences";
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -44,6 +50,18 @@ export default function SettingsScreen() {
   const [showDeleteAccount, setShowDeleteAccount] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const [deleteLoading, setDeleteLoading] = useState(false);
+
+  const { data: notifPrefs } = useNotificationPreferences(user?.id);
+  const updateNotifPref = useUpdateNotificationPreference(user?.id);
+  const [notifPermission, setNotifPermission] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (Platform.OS !== "web") {
+      Notifications.getPermissionsAsync().then(({ status }) => {
+        setNotifPermission(status);
+      });
+    }
+  }, []);
 
   const { width } = useWindowDimensions();
   const isDesktop = Platform.OS === "web" && width >= 1024;
@@ -176,6 +194,80 @@ export default function SettingsScreen() {
     </View>
   );
 
+  const notificationsSection = (
+    <View style={{ marginBottom: 28 }}>
+      <Text className="text-muted-foreground text-xs font-bold uppercase tracking-wider mb-4 ml-1">
+        Notifications
+      </Text>
+      <View className="bg-card rounded-2xl overflow-hidden border border-border">
+        <View className="flex-row items-center justify-between px-4 py-4 border-b border-border">
+          <View className="flex-row items-center gap-3 flex-1">
+            <View className="w-8 h-8 rounded-lg bg-accent items-center justify-center">
+              <Ionicons name="heart" size={18} color="#f59e0b" />
+            </View>
+            <View className="flex-1">
+              <Text className="text-foreground font-medium">Likes</Text>
+              <Text className="text-muted-foreground text-xs">When someone likes your drink</Text>
+            </View>
+          </View>
+          <Switch
+            value={notifPrefs?.notify_likes ?? true}
+            onValueChange={(val) => updateNotifPref.mutate({ notify_likes: val })}
+            trackColor={{ false: "#767577", true: "#f59e0b" }}
+            thumbColor={Platform.OS === "ios" ? "#fff" : (notifPrefs?.notify_likes ?? true) ? "#fff" : "#f4f3f4"}
+            disabled={updateNotifPref.isPending}
+          />
+        </View>
+        <View className="flex-row items-center justify-between px-4 py-4 border-b border-border">
+          <View className="flex-row items-center gap-3 flex-1">
+            <View className="w-8 h-8 rounded-lg bg-accent items-center justify-center">
+              <Ionicons name="chatbubble" size={18} color="#f59e0b" />
+            </View>
+            <View className="flex-1">
+              <Text className="text-foreground font-medium">Comments</Text>
+              <Text className="text-muted-foreground text-xs">When someone comments on your drink</Text>
+            </View>
+          </View>
+          <Switch
+            value={notifPrefs?.notify_comments ?? true}
+            onValueChange={(val) => updateNotifPref.mutate({ notify_comments: val })}
+            trackColor={{ false: "#767577", true: "#f59e0b" }}
+            thumbColor={Platform.OS === "ios" ? "#fff" : (notifPrefs?.notify_comments ?? true) ? "#fff" : "#f4f3f4"}
+            disabled={updateNotifPref.isPending}
+          />
+        </View>
+        <View className="flex-row items-center justify-between px-4 py-4">
+          <View className="flex-row items-center gap-3 flex-1">
+            <View className="w-8 h-8 rounded-lg bg-accent items-center justify-center">
+              <Ionicons name="person-add" size={18} color="#f59e0b" />
+            </View>
+            <View className="flex-1">
+              <Text className="text-foreground font-medium">Follows</Text>
+              <Text className="text-muted-foreground text-xs">When someone follows you</Text>
+            </View>
+          </View>
+          <Switch
+            value={notifPrefs?.notify_follows ?? true}
+            onValueChange={(val) => updateNotifPref.mutate({ notify_follows: val })}
+            trackColor={{ false: "#767577", true: "#f59e0b" }}
+            thumbColor={Platform.OS === "ios" ? "#fff" : (notifPrefs?.notify_follows ?? true) ? "#fff" : "#f4f3f4"}
+            disabled={updateNotifPref.isPending}
+          />
+        </View>
+      </View>
+      {notifPermission === "denied" && Platform.OS !== "web" && (
+        <Pressable
+          onPress={() => Linking.openSettings()}
+          className="mt-3 px-4 py-3 bg-amber-50 border border-amber-200 rounded-xl"
+        >
+          <Text className="text-amber-700 text-xs">
+            Notifications are disabled in iOS Settings. Tap here to enable them.
+          </Text>
+        </Pressable>
+      )}
+    </View>
+  );
+
   const bacSection = (
     <View style={{ marginBottom: 28 }}>
       <Text className="text-muted-foreground text-xs font-bold uppercase tracking-wider mb-4 ml-1">
@@ -271,6 +363,7 @@ export default function SettingsScreen() {
               <View style={{ flex: 1 }}>
                 {appearanceSection}
                 {preferencesSection}
+                {notificationsSection}
               </View>
               <View style={{ flex: 1 }}>
                 {bacSection}
@@ -282,6 +375,7 @@ export default function SettingsScreen() {
           <>
             {appearanceSection}
             {preferencesSection}
+            {notificationsSection}
             {bacSection}
             {accountSection}
           </>

@@ -118,6 +118,54 @@ export interface Database {
         };
         Update: never;
       };
+      push_tokens: {
+        Row: {
+          id: string;
+          user_id: string;
+          token: string;
+          platform: 'ios' | 'android';
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          token: string;
+          platform: 'ios' | 'android';
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          user_id?: string;
+          token?: string;
+          platform?: 'ios' | 'android';
+          updated_at?: string;
+        };
+      };
+      notification_preferences: {
+        Row: {
+          user_id: string;
+          notify_likes: boolean;
+          notify_comments: boolean;
+          notify_follows: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          user_id: string;
+          notify_likes?: boolean;
+          notify_comments?: boolean;
+          notify_follows?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          notify_likes?: boolean;
+          notify_comments?: boolean;
+          notify_follows?: boolean;
+          updated_at?: string;
+        };
+      };
     };
     Views: Record<string, never>;
     Functions: {

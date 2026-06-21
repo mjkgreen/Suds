@@ -47,6 +47,16 @@
       ["expo-router", { "origin": "https://drink-with-suds.com" }],
       "expo-location",
       [
+        "expo-notifications",
+        {
+          "icon": "./assets/Suds.png",
+          "color": "#F59E0B",
+          "sounds": [],
+          "iosDisplayInForeground": true,
+          "mode": "production"
+        }
+      ],
+      [
         "expo-image-picker",
         {
           "photosPermission": "Allow Suds to access your photos."

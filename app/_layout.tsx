@@ -11,6 +11,7 @@ import { initRevenueCat } from '@/lib/revenuecat';
 import { useAuthStore } from '@/stores/authStore';
 import { useColorScheme } from 'nativewind';
 import { useThemeStore } from '@/stores/themeStore';
+import { useNotifications } from '@/hooks/useNotifications';
 
 function ThemeSync() {
   const { themePreference } = useThemeStore();
@@ -40,6 +41,8 @@ function AuthGuard() {
       initRevenueCat(user.id);
     }
   }, [user?.id]);
+
+  useNotifications({ userId: user?.id });
 
   useEffect(() => {
     if (isLoading) return;
