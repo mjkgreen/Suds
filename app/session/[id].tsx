@@ -124,6 +124,16 @@ export default function SessionDetailScreen() {
     return map;
   }, [members]);
 
+  const memberBreakdowns = useMemo(() => {
+    if (!members || members.length <= 1 || !data) return [];
+    return members.map((m) => {
+      const mDrinks = data.drinks.filter((d) => d.user_id === m.user_id);
+      const mTotal = mDrinks.reduce((s, d) => s + d.quantity, 0);
+      const mTypes = [...new Set(mDrinks.map((d) => d.drink_type))];
+      return { member: m, drinkCount: mTotal, drinkTypes: mTypes };
+    });
+  }, [members, data]);
+
   const representativeDrinkId = data?.drinks[0]?.id;
   const { data: comments, isLoading: commentsLoading } = useComments(representativeDrinkId);
   const addComment = useAddComment(user?.id);
@@ -167,17 +177,6 @@ export default function SessionDetailScreen() {
 
   // My own drinks only (for BAC)
   const myDrinks = drinks.filter((d) => d.user_id === user?.id);
-
-  // Per-member drink breakdown
-  const memberBreakdowns = useMemo(() => {
-    if (!members || members.length <= 1) return [];
-    return members.map((m) => {
-      const mDrinks = drinks.filter((d) => d.user_id === m.user_id);
-      const mTotal = mDrinks.reduce((s, d) => s + d.quantity, 0);
-      const mTypes = [...new Set(mDrinks.map((d) => d.drink_type))];
-      return { member: m, drinkCount: mTotal, drinkTypes: mTypes };
-    });
-  }, [members, drinks]);
 
   return (
     <SafeAreaView className={`flex-1 bg-background ${isDark ? "dark" : ""}`}>

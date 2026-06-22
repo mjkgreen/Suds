@@ -13,6 +13,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { useColorScheme } from 'nativewind';
 import { useThemeStore } from '@/stores/themeStore';
 import { useNotifications } from '@/hooks/useNotifications';
+import { useNotificationRealtime } from '@/hooks/useInAppNotifications';
 
 // Module-level store for deep links that arrive before auth resolves
 let pendingDeepLink: string | null = null;
@@ -47,6 +48,7 @@ function AuthGuard() {
   }, [user?.id]);
 
   useNotifications({ userId: user?.id });
+  useNotificationRealtime();
 
   // Deep link handler: suds://session/join?token=xxx and suds://log
   const url = Linking.useURL();
@@ -128,6 +130,7 @@ function AuthGuard() {
         <Stack.Screen name="user/[id]" />
         <Stack.Screen name="user/edit" />
         <Stack.Screen name="paywall" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="notifications" />
         <Stack.Screen name="terms" />
         <Stack.Screen name="privacy" />
         <Stack.Screen name="support" />

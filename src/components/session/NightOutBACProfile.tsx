@@ -4,7 +4,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useAuthStore } from "@/stores/authStore";
 import { usePrefsStore } from "@/stores/prefsStore";
 import { calculateBAC, getSoberTime, ProfileInput, DrinkInput } from "@/utils/bacHelpers";
-import { DrinkLog, Session } from "@/types/models";
+import { DrinkLog, Session, isAlcoholicDrink } from "@/types/models";
 
 interface NightOutBACProfileProps {
   session: Session;
@@ -52,13 +52,15 @@ export function NightOutBACProfile({ session, drinks }: NightOutBACProfileProps)
     return () => clearInterval(interval);
   }, [isActive]);
 
-  // Map session drinks to DrinkInput
+  // Map session drinks to DrinkInput — exclude non-alcoholic drinks from BAC calculation
   const drinkInputs = useMemo<DrinkInput[]>(() => {
-    return drinks.map((d) => ({
-      quantity: d.quantity,
-      loggedAt: d.logged_at,
-      endedAt: d.ended_at,
-    }));
+    return drinks
+      .filter((d) => isAlcoholicDrink(d.drink_type))
+      .map((d) => ({
+        quantity: d.quantity,
+        loggedAt: d.logged_at,
+        endedAt: d.ended_at,
+      }));
   }, [drinks]);
 
   const profileInput = useMemo<ProfileInput>(() => {

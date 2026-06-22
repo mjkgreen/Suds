@@ -8,7 +8,7 @@ import { usePrefsStore } from "@/stores/prefsStore";
 import { useAuthStore } from "@/stores/authStore";
 import { calculateBAC, ProfileInput, DrinkInput } from "@/utils/bacHelpers";
 import { formatDuration } from "@/utils/dateHelpers";
-import { DrinkLog } from "@/types/models";
+import { DrinkLog, isAlcoholicDrink } from "@/types/models";
 import { Avatar } from "@/components/common/Avatar";
 import { FollowerPickerModal } from "@/components/session/FollowerPickerModal";
 import { useSessionInvites } from "@/hooks/useSessionMembers";
@@ -59,11 +59,11 @@ export function SessionBanner() {
     return formatDuration(activeSession.started_at, currentTime.toISOString());
   }, [activeSession?.started_at, currentTime]);
 
-  // BAC is personal — only current user's drinks
+  // BAC is personal — only current user's alcoholic drinks
   const drinkInputs = useMemo<DrinkInput[]>(() => {
     if (!sessionDrinks) return [];
     return (sessionDrinks as DrinkLog[])
-      .filter((d) => d.user_id === user?.id)
+      .filter((d) => d.user_id === user?.id && isAlcoholicDrink(d.drink_type))
       .map((d) => ({
         quantity: d.quantity,
         loggedAt: d.logged_at,

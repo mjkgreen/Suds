@@ -211,6 +211,31 @@ export interface Database {
           status?: 'pending' | 'accepted' | 'declined';
         };
       };
+      in_app_notifications: {
+        Row: {
+          id: string;
+          user_id: string;
+          actor_id: string | null;
+          actor_name: string | null;
+          type: 'like' | 'comment' | 'follow' | 'session_invite';
+          context: Record<string, string | undefined>;
+          read: boolean;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          actor_id?: string | null;
+          actor_name?: string | null;
+          type: 'like' | 'comment' | 'follow' | 'session_invite';
+          context?: Record<string, string | undefined>;
+          read?: boolean;
+          created_at?: string;
+        };
+        Update: {
+          read?: boolean;
+        };
+      };
     };
     Views: Record<string, never>;
     Functions: {

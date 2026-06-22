@@ -2,7 +2,18 @@ import Head from "expo-router/head";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useCallback, useState } from "react";
-import { ActivityIndicator, FlatList, Modal, Platform, Pressable, RefreshControl, Text, TextInput, View, useWindowDimensions } from "react-native";
+import {
+  ActivityIndicator,
+  FlatList,
+  Modal,
+  Platform,
+  Pressable,
+  RefreshControl,
+  Text,
+  TextInput,
+  View,
+  useWindowDimensions,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Button } from "@/components/common/Button";
 import { EmptyState } from "@/components/common/EmptyState";
@@ -11,6 +22,7 @@ import { SessionCard } from "@/components/session/SessionCard";
 import { useFeed } from "@/hooks/useFeed";
 import { useQuickLogDrink } from "@/hooks/useDrinkLog";
 import { useActiveSession, useEndSession, useStartSession } from "@/hooks/useSession";
+import { useUnreadNotificationCount } from "@/hooks/useInAppNotifications";
 import { useAuthStore } from "@/stores/authStore";
 import { FeedEntry } from "@/types/models";
 
@@ -26,6 +38,8 @@ export default function FeedScreen() {
   const { mutateAsync: startSession, isPending: isStarting } = useStartSession();
   const { mutateAsync: endSession, isPending: isEnding } = useEndSession();
   const { mutateAsync: quickLogDrink } = useQuickLogDrink();
+
+  const unreadCount = useUnreadNotificationCount();
 
   const { data, isLoading, isError, fetchNextPage, hasNextPage, isFetchingNextPage, refetch, isRefetching } = useFeed(
     user?.id,
@@ -110,7 +124,21 @@ export default function FeedScreen() {
             <View className="px-4 pt-0 mt-0 pb-3 gap-3">
               {!isDesktop && (
                 <View>
-                  <Text className="text-2xl font-bold text-foreground"> Suds</Text>
+                  <View className="flex-row items-center justify-between">
+                    <Text className="text-2xl font-bold text-foreground"> Suds</Text>
+                    <Pressable onPress={() => router.push("/notifications" as never)} hitSlop={8}>
+                      <View>
+                        <Ionicons name="notifications-outline" size={24} color={unreadCount > 0 ? "#f59e0b" : "#9ca3af"} />
+                        {unreadCount > 0 && (
+                          <View className="absolute -top-1 -right-1 bg-primary rounded-full w-4 h-4 items-center justify-center">
+                            <Text className="text-white text-[9px] font-bold">
+                              {unreadCount > 9 ? "9+" : unreadCount}
+                            </Text>
+                          </View>
+                        )}
+                      </View>
+                    </Pressable>
+                  </View>
                   <Text className="text-muted-foreground text-sm">What your crew is drinking</Text>
                 </View>
               )}

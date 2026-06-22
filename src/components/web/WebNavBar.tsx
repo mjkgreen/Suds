@@ -6,6 +6,7 @@ import { Pressable, Text, View } from "react-native";
 import { useColorScheme } from "nativewind";
 import { useAuthStore } from "@/stores/authStore";
 import { supabase } from "@/lib/supabase";
+import { useUnreadNotificationCount } from "@/hooks/useInAppNotifications";
 
 interface NavItem {
   label: string;
@@ -69,6 +70,7 @@ export function WebNavBar() {
   const isDark = colorScheme === "dark";
   const { profile } = useAuthStore();
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const unreadCount = useUnreadNotificationCount();
   // Close dropdown on any click outside (web only)
   useEffect(() => {
     if (!dropdownOpen || typeof document === "undefined") return;
@@ -151,8 +153,25 @@ export function WebNavBar() {
           })}
         </View>
 
-        {/* Right: Log drink + avatar */}
+        {/* Right: Notifications + Log drink + avatar */}
         <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+          <Pressable
+            onPress={() => router.push("/notifications" as never)}
+            className={`rounded-full items-center justify-center ${isDark ? "bg-gray-800" : "bg-gray-100"}`}
+            style={{ width: 36, height: 36, position: "relative" }}
+          >
+            <Ionicons name="notifications-outline" size={20} color={isDark ? "#9ca3af" : "#6b7280"} />
+            {unreadCount > 0 && (
+              <View
+                className="absolute bg-primary rounded-full items-center justify-center"
+                style={{ top: 0, right: 0, width: 16, height: 16 }}
+              >
+                <Text className="text-white font-bold" style={{ fontSize: 9 }}>
+                  {unreadCount > 9 ? "9+" : unreadCount}
+                </Text>
+              </View>
+            )}
+          </Pressable>
           <Pressable
             onPress={() => router.push("/(tabs)/log" as never)}
             className="bg-primary rounded-full items-center justify-center"

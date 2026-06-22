@@ -13,6 +13,7 @@
     },
     "scheme": "suds",
     "ios": {
+      "appleTeamId": "935735W5AA",
       "supportsTablet": false,
       "bundleIdentifier": "com.sudssocial.app",
       "infoPlist": {

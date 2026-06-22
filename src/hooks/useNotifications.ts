@@ -1,6 +1,8 @@
 import { useEffect, useRef } from 'react';
 import { Platform } from 'react-native';
 import * as Linking from 'expo-linking';
+import { useRouter } from 'expo-router';
+import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 
 // expo-notifications requires a native dev-client or production build.
@@ -17,6 +19,8 @@ function getNotifications(): ExpoNotifications | null {
 
 export function useNotifications({ userId }: { userId: string | undefined }): void {
   const registered = useRef(false);
+  const router = useRouter();
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     if (Platform.OS === 'web' || !userId || registered.current) return;
@@ -32,19 +36,32 @@ export function useNotifications({ userId }: { userId: string | undefined }): vo
       }),
     });
 
-    registerForPushNotificationsAsync(userId, Notifications).then(() => {
+    registerForPushNotificationsAsync(Notifications).then(() => {
       registered.current = true;
     });
 
     const receivedSub = Notifications.addNotificationReceivedListener(() => {
-      // Future: update in-app badge / invalidate notification queries
+      queryClient.invalidateQueries({ queryKey: ['inAppNotifications'] });
     });
 
     const tapSub = Notifications.addNotificationResponseReceivedListener((response) => {
       const data = response.notification.request.content.data as Record<string, string> | undefined;
-      if (data?.type === 'session_invite' && data?.invite_token) {
-        // Re-trigger through the deep link handler in _layout.tsx
-        Linking.openURL(`suds://session/join?token=${data.invite_token}`);
+      if (!data?.type) return;
+
+      switch (data.type) {
+        case 'like':
+        case 'comment':
+          if (data.drink_log_id) router.push(`/drink/${data.drink_log_id}` as never);
+          break;
+        case 'follow':
+          if (data.actor_id) router.push(`/user/${data.actor_id}` as never);
+          break;
+        case 'session_invite':
+          if (data.invite_token) {
+            // Go through the deep link handler so pendingDeepLink works if auth hasn't resolved
+            Linking.openURL(`suds://session/join?token=${data.invite_token}`);
+          }
+          break;
       }
     });
 
@@ -56,7 +73,6 @@ export function useNotifications({ userId }: { userId: string | undefined }): vo
 }
 
 async function registerForPushNotificationsAsync(
-  userId: string,
   Notifications: ExpoNotifications
 ): Promise<void> {
   try {
@@ -77,17 +93,10 @@ async function registerForPushNotificationsAsync(
     const token = result.data;
     if (!token) return;
 
-    const { error } = await supabase
-      .from('push_tokens')
-      .upsert(
-        {
-          user_id: userId,
-          token,
-          platform: Platform.OS as 'ios' | 'android',
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: 'token' }
-      );
+    const { error } = await supabase.rpc('upsert_push_token', {
+      p_token: token,
+      p_platform: Platform.OS as 'ios' | 'android',
+    });
 
     if (error) {
       console.error('Failed to register push token:', error.message);

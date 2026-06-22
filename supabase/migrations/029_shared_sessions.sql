@@ -65,12 +65,22 @@ ON CONFLICT DO NOTHING;
 -- ── RLS: session_members ─────────────────────────────────────
 ALTER TABLE public.session_members ENABLE ROW LEVEL SECURITY;
 
+-- SECURITY DEFINER helper avoids infinite recursion: a policy on session_members
+-- cannot query session_members directly without triggering itself.
+CREATE OR REPLACE FUNCTION public.get_my_session_ids()
+RETURNS SETOF uuid
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT session_id FROM public.session_members WHERE user_id = auth.uid();
+$$;
+
 -- Any member can see all members of their sessions
 CREATE POLICY "session_members_select" ON public.session_members
   FOR SELECT USING (
-    session_id IN (
-      SELECT sm.session_id FROM public.session_members sm WHERE sm.user_id = auth.uid()
-    )
+    session_id IN (SELECT public.get_my_session_ids())
   );
 
 -- Users can only insert their own membership row (guests accepting invites)

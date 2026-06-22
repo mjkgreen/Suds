@@ -17,7 +17,7 @@ import { useAuthStore } from "@/stores/authStore";
 import { usePrefsStore } from "@/stores/prefsStore";
 import { useActiveSession, useSessionDrinks } from "@/hooks/useSession";
 import { calculateBAC, getSoberTime, ProfileInput, DrinkInput } from "@/utils/bacHelpers";
-import { DrinkLog } from "@/types/models";
+import { DrinkLog, isAlcoholicDrink } from "@/types/models";
 import { Ionicons } from "@expo/vector-icons";
 
 function BACBar({ bac }: { bac: number }) {
@@ -80,14 +80,16 @@ export function BACEstimator() {
     return () => clearInterval(interval);
   }, [activeSession?.id]);
 
-  // Map session drinks to DrinkInput
+  // Map session drinks to DrinkInput — exclude non-alcoholic drinks from BAC calculation
   const drinkInputs = useMemo<DrinkInput[]>(() => {
     if (!sessionDrinks) return [];
-    return (sessionDrinks as DrinkLog[]).map((d) => ({
-      quantity: d.quantity,
-      loggedAt: d.logged_at,
-      endedAt: d.ended_at,
-    }));
+    return (sessionDrinks as DrinkLog[])
+      .filter((d) => isAlcoholicDrink(d.drink_type))
+      .map((d) => ({
+        quantity: d.quantity,
+        loggedAt: d.logged_at,
+        endedAt: d.ended_at,
+      }));
   }, [sessionDrinks]);
 
   // Live BAC Calculation

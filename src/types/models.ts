@@ -11,6 +11,17 @@ export type DrinkType =
   | 'non_alcoholic'
   | 'other';
 
+export const NON_ALCOHOLIC_DRINK_TYPES = new Set<DrinkType>([
+  'water',
+  'soft_drink',
+  'mocktail',
+  'non_alcoholic',
+]);
+
+export function isAlcoholicDrink(drinkType: DrinkType): boolean {
+  return !NON_ALCOHOLIC_DRINK_TYPES.has(drinkType);
+}
+
 export type SubscriptionTier = 'free' | 'premium';
 
 export interface Profile {
@@ -159,6 +170,24 @@ export interface SessionInvite {
 
 export interface SessionWithRole extends Session {
   my_role: SessionMemberRole;
+}
+
+export type NotificationType = 'like' | 'comment' | 'follow' | 'session_invite';
+
+export interface InAppNotification {
+  id: string;
+  user_id: string;
+  actor_id: string | null;
+  actor_name: string | null;
+  type: NotificationType;
+  context: {
+    drink_log_id?: string;
+    comment_preview?: string;
+    session_id?: string;
+    invite_token?: string;
+  };
+  read: boolean;
+  created_at: string;
 }
 
 // ── Route & Map Planning Types ────────────────────────────────
