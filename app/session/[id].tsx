@@ -1,9 +1,10 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import React, { useMemo, useRef, useState } from "react";
+import React, { useMemo, useRef, useState, useEffect } from "react";
 import {
   ActivityIndicator,
+  Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -20,7 +21,8 @@ import { ImageCarousel } from "@/components/common/ImageCarousel";
 import { DrinkIcon } from "@/components/icons/DrinkIcon";
 import { NightOutBACProfile } from "@/components/session/NightOutBACProfile";
 import { useAddComment, useComments, useDeleteComment } from "@/hooks/useComments";
-import { useEndSession, useLeaveSession } from "@/hooks/useSession";
+import { useDeleteSession, useEndSession, useLeaveSession } from "@/hooks/useSession";
+import { useRemoveDrinkFromSession } from "@/hooks/useDrinkLog";
 import { useSessionMembers } from "@/hooks/useSessionMembers";
 import { supabase } from "@/lib/supabase";
 import { DRINK_TYPE_MAP } from "@/lib/constants";
@@ -90,6 +92,8 @@ export default function SessionDetailScreen() {
   const { data: members } = useSessionMembers(id);
   const { mutateAsync: endSession, isPending: isEnding } = useEndSession();
   const { mutateAsync: leaveSession, isPending: isLeaving } = useLeaveSession();
+  const { mutateAsync: deleteSession, isPending: isDeleting } = useDeleteSession();
+  const { mutateAsync: removeDrinkFromSession } = useRemoveDrinkFromSession();
   const [confirmAction, setConfirmAction] = useState(false);
 
   const myMembership = useMemo(
@@ -98,9 +102,52 @@ export default function SessionDetailScreen() {
   );
 
   const isActive = !data?.session.ended_at;
-  const canEnd = isActive && myMembership?.role === "host";
+  const isHost = myMembership?.role === "host";
+  const canEnd = isActive && isHost;
   const canLeave = isActive && myMembership?.role === "guest";
-  const isPendingAction = isEnding || isLeaving;
+
+  const [currentTime, setCurrentTime] = useState(() => new Date());
+  useEffect(() => {
+    if (!isActive) return;
+    setCurrentTime(new Date());
+    const interval = setInterval(() => setCurrentTime(new Date()), 30000);
+    return () => clearInterval(interval);
+  }, [isActive]);
+  const isPendingAction = isEnding || isLeaving || isDeleting;
+
+  function handleDeleteSession() {
+    if (!data) return;
+    const message = isActive
+      ? "This will end the night out for all members and permanently delete it. This cannot be undone."
+      : "This will permanently delete this night out. Your drinks will remain in your history. This cannot be undone.";
+    Alert.alert("Delete Night Out?", message, [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Delete",
+        style: "destructive",
+        onPress: async () => {
+          await deleteSession(data.session.id);
+          router.replace("/(tabs)/feed");
+        },
+      },
+    ]);
+  }
+
+  function handleRemoveDrink(drink: DrinkLog) {
+    if (!user || !id) return;
+    Alert.alert(
+      "Remove from Night Out?",
+      "The drink will stay in your history but won't be part of this night out.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Remove",
+          style: "destructive",
+          onPress: () => removeDrinkFromSession({ id: drink.id, sessionId: id, userId: user.id }),
+        },
+      ]
+    );
+  }
 
   async function handleEndOrLeave() {
     if (!data || !user?.id) return;
@@ -165,9 +212,9 @@ export default function SessionDetailScreen() {
   ] as string[];
   const drinkTypes = [...new Set(drinks.map((d) => d.drink_type))];
   const photos = drinks.map((d) => d.photo_url).filter(Boolean) as string[];
-  const duration = formatDuration(session.started_at, session.ended_at ?? undefined);
+  const duration = formatDuration(session.started_at, session.ended_at ?? currentTime.toISOString());
   const hoursElapsed =
-    ((session.ended_at ? new Date(session.ended_at) : new Date()).getTime() -
+    ((session.ended_at ? new Date(session.ended_at) : currentTime).getTime() -
       new Date(session.started_at).getTime()) /
     (1000 * 60 * 60);
   const drinksPerHour =
@@ -219,7 +266,17 @@ export default function SessionDetailScreen() {
               )}
             </Pressable>
           )}
-          {!(canEnd || canLeave) && <View className="w-10" />}
+          {/* Delete button — hosts only, ended sessions */}
+          {isHost && !isActive && (
+            <Pressable onPress={handleDeleteSession} disabled={isDeleting} className="p-2">
+              {isDeleting ? (
+                <ActivityIndicator size="small" color="#ef4444" />
+              ) : (
+                <Ionicons name="trash-outline" size={20} color="#ef4444" />
+              )}
+            </Pressable>
+          )}
+          {!(canEnd || canLeave) && !(isHost && !isActive) && <View className="w-10" />}
         </View>
 
         <KeyboardAvoidingView
@@ -414,66 +471,95 @@ export default function SessionDetailScreen() {
                   DRINK_TYPE_MAP[drink.drink_type as DrinkType] ?? DRINK_TYPE_MAP["other"];
                 const author = memberMap.get(drink.user_id);
                 const showAuthor = isMultiMember && !!author;
+                const isOwnDrink = drink.user_id === user?.id;
                 return (
-                  <Pressable
-                    key={drink.id}
-                    className="flex-row items-center gap-3"
-                    onPress={() => router.push(`/drink/${drink.id}`)}
-                  >
-                    <View
-                      style={{ backgroundColor: info.color + "15" }}
-                      className="w-10 h-10 rounded-xl items-center justify-center"
+                  <View key={drink.id} className="flex-row items-center gap-2">
+                    <Pressable
+                      className="flex-row items-center gap-3 flex-1"
+                      onPress={() => router.push(`/drink/${drink.id}`)}
                     >
-                      <DrinkIcon
-                        type={drink.drink_type as DrinkType}
-                        size={22}
-                        color={info.color}
-                      />
-                    </View>
-                    <View className="flex-1">
-                      <Text className="text-foreground text-sm font-medium">
-                        {drink.drink_name || drink.event_name || info.label}
-                        {drink.quantity !== 1 && (
-                          <Text className="text-muted-foreground font-normal">
-                            {" "}
-                            ×{drink.quantity}
-                          </Text>
+                      <View
+                        style={{ backgroundColor: info.color + "15" }}
+                        className="w-10 h-10 rounded-xl items-center justify-center"
+                      >
+                        <DrinkIcon
+                          type={drink.drink_type as DrinkType}
+                          size={22}
+                          color={info.color}
+                        />
+                      </View>
+                      <View className="flex-1">
+                        <Text className="text-foreground text-sm font-medium">
+                          {drink.drink_name || drink.event_name || info.label}
+                          {drink.quantity !== 1 && (
+                            <Text className="text-muted-foreground font-normal">
+                              {" "}
+                              ×{drink.quantity}
+                            </Text>
+                          )}
+                          {drink.brand ? (
+                            <Text className="text-muted-foreground font-normal">
+                              {" "}
+                              · {drink.brand}
+                            </Text>
+                          ) : null}
+                        </Text>
+                        {showAuthor && (
+                          <View className="flex-row items-center gap-1 mt-0.5">
+                            <Avatar
+                              uri={author.avatar_url}
+                              name={author.display_name ?? author.username}
+                              size={14}
+                            />
+                            <Text className="text-muted-foreground text-[11px]">
+                              {author.display_name ?? author.username}
+                            </Text>
+                          </View>
                         )}
-                        {drink.brand ? (
-                          <Text className="text-muted-foreground font-normal">
-                            {" "}
-                            · {drink.brand}
-                          </Text>
+                        {drink.location_name ? (
+                          <Text className="text-muted-foreground text-xs">{drink.location_name}</Text>
                         ) : null}
-                      </Text>
-                      {showAuthor && (
-                        <View className="flex-row items-center gap-1 mt-0.5">
-                          <Avatar
-                            uri={author.avatar_url}
-                            name={author.display_name ?? author.username}
-                            size={14}
-                          />
-                          <Text className="text-muted-foreground text-[11px]">
-                            {author.display_name ?? author.username}
-                          </Text>
-                        </View>
-                      )}
-                      {drink.location_name ? (
-                        <Text className="text-muted-foreground text-xs">{drink.location_name}</Text>
-                      ) : null}
-                      <Text className="text-muted-foreground text-xs">
-                        {formatDateTime(drink.logged_at)}
-                      </Text>
-                    </View>
-                    <Ionicons
-                      name="chevron-forward"
-                      size={16}
-                      color="hsl(var(--muted-foreground))"
-                    />
-                  </Pressable>
+                        <Text className="text-muted-foreground text-xs">
+                          {formatDateTime(drink.logged_at)}
+                        </Text>
+                      </View>
+                      <Ionicons
+                        name="chevron-forward"
+                        size={16}
+                        color="hsl(var(--muted-foreground))"
+                      />
+                    </Pressable>
+                    {isOwnDrink && (
+                      <Pressable
+                        onPress={() => handleRemoveDrink(drink)}
+                        hitSlop={8}
+                        className="p-1"
+                      >
+                        <Ionicons name="close-circle-outline" size={18} color="#6b7280" />
+                      </Pressable>
+                    )}
+                  </View>
                 );
               })}
             </View>
+
+            {/* Delete Night Out — hosts only, active sessions (ended sessions use nav bar trash) */}
+            {isHost && isActive && (
+              <Pressable
+                onPress={handleDeleteSession}
+                disabled={isDeleting}
+                className="flex-row items-center justify-center gap-2 border border-red-500/30 rounded-2xl py-3 mb-4"
+              >
+                {isDeleting ? (
+                  <ActivityIndicator size="small" color="#ef4444" />
+                ) : (
+                  <>
+                    <Ionicons name="trash-outline" size={15} color="#ef4444" />
+                    <Text className="text-red-500 text-sm font-semibold">Delete Night Out</Text>
+                  </>
+                )}
+              </Pressable>
+            )}
 
             {/* Host profile */}
             <Pressable

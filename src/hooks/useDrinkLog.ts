@@ -2,6 +2,43 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { deleteDrinkPhoto, uploadDrinkPhoto } from '@/lib/storage';
 import { supabase } from '@/lib/supabase';
 import { DrinkLog, LogDrinkFormData } from '@/types/models';
+import { useSessionStore } from '@/stores/sessionStore';
+import { useAuthStore } from '@/stores/authStore';
+import * as LiveActivityBridge from 'suds-live-activity-bridge';
+import { computeBAC, weightToLbs } from './useLiveActivity';
+
+function capitalise(s: string): string {
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+function updateLiveActivity(sessionId: string | null | undefined, drinkType: string, drinkName: string): void {
+  if (!sessionId) return;
+  const {
+    liveActivityId,
+    liveActivityDrinkCount,
+    liveActivityMemberCount,
+    activeSession,
+    setLiveActivityDrinkCount,
+    setLiveActivityLastDrinkName,
+  } = useSessionStore.getState();
+  if (!liveActivityId) return;
+
+  const newCount = liveActivityDrinkCount + 1;
+  // Use DB-authoritative started_at to stay consistent with the timer in useLiveActivity.ts
+  const elapsed = activeSession?.started_at
+    ? Math.floor((Date.now() - new Date(activeSession.started_at).getTime()) / 60_000)
+    : 0;
+  const { profile } = useAuthStore.getState();
+  const wLbs = weightToLbs(profile?.weight, profile?.weight_unit);
+  const bac = computeBAC(newCount, elapsed, wLbs);
+
+  setLiveActivityDrinkCount(newCount);
+  setLiveActivityLastDrinkName(drinkName);
+  LiveActivityBridge.updateSharedLastDrink(drinkType, drinkName);
+  LiveActivityBridge.updateActivity(liveActivityId, newCount, elapsed, drinkName, liveActivityMemberCount, bac).catch(
+    (e) => { console.warn('[LiveActivity] updateActivity failed:', e); },
+  );
+}
 
 export function useMyDrinkLogs(userId: string | undefined) {
   return useQuery({
@@ -70,11 +107,12 @@ export function useLogDrink() {
       if (error) throw error;
       return data;
     },
-    onSuccess: (_data, { userId }) => {
+    onSuccess: (_data, { userId, sessionId, formData }) => {
       queryClient.invalidateQueries({ queryKey: ['drinkLogs', userId] });
       queryClient.invalidateQueries({ queryKey: ['mapLogs', userId] });
       queryClient.invalidateQueries({ queryKey: ['feed', userId] });
       queryClient.invalidateQueries({ queryKey: ['userStats', userId] });
+      updateLiveActivity(sessionId, formData.drink_type, formData.drink_name || capitalise(formData.drink_type));
     },
   });
 }
@@ -185,11 +223,12 @@ export function useQuickLogDrink() {
       if (error) throw error;
       return data;
     },
-    onSuccess: (_data, { userId }) => {
+    onSuccess: (_data, { userId, sessionId, item }) => {
       queryClient.invalidateQueries({ queryKey: ['drinkLogs', userId] });
       queryClient.invalidateQueries({ queryKey: ['mapLogs', userId] });
       queryClient.invalidateQueries({ queryKey: ['feed', userId] });
       queryClient.invalidateQueries({ queryKey: ['userStats', userId] });
+      updateLiveActivity(sessionId, item.drink_type, item.drink_name || capitalise(item.drink_type));
     },
   });
 }
@@ -211,6 +250,27 @@ export function useDeleteDrinkLog() {
       queryClient.invalidateQueries({ queryKey: ['mapLogs', userId] });
       queryClient.invalidateQueries({ queryKey: ['feed', userId] });
       queryClient.invalidateQueries({ queryKey: ['userStats', userId] });
+    },
+  });
+}
+
+export function useRemoveDrinkFromSession() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, sessionId, userId }: { id: string; sessionId: string; userId: string }) => {
+      const { error } = await (supabase.from('drink_logs') as any)
+        .update({ session_id: null })
+        .eq('id', id);
+      if (error) throw error;
+      return { id, sessionId, userId };
+    },
+    onSuccess: (_data, { sessionId, userId, id }) => {
+      queryClient.invalidateQueries({ queryKey: ['sessionDrinks', sessionId] });
+      queryClient.invalidateQueries({ queryKey: ['sessionDetail', sessionId] });
+      queryClient.invalidateQueries({ queryKey: ['drinkLogs', userId] });
+      queryClient.invalidateQueries({ queryKey: ['feed', userId] });
+      queryClient.invalidateQueries({ queryKey: ['drinkDetail', id] });
     },
   });
 }

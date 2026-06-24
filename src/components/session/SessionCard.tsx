@@ -27,7 +27,7 @@ interface SessionCardProps {
   onQuickLog?: (item: FeedItem) => Promise<void>;
 }
 
-export function SessionCard({ group, currentUserId, isActive, onEnd, isEnding, onQuickLog }: SessionCardProps) {
+export const SessionCard = React.memo(function SessionCard({ group, currentUserId, isActive, onEnd, isEnding, onQuickLog }: SessionCardProps) {
   const router = useRouter();
   const { width } = useWindowDimensions();
   const imageHeight = Platform.OS === "web" && width >= 1024 ? 280 : 180;
@@ -369,4 +369,4 @@ export function SessionCard({ group, currentUserId, isActive, onEnd, isEnding, o
       )}
     </PressableCard>
   );
-}
+});

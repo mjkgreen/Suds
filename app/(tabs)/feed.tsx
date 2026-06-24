@@ -58,6 +58,27 @@ export default function FeedScreen() {
     if (hasNextPage && !isFetchingNextPage) fetchNextPage();
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
+  const renderItem = useCallback(({ item: entry }: { item: FeedEntry }) => {
+    if (entry.type === "session") {
+      const isActive = !!activeSession && entry.session_id === activeSession.id;
+      return (
+        <SessionCard
+          group={entry}
+          currentUserId={user?.id}
+          isActive={isActive}
+          onEnd={isActive ? () => endSession(activeSession!.id) : undefined}
+          isEnding={isActive ? isEnding : undefined}
+          onQuickLog={
+            isActive && user
+              ? (item) => quickLogDrink({ userId: user.id, item, sessionId: activeSession!.id })
+              : undefined
+          }
+        />
+      );
+    }
+    return <DrinkCard item={entry.item} currentUserId={user?.id} />;
+  }, [activeSession, user, endSession, isEnding, quickLogDrink]);
+
   async function handleStartSession() {
     if (!user) return;
     await startSession({ userId: user.id, title: sessionTitle.trim() || undefined });
@@ -100,26 +121,7 @@ export default function FeedScreen() {
           keyExtractor={(entry) =>
             entry.type === "session" ? `session-${entry.session_id}` : `drink-${entry.item.id}`
           }
-          renderItem={({ item: entry }) => {
-            if (entry.type === "session") {
-              const isActive = !!activeSession && entry.session_id === activeSession.id;
-              return (
-                <SessionCard
-                  group={entry}
-                  currentUserId={user?.id}
-                  isActive={isActive}
-                  onEnd={isActive ? () => endSession(activeSession!.id) : undefined}
-                  isEnding={isActive ? isEnding : undefined}
-                  onQuickLog={
-                    isActive && user
-                      ? (item) => quickLogDrink({ userId: user.id, item, sessionId: activeSession!.id })
-                      : undefined
-                  }
-                />
-              );
-            }
-            return <DrinkCard item={entry.item} currentUserId={user?.id} />;
-          }}
+          renderItem={renderItem}
           ListHeaderComponent={
             <View className="px-4 pt-0 mt-0 pb-3 gap-3">
               {!isDesktop && (

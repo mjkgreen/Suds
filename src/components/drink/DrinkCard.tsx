@@ -24,7 +24,7 @@ interface DrinkCardProps {
   onQuickLog?: () => Promise<void>;
 }
 
-export function DrinkCard({ item, currentUserId, onQuickLog }: DrinkCardProps) {
+export const DrinkCard = React.memo(function DrinkCard({ item, currentUserId, onQuickLog }: DrinkCardProps) {
   const router = useRouter();
   const { width } = useWindowDimensions();
   const drinkInfo = DRINK_TYPE_MAP[item.drink_type] ?? DRINK_TYPE_MAP["other"];
@@ -232,4 +232,4 @@ export function DrinkCard({ item, currentUserId, onQuickLog }: DrinkCardProps) {
       />
     </PressableCard>
   );
-}
+});
