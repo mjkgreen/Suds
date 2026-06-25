@@ -1,6 +1,9 @@
 {
   "expo": {
     "name": "Suds",
+    "autolinking": {
+      "searchPaths": ["./modules"]
+    },
     "slug": "suds",
     "version": "1.1.1",
     "orientation": "portrait",

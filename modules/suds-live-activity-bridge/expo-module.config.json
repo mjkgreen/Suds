@@ -2,6 +2,6 @@
   "platforms": ["apple"],
   "apple": {
     "modules": ["SudsLiveActivityBridgeModule"],
-    "podspecPath": "ios/SudsLiveActivityBridge.podspec"
+    "podspecPath": "SudsLiveActivityBridge.podspec"
   }
 }
