@@ -12,6 +12,11 @@
   "workspaces": [
     "modules/*"
   ],
+  "expo": {
+    "autolinking": {
+      "searchPaths": ["./modules"]
+    }
+  },
   "dependencies": {
     "@bacons/apple-targets": "^4.0.7",
     "@expo/metro-runtime": "~6.1.2",

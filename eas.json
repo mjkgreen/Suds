@@ -6,15 +6,12 @@
   "build": {
     "development": {
       "developmentClient": true,
-      "distribution": "internal",
-      "prebuildCommand": "bash scripts/prebuild.sh"
+      "distribution": "internal"
     },
     "preview": {
-      "distribution": "internal",
-      "prebuildCommand": "bash scripts/prebuild.sh"
+      "distribution": "internal"
     },
     "production": {
-      "prebuildCommand": "bash scripts/prebuild.sh",
       "autoIncrement": true,
       "env": {
         "EXPO_PUBLIC_SUPABASE_URL": "https://gbenibgytweskljxneup.supabase.co",
