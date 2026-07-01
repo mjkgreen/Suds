@@ -54,6 +54,7 @@
     },
     "plugins": [
       "./plugins/withModularHeaders",
+      "./plugins/withLiveActivityBridge",
       ["expo-router", { "origin": "https://drink-with-suds.com" }],
       "expo-location",
       [
