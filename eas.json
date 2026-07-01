@@ -7,14 +7,14 @@
     "development": {
       "developmentClient": true,
       "distribution": "internal",
-      "prebuildCommand": "expo prebuild --no-install && node scripts/patch-podfile.js"
+      "prebuildCommand": "bash scripts/prebuild.sh"
     },
     "preview": {
       "distribution": "internal",
-      "prebuildCommand": "expo prebuild --no-install && node scripts/patch-podfile.js"
+      "prebuildCommand": "bash scripts/prebuild.sh"
     },
     "production": {
-      "prebuildCommand": "expo prebuild --no-install && node scripts/patch-podfile.js",
+      "prebuildCommand": "bash scripts/prebuild.sh",
       "autoIncrement": true,
       "env": {
         "EXPO_PUBLIC_SUPABASE_URL": "https://gbenibgytweskljxneup.supabase.co",
