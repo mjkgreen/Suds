@@ -28,12 +28,13 @@ const withLiveActivityBridge = (config) => {
       const podfilePath = path.join(iosDir, 'Podfile');
       let contents = fs.readFileSync(podfilePath, 'utf8');
 
-      if (!contents.includes('suds-live-activity-bridge')) {
-        const searchPathArg = `{ searchPaths: [File.expand_path('../modules/suds-live-activity-bridge', __dir__)] }`;
-        if (contents.includes('use_expo_modules!')) {
+      if (!contents.includes('SudsLiveActivityBridge')) {
+        // Direct pod reference — works regardless of autolinking behaviour on EAS
+        const podLine = "  pod 'SudsLiveActivityBridge', :path => '../modules/suds-live-activity-bridge'";
+        if (contents.includes("target 'Suds' do")) {
           contents = contents.replace(
-            'use_expo_modules!',
-            `use_expo_modules!(${searchPathArg})`
+            "target 'Suds' do",
+            `target 'Suds' do\n${podLine}`
           );
         }
       }
