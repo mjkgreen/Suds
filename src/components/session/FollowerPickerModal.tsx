@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import React, { useMemo, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -24,6 +24,64 @@ interface FollowerPickerModalProps {
   currentInvites: SessionInvite[];
   currentMembers: SessionMember[];
 }
+
+interface FollowerRowProps {
+  item: Profile;
+  isMember: boolean;
+  isInvited: boolean;
+  isInFlight: boolean;
+  isSending: boolean;
+  onInvite: (profile: Profile) => void;
+}
+
+const FollowerRow = React.memo(function FollowerRow({
+  item,
+  isMember,
+  isInvited,
+  isInFlight,
+  isSending,
+  onInvite,
+}: FollowerRowProps) {
+  return (
+    <View className="flex-row items-center gap-3">
+      <Avatar uri={item.avatar_url} name={getDisplayName(item)} size={44} />
+      <View className="flex-1">
+        <Text className="text-foreground font-semibold text-sm">
+          {getDisplayName(item)}
+        </Text>
+        <Text className="text-muted-foreground text-xs">
+          @{getUsername(item)}
+        </Text>
+      </View>
+      {isMember ? (
+        <View className="px-3 py-1.5 rounded-full bg-muted">
+          <Text className="text-muted-foreground text-xs font-semibold">In session</Text>
+        </View>
+      ) : isInvited ? (
+        <View className="px-3 py-1.5 rounded-full border border-border">
+          <Text className="text-muted-foreground text-xs font-semibold">Invited</Text>
+        </View>
+      ) : (
+        <Pressable
+          onPress={() => onInvite(item)}
+          disabled={isInFlight || isSending}
+          className="flex-row items-center gap-1 bg-primary rounded-full px-3 py-1.5 active:opacity-70"
+        >
+          {isInFlight ? (
+            <ActivityIndicator size="small" color="#fff" />
+          ) : (
+            <>
+              <Ionicons name="paper-plane-outline" size={12} color="#fff" />
+              <Text className="text-white text-xs font-semibold">Invite</Text>
+            </>
+          )}
+        </Pressable>
+      )}
+    </View>
+  );
+});
+
+const FollowerSeparator = () => <View className="h-3" />;
 
 export function FollowerPickerModal({
   visible,
@@ -64,7 +122,7 @@ export function FollowerPickerModal({
     });
   }, [following, search]);
 
-  function handleInvite(profile: Profile) {
+  const handleInvite = useCallback((profile: Profile) => {
     setPendingIds((prev) => new Set(prev).add(profile.id));
     sendInvite(
       { sessionId, inviteeId: profile.id },
@@ -77,7 +135,18 @@ export function FollowerPickerModal({
           }),
       }
     );
-  }
+  }, [sessionId, sendInvite]);
+
+  const renderItem = useCallback(({ item }: { item: Profile }) => (
+    <FollowerRow
+      item={item}
+      isMember={memberIds.has(item.id)}
+      isInvited={invitedIds.has(item.id)}
+      isInFlight={pendingIds.has(item.id)}
+      isSending={isSending}
+      onInvite={handleInvite}
+    />
+  ), [memberIds, invitedIds, pendingIds, isSending, handleInvite]);
 
   return (
     <Modal
@@ -131,55 +200,8 @@ export function FollowerPickerModal({
                 {search ? "No results." : "You're not following anyone yet."}
               </Text>
             }
-            ItemSeparatorComponent={() => <View className="h-3" />}
-            renderItem={({ item }) => {
-              const isMember = memberIds.has(item.id);
-              const isInvited = invitedIds.has(item.id);
-              const isInFlight = pendingIds.has(item.id);
-
-              return (
-                <View className="flex-row items-center gap-3">
-                  <Avatar
-                    uri={item.avatar_url}
-                    name={getDisplayName(item)}
-                    size={44}
-                  />
-                  <View className="flex-1">
-                    <Text className="text-foreground font-semibold text-sm">
-                      {getDisplayName(item)}
-                    </Text>
-                    <Text className="text-muted-foreground text-xs">
-                      @{getUsername(item)}
-                    </Text>
-                  </View>
-
-                  {isMember ? (
-                    <View className="px-3 py-1.5 rounded-full bg-muted">
-                      <Text className="text-muted-foreground text-xs font-semibold">In session</Text>
-                    </View>
-                  ) : isInvited ? (
-                    <View className="px-3 py-1.5 rounded-full border border-border">
-                      <Text className="text-muted-foreground text-xs font-semibold">Invited</Text>
-                    </View>
-                  ) : (
-                    <Pressable
-                      onPress={() => handleInvite(item)}
-                      disabled={isInFlight || isSending}
-                      className="flex-row items-center gap-1 bg-primary rounded-full px-3 py-1.5 active:opacity-70"
-                    >
-                      {isInFlight ? (
-                        <ActivityIndicator size="small" color="#fff" />
-                      ) : (
-                        <>
-                          <Ionicons name="paper-plane-outline" size={12} color="#fff" />
-                          <Text className="text-white text-xs font-semibold">Invite</Text>
-                        </>
-                      )}
-                    </Pressable>
-                  )}
-                </View>
-              );
-            }}
+            ItemSeparatorComponent={FollowerSeparator}
+            renderItem={renderItem}
           />
         )}
       </View>

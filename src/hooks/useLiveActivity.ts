@@ -3,6 +3,8 @@ import { useAuthStore } from '@/stores/authStore';
 import { useSessionStore } from '@/stores/sessionStore';
 import { supabase } from '@/lib/supabase';
 import * as LiveActivityBridge from 'suds-live-activity-bridge';
+import { SessionMember } from '@/types/models';
+import { formatMemberNames } from '@/utils/profileHelpers';
 
 export interface SessionActivityState {
   sessionTitle: string;
@@ -28,8 +30,8 @@ export function computeBAC(drinkCount: number, elapsedMinutes: number, weightLbs
 }
 
 export function useLiveActivity() {
-  const { setLiveActivityId, setLiveActivityDrinkCount, setLiveActivityLastDrinkName, setLiveActivityMemberCount } =
-    useSessionStore();
+  const { setLiveActivityId, setLiveActivityDrinkCount, setLiveActivityLastDrinkName,
+          setLiveActivityMemberCount, setLiveActivityMemberNames } = useSessionStore();
 
   async function startActivity(state: SessionActivityState): Promise<void> {
     if (Platform.OS !== 'ios') return;
@@ -67,7 +69,7 @@ export function useLiveActivity() {
     console.warn('[LiveActivity] isSupported:', LiveActivityBridge.isSupported());
     let id: string | null = null;
     try {
-      id = await LiveActivityBridge.startActivity(state.sessionTitle, state.drinkCount, 1);
+      id = await LiveActivityBridge.startActivity(state.sessionTitle, state.drinkCount, 1, '');
     } catch (e) {
       console.warn('[LiveActivity] startActivity threw:', e);
       return;
@@ -79,13 +81,13 @@ export function useLiveActivity() {
     setLiveActivityDrinkCount(state.drinkCount);
     setLiveActivityLastDrinkName('');
     setLiveActivityMemberCount(1);
+    setLiveActivityMemberNames('');
 
     _timer = setInterval(() => {
       void (async () => {
         try {
           const {
             liveActivityId,
-            liveActivityDrinkCount,
             liveActivityLastDrinkName,
             activeSession: currentSession,
           } = useSessionStore.getState();
@@ -93,27 +95,42 @@ export function useLiveActivity() {
 
           const elapsed = Math.floor((Date.now() - _sessionStartMs) / 60_000);
 
+          // Query ground-truth counts from DB — picks up drinks logged via the widget +1
+          // intent, which bypass the JS mutation flow and never update the Zustand store.
+          let drinkCount = useSessionStore.getState().liveActivityDrinkCount;
           let memberCount = 1;
+          let memberNames = useSessionStore.getState().liveActivityMemberNames;
+
           if (currentSession?.id) {
-            const { count } = await supabase
-              .from('session_members')
-              .select('*', { count: 'exact', head: true })
-              .eq('session_id', currentSession.id);
-            memberCount = count ?? 1;
+            const currentUserId = useAuthStore.getState().session?.user?.id;
+            const [drinkRes, membersRes] = await Promise.all([
+              supabase.from('drink_logs').select('*', { count: 'exact', head: true }).eq('session_id', currentSession.id),
+              supabase.rpc('get_session_members_with_profiles', { p_session_id: currentSession.id }),
+            ]);
+            if (drinkRes.count !== null) {
+              drinkCount = drinkRes.count;
+              useSessionStore.getState().setLiveActivityDrinkCount(drinkCount);
+            }
+            const coMembers = ((membersRes.data ?? []) as SessionMember[])
+              .filter((m) => m.user_id !== currentUserId);
+            memberCount = coMembers.length + 1;
+            memberNames = formatMemberNames(coMembers);
+            useSessionStore.getState().setLiveActivityMemberNames(memberNames);
           }
           setLiveActivityMemberCount(memberCount);
 
           const { profile: currentProfile } = useAuthStore.getState();
           const wLbs = weightToLbs(currentProfile?.weight, currentProfile?.weight_unit);
-          const bac = computeBAC(liveActivityDrinkCount, elapsed, wLbs);
+          const bac = computeBAC(drinkCount, elapsed, wLbs);
 
           await LiveActivityBridge.updateActivity(
             liveActivityId,
-            liveActivityDrinkCount,
+            drinkCount,
             elapsed,
             liveActivityLastDrinkName,
             memberCount,
             bac,
+            memberNames,
           );
         } catch {
           // Silently ignore — timer will retry on the next tick
@@ -124,8 +141,8 @@ export function useLiveActivity() {
 
   async function updateActivity(state: Partial<SessionActivityState>): Promise<void> {
     if (Platform.OS !== 'ios') return;
-    const { liveActivityId, liveActivityDrinkCount, liveActivityLastDrinkName, liveActivityMemberCount } =
-      useSessionStore.getState();
+    const { liveActivityId, liveActivityDrinkCount, liveActivityLastDrinkName,
+            liveActivityMemberCount, liveActivityMemberNames } = useSessionStore.getState();
     if (!liveActivityId) return;
     const elapsed = _sessionStartMs ? Math.floor((Date.now() - _sessionStartMs) / 60_000) : 0;
     const count = state.drinkCount ?? liveActivityDrinkCount;
@@ -140,6 +157,7 @@ export function useLiveActivity() {
       liveActivityLastDrinkName,
       liveActivityMemberCount,
       bac,
+      liveActivityMemberNames,
     );
   }
 
@@ -160,6 +178,7 @@ export function useLiveActivity() {
     setLiveActivityDrinkCount(0);
     setLiveActivityLastDrinkName('');
     setLiveActivityMemberCount(1);
+    setLiveActivityMemberNames('');
   }
 
   return { startActivity, updateActivity, endActivity };

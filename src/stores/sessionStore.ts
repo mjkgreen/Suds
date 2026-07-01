@@ -12,6 +12,8 @@ interface SessionState {
   setLiveActivityLastDrinkName: (name: string) => void;
   liveActivityMemberCount: number;
   setLiveActivityMemberCount: (count: number) => void;
+  liveActivityMemberNames: string;
+  setLiveActivityMemberNames: (names: string) => void;
 }
 
 export const useSessionStore = create<SessionState>((set) => ({
@@ -25,4 +27,6 @@ export const useSessionStore = create<SessionState>((set) => ({
   setLiveActivityLastDrinkName: (liveActivityLastDrinkName) => set({ liveActivityLastDrinkName }),
   liveActivityMemberCount: 1,
   setLiveActivityMemberCount: (liveActivityMemberCount) => set({ liveActivityMemberCount }),
+  liveActivityMemberNames: '',
+  setLiveActivityMemberNames: (liveActivityMemberNames) => set({ liveActivityMemberNames }),
 }));

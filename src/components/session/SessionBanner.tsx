@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import React, { useState, useEffect, useMemo } from "react";
 import { ActivityIndicator, Pressable, Text, View } from "react-native";
+import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useActiveSession, useEndSession, useLeaveSession, useSessionDrinks } from "@/hooks/useSession";
 import { useSessionMembers } from "@/hooks/useSessionMembers";
@@ -15,6 +16,7 @@ import { useSessionInvites } from "@/hooks/useSessionMembers";
 
 export function SessionBanner() {
   const { top } = useSafeAreaInsets();
+  const router = useRouter();
   const activeSession = useActiveSession();
   const { user } = useAuthStore();
   const { mutateAsync: endSession, isPending: isEnding } = useEndSession();
@@ -96,7 +98,8 @@ export function SessionBanner() {
 
   return (
     <>
-      <View
+      <Pressable
+        onPress={() => router.push(`/session/${activeSession.id}`)}
         className={`${bannerBgColor} px-4 py-2.5`}
         style={{ paddingTop: top + 4, zIndex: 1 }}
       >
@@ -189,7 +192,7 @@ export function SessionBanner() {
             )).slice(0, 2)}
           </View>
         )}
-      </View>
+      </Pressable>
 
       {isHost && (
         <FollowerPickerModal

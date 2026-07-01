@@ -105,6 +105,21 @@ export default function ProfileScreen() {
     if (hasNextPage && !isFetchingNextPage) fetchNextPage();
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
+  const renderActivityItem = useCallback(({ item: entry }: { item: FeedEntry }) => {
+    if (entry.type === "session") {
+      const isActive = !!activeSession && entry.session_id === activeSession.id;
+      return (
+        <SessionCard
+          group={entry}
+          isActive={isActive}
+          onEnd={isActive ? () => endSession(activeSession!.id) : undefined}
+          isEnding={isActive ? isEnding : undefined}
+        />
+      );
+    }
+    return <DrinkCard item={entry.item} />;
+  }, [activeSession, endSession, isEnding]);
+
   const onRefresh = useCallback(() => {
     refetchProfile();
     refetchFeed();
@@ -355,20 +370,7 @@ export default function ProfileScreen() {
                 keyExtractor={(entry) =>
                   entry.type === "session" ? `session-${entry.session_id}` : `drink-${entry.item.id}`
                 }
-                renderItem={({ item: entry }) => {
-                  if (entry.type === "session") {
-                    const isActive = !!activeSession && entry.session_id === activeSession.id;
-                    return (
-                      <SessionCard
-                        group={entry}
-                        isActive={isActive}
-                        onEnd={isActive ? () => endSession(activeSession!.id) : undefined}
-                        isEnding={isActive ? isEnding : undefined}
-                      />
-                    );
-                  }
-                  return <DrinkCard item={entry.item} />;
-                }}
+                renderItem={renderActivityItem}
                 refreshControl={<RefreshControl refreshing={false} onRefresh={onRefresh} tintColor="#f59e0b" />}
                 ListHeaderComponent={
                   <View className="px-4 pt-4 pb-2">
@@ -597,20 +599,7 @@ export default function ProfileScreen() {
           keyExtractor={(entry) =>
             entry.type === "session" ? `session-${entry.session_id}` : `drink-${entry.item.id}`
           }
-          renderItem={({ item: entry }) => {
-            if (entry.type === "session") {
-              const isActive = !!activeSession && entry.session_id === activeSession.id;
-              return (
-                <SessionCard
-                  group={entry}
-                  isActive={isActive}
-                  onEnd={isActive ? () => endSession(activeSession!.id) : undefined}
-                  isEnding={isActive ? isEnding : undefined}
-                />
-              );
-            }
-            return <DrinkCard item={entry.item} />;
-          }}
+          renderItem={renderActivityItem}
           refreshControl={<RefreshControl refreshing={false} onRefresh={onRefresh} tintColor="#f59e0b" />}
           ListEmptyComponent={
             <View className="px-6 py-10 items-center">

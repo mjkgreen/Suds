@@ -15,7 +15,7 @@ import { LikersModal } from "@/components/social/LikersModal";
 import { DRINK_TYPE_MAP } from "@/lib/constants";
 import { DrinkType, FeedItem, SessionFeedGroup } from "@/types/models";
 import { formatDateTime, formatDuration } from "@/utils/dateHelpers";
-import { getDisplayName, getUsername } from "@/utils/profileHelpers";
+import { formatMemberNames, getDisplayName, getUsername } from "@/utils/profileHelpers";
 import { findBadgeById, TIER_COLORS } from "@/utils/badgeHelpers";
 
 interface SessionCardProps {
@@ -189,9 +189,7 @@ export const SessionCard = React.memo(function SessionCard({ group, currentUserI
             <Text className="text-muted-foreground text-xs">+{coMembers.length - 4}</Text>
           )}
           <Text className="text-muted-foreground text-xs" numberOfLines={1}>
-            {coMembers.length === 1
-              ? (coMembers[0].display_name ?? coMembers[0].username)
-              : `${coMembers.length} others`}
+            {formatMemberNames(coMembers)}
           </Text>
         </View>
       )}

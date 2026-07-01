@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React from 'react';
+import React, { useCallback } from 'react';
 import { ActivityIndicator, FlatList, Modal, Pressable, Text, View } from 'react-native';
 import { Avatar } from '@/components/common/Avatar';
 import { useLikers } from '@/hooks/useLikers';
@@ -41,18 +41,7 @@ export function LikersModal({ drinkLogId, visible, onClose, currentUserId }: Lik
             <ActivityIndicator color="#f59e0b" />
           </View>
         ) : (
-          <FlatList
-            data={likers ?? []}
-            keyExtractor={(p) => p.id}
-            contentContainerStyle={{ padding: 16 }}
-            ListEmptyComponent={
-              <Text className="text-muted-foreground text-sm text-center mt-8">No likes yet.</Text>
-            }
-            renderItem={({ item }) => (
-              <LikerRow profile={item} currentUserId={currentUserId} onClose={onClose} />
-            )}
-            ItemSeparatorComponent={() => <View className="h-4" />}
-          />
+          <LikersList likers={likers ?? []} currentUserId={currentUserId} onClose={onClose} />
         )}
       </View>
     </Modal>
@@ -65,7 +54,39 @@ interface LikerRowProps {
   onClose: () => void;
 }
 
-function LikerRow({ profile, currentUserId, onClose }: LikerRowProps) {
+const LikerSeparator = () => <View className="h-4" />;
+
+function LikersList({
+  likers,
+  currentUserId,
+  onClose,
+}: {
+  likers: Profile[];
+  currentUserId: string | undefined;
+  onClose: () => void;
+}) {
+  const renderItem = useCallback(
+    ({ item }: { item: Profile }) => (
+      <LikerRow profile={item} currentUserId={currentUserId} onClose={onClose} />
+    ),
+    [currentUserId, onClose]
+  );
+
+  return (
+    <FlatList
+      data={likers}
+      keyExtractor={(p) => p.id}
+      contentContainerStyle={{ padding: 16 }}
+      ListEmptyComponent={
+        <Text className="text-muted-foreground text-sm text-center mt-8">No likes yet.</Text>
+      }
+      renderItem={renderItem}
+      ItemSeparatorComponent={LikerSeparator}
+    />
+  );
+}
+
+const LikerRow = React.memo(function LikerRow({ profile, currentUserId, onClose }: LikerRowProps) {
   const router = useRouter();
   const isOwn = profile.id === currentUserId;
   const { data: isFollowing } = useIsFollowing(currentUserId, profile.id);
@@ -104,4 +125,4 @@ function LikerRow({ profile, currentUserId, onClose }: LikerRowProps) {
       )}
     </View>
   );
-}
+});

@@ -21,19 +21,17 @@ struct SudsLiveActivityWidget: Widget {
         } dynamicIsland: { context in
             DynamicIsland {
                 DynamicIslandExpandedRegion(.leading) {
-                    VStack(alignment: .leading, spacing: 2) {
+                    HStack(spacing: 6) {
+                        Image("SudsLogo")
+                            .resizable().scaledToFit()
+                            .frame(width: 22, height: 22)
+                            .clipShape(RoundedRectangle(cornerRadius: 5))
                         Label(
                             "\(context.state.drinkCount)",
                             systemImage: "mug.fill"
                         )
                         .font(.title2.bold())
                         .foregroundStyle(.orange)
-                        if !context.state.lastDrinkName.isEmpty {
-                            Text(context.state.lastDrinkName)
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
-                                .lineLimit(1)
-                        }
                     }
                 }
                 DynamicIslandExpandedRegion(.trailing) {
@@ -44,10 +42,11 @@ struct SudsLiveActivityWidget: Widget {
                         )
                         .font(.caption.bold())
                         .foregroundStyle(.secondary)
-                        if context.state.memberCount > 1 {
-                            Text("\(context.state.memberCount) people")
+                        if !context.state.memberNames.isEmpty {
+                            Text("w/ \(context.state.memberNames)")
                                 .font(.caption2)
                                 .foregroundStyle(.secondary)
+                                .lineLimit(1)
                         }
                     }
                 }
@@ -57,14 +56,19 @@ struct SudsLiveActivityWidget: Widget {
                         .lineLimit(1)
                 }
                 DynamicIslandExpandedRegion(.bottom) {
-                    HStack {
+                    HStack(spacing: 12) {
+                        if let pace = paceString(context.state.drinkCount, context.state.elapsedMinutes) {
+                            Text(pace)
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
                         if context.state.bacEstimate > 0 {
                             Text("~\(String(format: "%.3f", context.state.bacEstimate))%")
                                 .font(.caption2.bold())
                                 .foregroundStyle(bacColor(context.state.bacEstimate))
                         }
                         Spacer()
-                        PlusOneButton()
+                        PlusOneButton(lastDrinkName: context.state.lastDrinkName)
                     }
                 }
             } compactLeading: {
@@ -89,64 +93,90 @@ struct LockScreenView: View {
     let context: ActivityViewContext<SudsSessionAttributes>
 
     var body: some View {
-        HStack(spacing: 12) {
-            // Left: session info + metadata
+        HStack(spacing: 10) {
+            Image("SudsLogo")
+                .resizable().scaledToFit()
+                .frame(width: 28, height: 28)
+                .clipShape(RoundedRectangle(cornerRadius: 6))
+
             VStack(alignment: .leading, spacing: 4) {
                 Text(context.attributes.sessionTitle)
                     .font(.headline)
                     .lineLimit(1)
-                HStack(spacing: 8) {
-                    Label(elapsedString(context.state.elapsedMinutes), systemImage: "clock")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    if context.state.memberCount > 1 {
-                        Label("\(context.state.memberCount)", systemImage: "person.2.fill")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-                if let pace = paceString(context.state.drinkCount, context.state.elapsedMinutes) {
-                    Text(pace)
+                if !context.state.memberNames.isEmpty {
+                    Text("with \(context.state.memberNames)")
                         .font(.caption2)
                         .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+                HStack(spacing: 12) {
+                    StatCell(
+                        value: "\(context.state.drinkCount)",
+                        label: "drinks",
+                        color: .orange
+                    )
+                    StatCell(
+                        value: elapsedString(context.state.elapsedMinutes),
+                        label: "elapsed"
+                    )
+                    if let pace = paceString(context.state.drinkCount, context.state.elapsedMinutes) {
+                        StatCell(value: pace, label: "/hr")
+                    }
+                    if context.state.bacEstimate > 0 {
+                        StatCell(
+                            value: "~\(String(format: "%.3f", context.state.bacEstimate))%",
+                            label: "bac",
+                            color: bacColor(context.state.bacEstimate)
+                        )
+                    }
                 }
             }
 
             Spacer()
 
-            // Center: drink count + last drink name + BAC
-            VStack(spacing: 2) {
-                Text("\(context.state.drinkCount)")
-                    .font(.title.bold())
-                    .foregroundStyle(.orange)
-                Text(context.state.lastDrinkName.isEmpty ? "drinks" : context.state.lastDrinkName)
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-                if context.state.bacEstimate > 0 {
-                    Text("~\(String(format: "%.3f", context.state.bacEstimate))%")
-                        .font(.caption2.bold())
-                        .foregroundStyle(bacColor(context.state.bacEstimate))
-                }
-            }
-
-            // Right: +1 button
-            PlusOneButton()
+            PlusOneButton(lastDrinkName: context.state.lastDrinkName)
         }
         .padding()
+    }
+}
+
+// MARK: - Stat Cell
+
+struct StatCell: View {
+    let value: String
+    let label: String
+    var color: Color = .primary
+
+    var body: some View {
+        VStack(spacing: 0) {
+            Text(value)
+                .font(.title3.bold())
+                .foregroundStyle(color)
+            Text(label)
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+        }
     }
 }
 
 // MARK: - +1 Button
 
 struct PlusOneButton: View {
+    let lastDrinkName: String
+
     var body: some View {
         Group {
             if #available(iOS 17.0, *) {
                 Button(intent: QuickLogDrinkIntent()) {
-                    Image(systemName: "plus.circle.fill")
-                        .font(.title2)
-                        .foregroundStyle(.orange)
+                    VStack(spacing: 2) {
+                        Image(systemName: "plus.circle.fill")
+                            .font(.title3)
+                            .foregroundStyle(.orange)
+                        Text(lastDrinkName.isEmpty ? "Drink" : lastDrinkName)
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                    }
                 }
                 .buttonStyle(.plain)
             } else {

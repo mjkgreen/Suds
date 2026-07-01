@@ -27,3 +27,17 @@ export function getUsername(profile: Pick<Profile, 'username'>): string {
   }
   return 'unknown';
 }
+
+/**
+ * Formats an array of members into "John, Ben +2" style.
+ * Shows up to maxShown names, then "+N" for the rest.
+ */
+export function formatMemberNames(
+  members: Array<{ display_name?: string | null; username?: string }>,
+  maxShown = 2
+): string {
+  if (members.length === 0) return '';
+  const names = members.map(m => getDisplayName(m));
+  if (names.length <= maxShown) return names.join(', ');
+  return `${names.slice(0, maxShown).join(', ')} +${names.length - maxShown}`;
+}

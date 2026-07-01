@@ -42,7 +42,7 @@ import {
   formatTime,
   relativeTime,
 } from "@/utils/dateHelpers";
-import { getDisplayName, getUsername } from "@/utils/profileHelpers";
+import { formatMemberNames, getDisplayName, getUsername } from "@/utils/profileHelpers";
 
 export default function SessionDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -308,6 +308,11 @@ export default function SessionDetailScreen() {
                 {formatTime(session.started_at)}
                 {session.ended_at ? ` – ${formatTime(session.ended_at)}` : " · ongoing"}
               </Text>
+              {members && members.length > 1 && (
+                <Text className="text-sm text-muted-foreground mt-0.5">
+                  with {formatMemberNames(members.filter((m) => m.user_id !== user?.id))}
+                </Text>
+              )}
             </View>
 
             {/* Members row (multi-participant) */}

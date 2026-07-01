@@ -67,6 +67,13 @@ export default function UserProfileScreen() {
     if (hasNextPage && !isFetchingNextPage) fetchNextPage();
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
+  const renderItem = useCallback(({ item: entry }: { item: FeedEntry }) => {
+    if (entry.type === 'session') {
+      return <SessionCard group={entry} />;
+    }
+    return <DrinkCard item={entry.item} />;
+  }, []);
+
   const { data: isFollowing } = useIsFollowing(currentUser?.id, id);
   const { follow, unfollow } = useFollow(currentUser?.id);
   const { colorScheme } = useColorScheme();
@@ -187,12 +194,7 @@ export default function UserProfileScreen() {
         keyExtractor={(entry) =>
           entry.type === 'session' ? `session-${entry.session_id}` : `drink-${entry.item.id}`
         }
-        renderItem={({ item: entry }) => {
-          if (entry.type === 'session') {
-            return <SessionCard group={entry} />;
-          }
-          return <DrinkCard item={entry.item} />;
-        }}
+        renderItem={renderItem}
         ListHeaderComponent={<ProfileHeader />}
         ListEmptyComponent={
           <View className="py-16 items-center">

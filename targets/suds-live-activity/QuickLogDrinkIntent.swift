@@ -72,7 +72,8 @@ struct QuickLogDrinkIntent: AppIntent {
                 elapsedMinutes: elapsed,
                 lastDrinkName: lastDrinkName,
                 memberCount: s.memberCount,
-                bacEstimate: newBAC
+                bacEstimate: newBAC,
+                memberNames: s.memberNames
             ))
         }
 

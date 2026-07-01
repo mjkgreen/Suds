@@ -17,6 +17,7 @@ function updateLiveActivity(sessionId: string | null | undefined, drinkType: str
     liveActivityId,
     liveActivityDrinkCount,
     liveActivityMemberCount,
+    liveActivityMemberNames,
     activeSession,
     setLiveActivityDrinkCount,
     setLiveActivityLastDrinkName,
@@ -35,7 +36,7 @@ function updateLiveActivity(sessionId: string | null | undefined, drinkType: str
   setLiveActivityDrinkCount(newCount);
   setLiveActivityLastDrinkName(drinkName);
   LiveActivityBridge.updateSharedLastDrink(drinkType, drinkName);
-  LiveActivityBridge.updateActivity(liveActivityId, newCount, elapsed, drinkName, liveActivityMemberCount, bac).catch(
+  LiveActivityBridge.updateActivity(liveActivityId, newCount, elapsed, drinkName, liveActivityMemberCount, bac, liveActivityMemberNames).catch(
     (e) => { console.warn('[LiveActivity] updateActivity failed:', e); },
   );
 }

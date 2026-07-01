@@ -29,7 +29,7 @@ public class SudsLiveActivityBridgeModule: Module {
       }
     }
 
-    AsyncFunction("startActivity") { (sessionTitle: String, drinkCount: Int, memberCount: Int) throws -> String? in
+    AsyncFunction("startActivity") { (sessionTitle: String, drinkCount: Int, memberCount: Int, memberNames: String) throws -> String? in
       guard #available(iOS 16.1, *) else { return nil }
       let attrs = SudsSessionAttributes(sessionTitle: sessionTitle)
       let state = SudsSessionAttributes.ContentState(
@@ -37,7 +37,8 @@ public class SudsLiveActivityBridgeModule: Module {
         elapsedMinutes: 0,
         lastDrinkName: "",
         memberCount: memberCount,
-        bacEstimate: 0
+        bacEstimate: 0,
+        memberNames: memberNames
       )
       let activity = try Activity<SudsSessionAttributes>.request(
         attributes: attrs,
@@ -49,14 +50,16 @@ public class SudsLiveActivityBridgeModule: Module {
 
     // Awaited directly so the JS promise resolves only after ActivityKit commits the update.
     AsyncFunction("updateActivity") { (activityId: String, drinkCount: Int, elapsedMinutes: Int,
-                                        lastDrinkName: String, memberCount: Int, bacEstimate: Double) async in
+                                        lastDrinkName: String, memberCount: Int, bacEstimate: Double,
+                                        memberNames: String) async in
       guard #available(iOS 16.1, *) else { return }
       let state = SudsSessionAttributes.ContentState(
         drinkCount: drinkCount,
         elapsedMinutes: elapsedMinutes,
         lastDrinkName: lastDrinkName,
         memberCount: memberCount,
-        bacEstimate: bacEstimate
+        bacEstimate: bacEstimate,
+        memberNames: memberNames
       )
       for activity in Activity<SudsSessionAttributes>.activities where activity.id == activityId {
         await activity.update(using: state)

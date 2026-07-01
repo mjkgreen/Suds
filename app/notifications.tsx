@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useColorScheme } from "nativewind";
-import React, { useEffect, useMemo } from "react";
+import React, { useCallback, useEffect, useMemo } from "react";
 import { ActivityIndicator, FlatList, Pressable, RefreshControl, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
@@ -45,22 +45,38 @@ function useActorProfiles(actorIds: string[]) {
   });
 }
 
-function NotificationRow({
+const NotificationSeparator = () => <View className="h-px bg-border mx-4" />;
+
+const NotificationRow = React.memo(function NotificationRow({
   notification,
   actorProfile,
-  onPress,
-  isDark,
 }: {
   notification: InAppNotification;
   actorProfile?: ActorProfile;
-  onPress: () => void;
-  isDark: boolean;
 }) {
+  const router = useRouter();
+  const { colorScheme } = useColorScheme();
+  const isDark = colorScheme === "dark";
   const avatarName = actorProfile?.display_name ?? actorProfile?.username ?? notification.actor_name ?? "?";
+
+  function handlePress() {
+    switch (notification.type) {
+      case "like":
+      case "comment":
+        if (notification.context.drink_log_id) router.push(`/drink/${notification.context.drink_log_id}` as never);
+        break;
+      case "follow":
+        if (notification.actor_id) router.push(`/user/${notification.actor_id}` as never);
+        break;
+      case "session_invite":
+        if (notification.context.invite_token) router.push(`/session/join/${notification.context.invite_token}` as never);
+        break;
+    }
+  }
 
   return (
     <Pressable
-      onPress={onPress}
+      onPress={handlePress}
       className={`flex-row items-center px-4 py-3 gap-3 ${notification.read ? "" : isDark ? "bg-amber-950/30" : "bg-amber-50"}`}
     >
       <Avatar uri={actorProfile?.avatar_url ?? null} name={avatarName} size={44} />
@@ -77,7 +93,7 @@ function NotificationRow({
       )}
     </Pressable>
   );
-}
+});
 
 export default function NotificationsScreen() {
   const router = useRouter();
@@ -96,20 +112,12 @@ export default function NotificationsScreen() {
   );
   const { data: actorProfiles = {} } = useActorProfiles(actorIds);
 
-  function handlePress(n: InAppNotification) {
-    switch (n.type) {
-      case "like":
-      case "comment":
-        if (n.context.drink_log_id) router.push(`/drink/${n.context.drink_log_id}` as never);
-        break;
-      case "follow":
-        if (n.actor_id) router.push(`/user/${n.actor_id}` as never);
-        break;
-      case "session_invite":
-        if (n.context.invite_token) router.push(`/session/join/${n.context.invite_token}` as never);
-        break;
-    }
-  }
+  const renderItem = useCallback(({ item }: { item: InAppNotification }) => (
+    <NotificationRow
+      notification={item}
+      actorProfile={item.actor_id ? actorProfiles[item.actor_id] : undefined}
+    />
+  ), [actorProfiles]);
 
   const header = (
     <View className={`flex-row items-center px-2 py-3 border-b ${isDark ? "bg-gray-900 border-gray-800" : "bg-white border-gray-100"}`}>
@@ -139,15 +147,8 @@ export default function NotificationsScreen() {
       <FlatList
         data={notifications ?? []}
         keyExtractor={(n) => n.id}
-        renderItem={({ item }) => (
-          <NotificationRow
-            notification={item}
-            actorProfile={item.actor_id ? actorProfiles[item.actor_id] : undefined}
-            onPress={() => handlePress(item)}
-            isDark={isDark}
-          />
-        )}
-        ItemSeparatorComponent={() => <View className="h-px bg-border mx-4" />}
+        renderItem={renderItem}
+        ItemSeparatorComponent={NotificationSeparator}
         ListEmptyComponent={
           <View className="flex-1 items-center justify-center py-20">
             <Ionicons name="notifications-outline" size={48} color={isDark ? "#4b5563" : "#9ca3af"} />

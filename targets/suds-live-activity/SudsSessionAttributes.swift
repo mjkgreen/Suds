@@ -10,5 +10,6 @@ struct SudsSessionAttributes: ActivityAttributes {
         var lastDrinkName: String
         var memberCount: Int
         var bacEstimate: Double
+        var memberNames: String
     }
 }

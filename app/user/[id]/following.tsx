@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React from 'react';
+import React, { useCallback } from 'react';
 import { ActivityIndicator, FlatList, Pressable, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Avatar } from '@/components/common/Avatar';
@@ -9,6 +9,22 @@ import { useColorScheme } from 'nativewind';
 import { Profile } from '@/types/models';
 import { getDisplayName, getUsername } from '@/utils/profileHelpers';
 
+const FollowingRow = React.memo(function FollowingRow({ item }: { item: Profile }) {
+  const router = useRouter();
+  return (
+    <Pressable
+      className="flex-row items-center px-6 py-4 border-b border-border bg-background active:bg-accent"
+      onPress={() => router.push(`/user/${item.id}`)}
+    >
+      <Avatar uri={item.avatar_url} name={getDisplayName(item)} size={48} />
+      <View className="flex-1 ml-4 justify-center">
+        <Text className="text-foreground font-bold text-base">{getDisplayName(item)}</Text>
+        <Text className="text-muted-foreground text-sm">@{getUsername(item)}</Text>
+      </View>
+    </Pressable>
+  );
+});
+
 export default function FollowingScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
@@ -16,6 +32,10 @@ export default function FollowingScreen() {
   const isDark = colorScheme === 'dark';
 
   const { data: following, isLoading } = useFollowing(id);
+
+  const renderItem = useCallback(({ item }: { item: Profile }) => (
+    <FollowingRow item={item} />
+  ), []);
 
   if (isLoading) {
     return (
@@ -36,18 +56,7 @@ export default function FollowingScreen() {
       <FlatList
         data={following as Profile[] ?? []}
         keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <Pressable
-            className="flex-row items-center px-6 py-4 border-b border-border bg-background active:bg-accent"
-            onPress={() => router.push(`/user/${item.id}`)}
-          >
-            <Avatar uri={item.avatar_url} name={getDisplayName(item)} size={48} />
-            <View className="flex-1 ml-4 justify-center">
-              <Text className="text-foreground font-bold text-base">{getDisplayName(item)}</Text>
-              <Text className="text-muted-foreground text-sm">@{getUsername(item)}</Text>
-            </View>
-          </Pressable>
-        )}
+        renderItem={renderItem}
         ListEmptyComponent={
           <View className="py-16 items-center flex-1 justify-center">
             <Text className="text-muted-foreground text-base">Not following anyone yet.</Text>

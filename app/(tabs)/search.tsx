@@ -1,6 +1,6 @@
 import { useRouter } from "expo-router";
 import Head from "expo-router/head";
-import React, { useState } from "react";
+import React, { useCallback, useState } from "react";
 import { ActivityIndicator, FlatList, Pressable, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
@@ -14,7 +14,7 @@ import { Profile } from "@/types/models";
 import { SEARCH_DEBOUNCE_MS } from "@/lib/constants";
 import { useDebounce } from "@/hooks/useDebounce";
 
-function UserRow({ profile, currentUserId }: { profile: Profile; currentUserId: string }) {
+const UserRow = React.memo(function UserRow({ profile, currentUserId }: { profile: Profile; currentUserId: string }) {
   const router = useRouter();
   const { data: isFollowing } = useIsFollowing(currentUserId, profile.id);
   const { follow, unfollow } = useFollow(currentUserId);
@@ -47,7 +47,7 @@ function UserRow({ profile, currentUserId }: { profile: Profile; currentUserId: 
       )}
     </Pressable>
   );
-}
+});
 
 export default function SearchScreen() {
   const { user } = useAuthStore();
@@ -55,6 +55,11 @@ export default function SearchScreen() {
   const topEdges = activeSession ? [] : ["top" as const];
   const [query, setQuery] = useState("");
   const debouncedQuery = useDebounce(query, SEARCH_DEBOUNCE_MS);
+
+  const renderItem = useCallback(
+    ({ item }: { item: Profile }) => <UserRow profile={item} currentUserId={user?.id ?? ""} />,
+    [user?.id]
+  );
 
   const { data: results, isLoading } = useQuery({
     queryKey: ["searchUsers", debouncedQuery],
@@ -102,7 +107,7 @@ export default function SearchScreen() {
           <FlatList
             data={results ?? []}
             keyExtractor={(item) => item.id}
-            renderItem={({ item }) => <UserRow profile={item} currentUserId={user?.id ?? ""} />}
+            renderItem={renderItem}
             ListEmptyComponent={
               query.length > 1 ? (
                 <View className="py-16 items-center">
