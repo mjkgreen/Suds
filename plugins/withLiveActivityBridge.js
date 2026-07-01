@@ -42,11 +42,11 @@ const withLiveActivityBridge = (config) => {
       // 2. Inject patch code — merge into existing post_install if present,
       //    otherwise append a new block. CocoaPods only allows one post_install.
       if (!contents.includes(PATCH_MARKER)) {
-        const existingHook = /^post_install do \|installer\|/m.test(contents);
-        if (existingHook) {
-          // Insert our code right after the opening line of the existing hook
+        const hookMatch = /^(post_install\s+do\s+\|\w+\|)/m.exec(contents);
+        if (hookMatch) {
+          // Merge into the existing hook — CocoaPods only allows one post_install block
           contents = contents.replace(
-            /^(post_install do \|installer\|)/m,
+            /^(post_install\s+do\s+\|\w+\|)/m,
             `$1${PATCH_RUBY}`
           );
         } else {
