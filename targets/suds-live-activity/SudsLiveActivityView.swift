@@ -21,20 +21,12 @@ struct SudsLiveActivityWidget: Widget {
         } dynamicIsland: { context in
             DynamicIsland {
                 DynamicIslandExpandedRegion(.leading) {
-                    HStack(spacing: 6) {
-                        Image("SudsLogo")
-                            .resizable()
-                            .renderingMode(.original)
-                            .scaledToFit()
-                            .frame(width: 22, height: 22)
-                            .clipShape(RoundedRectangle(cornerRadius: 5))
-                        Label(
-                            "\(context.state.drinkCount)",
-                            systemImage: "mug.fill"
-                        )
-                        .font(.title2.bold())
-                        .foregroundStyle(.orange)
-                    }
+                    Label(
+                        "\(context.state.drinkCount)",
+                        systemImage: "mug.fill"
+                    )
+                    .font(.title2.bold())
+                    .foregroundStyle(.orange)
                 }
                 DynamicIslandExpandedRegion(.trailing) {
                     VStack(alignment: .trailing, spacing: 2) {
@@ -98,12 +90,14 @@ struct LockScreenView: View {
         VStack(alignment: .leading, spacing: 8) {
             // Row 1: logo + session title + +1 button
             HStack(spacing: 8) {
-                Image("SudsLogo")
-                    .resizable()
-                    .renderingMode(.original)
-                    .scaledToFit()
-                    .frame(width: 44, height: 44)
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                ZStack {
+                    Color.orange
+                    Image(systemName: "mug.fill")
+                        .font(.system(size: 22, weight: .semibold))
+                        .foregroundStyle(.white)
+                }
+                .frame(width: 44, height: 44)
+                .clipShape(RoundedRectangle(cornerRadius: 10))
 
                 VStack(alignment: .leading, spacing: 1) {
                     Text(context.attributes.sessionTitle)
@@ -160,10 +154,10 @@ struct StatCell: View {
     var body: some View {
         VStack(spacing: 0) {
             Text(value)
-                .font(.subheadline.bold())
+                .font(.callout.bold())
                 .foregroundStyle(color)
             Text(label)
-                .font(.caption2)
+                .font(.caption)
                 .foregroundStyle(.secondary)
         }
     }
