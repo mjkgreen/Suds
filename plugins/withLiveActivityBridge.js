@@ -19,8 +19,8 @@ const PATCH_SCRIPT = [
 ].join('\n');
 
 const withLiveActivityBridge = (config) => {
-  // 1. Modify use_expo_modules! to pass our module as a searchPath.
-  //    Also write the ExpoModulesProvider patch script to ios/ for the build phase.
+  // 1. Add pod directly to the Podfile target block and write the ExpoModulesProvider
+  //    patch script to ios/ so the build phase can call it.
   config = withDangerousMod(config, [
     'ios',
     async (modConfig) => {
@@ -79,7 +79,7 @@ const withLiveActivityBridge = (config) => {
       targetUuid,
       {
         shellPath: '/bin/bash',
-        // Xcode expands $(SRCROOT) to the ios/ directory at build time
+        // $SRCROOT is an env var Xcode sets to the ios/ dir when running build phases
         shellScript: '"$SRCROOT/patch-expo-modules-provider.sh"',
         inputPaths: [],
         outputPaths: [],

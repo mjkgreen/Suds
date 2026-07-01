@@ -4,7 +4,7 @@ Pod::Spec.new do |s|
   s.summary        = 'ActivityKit bridge for Suds Live Activities'
   s.author         = ''
   s.homepage       = 'https://docs.expo.dev/modules/'
-  s.platforms      = { :ios => '16.1' }
+  s.platforms      = { :ios => '15.1' }
   s.source         = { git: '' }
   s.static_framework = true
 
