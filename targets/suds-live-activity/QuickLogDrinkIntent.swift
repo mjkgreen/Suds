@@ -23,13 +23,42 @@ struct QuickLogDrinkIntent: AppIntent {
               let lastDrinkName = d.string(forKey: "lastDrinkName"), !lastDrinkName.isEmpty
         else { return .result() }
 
+        // Optimistically update the Live Activity immediately so the widget
+        // reflects the tap before any network round-trips complete.
+        var optimisticStates: [(Activity<SudsSessionAttributes>, SudsSessionAttributes.ContentState)] = []
+        for activity in Activity<SudsSessionAttributes>.activities {
+            let s = activity.contentState
+            let newCount = s.drinkCount + 1
+            let elapsed = sessionStart > 0
+                ? Int((Date().timeIntervalSince1970 - sessionStart) / 60)
+                : s.elapsedMinutes
+            let newBAC: Double = weightLbs > 0
+                ? max(0, (Double(newCount) * 0.6 * 5.14) / (weightLbs * 0.70) - (0.015 * Double(elapsed) / 60))
+                : 0.0
+            let newState = SudsSessionAttributes.ContentState(
+                drinkCount: newCount,
+                elapsedMinutes: elapsed,
+                lastDrinkName: lastDrinkName,
+                memberCount: s.memberCount,
+                bacEstimate: newBAC,
+                memberNames: s.memberNames
+            )
+            optimisticStates.append((activity, s))
+            await activity.update(using: newState)
+        }
+
         // Refresh the JWT; Supabase access tokens expire after 1 hour.
-        // Also saves the rotated refresh_token so the next tap uses a fresh token.
         guard let (accessToken, newRefreshToken) = try? await refreshAccessToken(
             refreshToken: storedRefreshToken,
             supabaseUrl: supabaseUrl,
             anonKey: anonKey
-        ) else { return .result() }
+        ) else {
+            // Revert optimistic updates on auth failure
+            for (activity, originalState) in optimisticStates {
+                await activity.update(using: originalState)
+            }
+            return .result()
+        }
 
         if let newToken = newRefreshToken {
             d.set(newToken, forKey: "refreshToken")
@@ -53,34 +82,19 @@ struct QuickLogDrinkIntent: AppIntent {
 
         guard let (_, response) = try? await URLSession.shared.data(for: req),
               (response as? HTTPURLResponse)?.statusCode == 201
-        else { return .result() }
-
-        // Update Live Activity only after confirming the DB write succeeded
-        // If the user taps +1 while a JS-side log is also in flight, both increment
-        // from the same stored drinkCount. The JS 60s timer corrects on its next tick.
-        for activity in Activity<SudsSessionAttributes>.activities {
-            let s = activity.contentState
-            let newCount = s.drinkCount + 1
-            let elapsed = sessionStart > 0
-                ? Int((Date().timeIntervalSince1970 - sessionStart) / 60)
-                : s.elapsedMinutes
-            let newBAC: Double = weightLbs > 0
-                ? max(0, (Double(newCount) * 0.6 * 5.14) / (weightLbs * 0.70) - (0.015 * Double(elapsed) / 60))
-                : 0.0
-            await activity.update(using: SudsSessionAttributes.ContentState(
-                drinkCount: newCount,
-                elapsedMinutes: elapsed,
-                lastDrinkName: lastDrinkName,
-                memberCount: s.memberCount,
-                bacEstimate: newBAC,
-                memberNames: s.memberNames
-            ))
+        else {
+            // Revert optimistic updates on DB write failure
+            for (activity, originalState) in optimisticStates {
+                await activity.update(using: originalState)
+            }
+            return .result()
         }
 
+        // DB write confirmed — optimistic state is now accurate.
+        // The JS 60s timer will also sync on its next tick for ground-truth reconciliation.
         return .result()
     }
 
-    // Returns (accessToken, newRefreshToken?) — saves rotated token back to UserDefaults
     private func refreshAccessToken(
         refreshToken: String,
         supabaseUrl: String,

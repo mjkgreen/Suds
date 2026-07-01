@@ -23,7 +23,9 @@ struct SudsLiveActivityWidget: Widget {
                 DynamicIslandExpandedRegion(.leading) {
                     HStack(spacing: 6) {
                         Image("SudsLogo")
-                            .resizable().scaledToFit()
+                            .resizable()
+                            .renderingMode(.original)
+                            .scaledToFit()
                             .frame(width: 22, height: 22)
                             .clipShape(RoundedRectangle(cornerRadius: 5))
                         Label(
@@ -58,7 +60,7 @@ struct SudsLiveActivityWidget: Widget {
                 DynamicIslandExpandedRegion(.bottom) {
                     HStack(spacing: 12) {
                         if let pace = paceString(context.state.drinkCount, context.state.elapsedMinutes) {
-                            Text(pace)
+                            Text("\(pace)/hr")
                                 .font(.caption2)
                                 .foregroundStyle(.secondary)
                         }
@@ -93,48 +95,56 @@ struct LockScreenView: View {
     let context: ActivityViewContext<SudsSessionAttributes>
 
     var body: some View {
-        HStack(spacing: 10) {
-            Image("SudsLogo")
-                .resizable().scaledToFit()
-                .frame(width: 28, height: 28)
-                .clipShape(RoundedRectangle(cornerRadius: 6))
+        VStack(alignment: .leading, spacing: 8) {
+            // Row 1: logo + session title + +1 button
+            HStack(spacing: 8) {
+                Image("SudsLogo")
+                    .resizable()
+                    .renderingMode(.original)
+                    .scaledToFit()
+                    .frame(width: 44, height: 44)
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
 
-            VStack(alignment: .leading, spacing: 4) {
-                Text(context.attributes.sessionTitle)
-                    .font(.headline)
-                    .lineLimit(1)
-                if !context.state.memberNames.isEmpty {
-                    Text("with \(context.state.memberNames)")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                }
-                HStack(spacing: 12) {
-                    StatCell(
-                        value: "\(context.state.drinkCount)",
-                        label: "drinks",
-                        color: .orange
-                    )
-                    StatCell(
-                        value: elapsedString(context.state.elapsedMinutes),
-                        label: "elapsed"
-                    )
-                    if let pace = paceString(context.state.drinkCount, context.state.elapsedMinutes) {
-                        StatCell(value: pace, label: "/hr")
-                    }
-                    if context.state.bacEstimate > 0 {
-                        StatCell(
-                            value: "~\(String(format: "%.3f", context.state.bacEstimate))%",
-                            label: "bac",
-                            color: bacColor(context.state.bacEstimate)
-                        )
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(context.attributes.sessionTitle)
+                        .font(.subheadline.bold())
+                        .foregroundStyle(.primary)
+                        .lineLimit(2)
+                    if !context.state.memberNames.isEmpty {
+                        Text("with \(context.state.memberNames)")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
                     }
                 }
+
+                Spacer()
+
+                PlusOneButton(lastDrinkName: context.state.lastDrinkName)
             }
 
-            Spacer()
-
-            PlusOneButton(lastDrinkName: context.state.lastDrinkName)
+            // Row 2: stats
+            HStack(spacing: 14) {
+                StatCell(
+                    value: "\(context.state.drinkCount)",
+                    label: "drinks",
+                    color: .orange
+                )
+                StatCell(
+                    value: elapsedString(context.state.elapsedMinutes),
+                    label: "elapsed"
+                )
+                if let pace = paceString(context.state.drinkCount, context.state.elapsedMinutes) {
+                    StatCell(value: pace, label: "/hr")
+                }
+                if context.state.bacEstimate > 0 {
+                    StatCell(
+                        value: "~\(String(format: "%.3f", context.state.bacEstimate))",
+                        label: "% bac",
+                        color: bacColor(context.state.bacEstimate)
+                    )
+                }
+            }
         }
         .padding()
     }
@@ -150,7 +160,7 @@ struct StatCell: View {
     var body: some View {
         VStack(spacing: 0) {
             Text(value)
-                .font(.title3.bold())
+                .font(.subheadline.bold())
                 .foregroundStyle(color)
             Text(label)
                 .font(.caption2)
@@ -175,8 +185,9 @@ struct PlusOneButton: View {
                         Text(lastDrinkName.isEmpty ? "Drink" : lastDrinkName)
                             .font(.caption2)
                             .foregroundStyle(.secondary)
-                            .lineLimit(1)
+                            .multilineTextAlignment(.center)
                     }
+                    .frame(width: 60)
                 }
                 .buttonStyle(.plain)
             } else {
@@ -201,7 +212,7 @@ private func elapsedString(_ minutes: Int) -> String {
 private func paceString(_ drinkCount: Int, _ elapsedMinutes: Int) -> String? {
     guard drinkCount > 0, elapsedMinutes > 0 else { return nil }
     let pace = Double(drinkCount) / (Double(elapsedMinutes) / 60.0)
-    return String(format: "%.1f/hr", pace)
+    return String(format: "%.1f", pace)
 }
 
 private func bacColor(_ bac: Double) -> Color {
