@@ -1,7 +1,7 @@
 import Head from "expo-router/head";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import { ActivityIndicator, FlatList, Platform, Pressable, RefreshControl, ScrollView, Text, View, useWindowDimensions } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Avatar } from "@/components/common/Avatar";
@@ -94,7 +94,10 @@ export default function ProfileScreen() {
     refetch: refetchFeed,
   } = useMyFeed(user?.id);
 
-  const myEntries: FeedEntry[] = feedData?.pages.flatMap((p) => p.entries) ?? [];
+  const myEntries = useMemo<FeedEntry[]>(
+    () => feedData?.pages.flatMap((p) => p.entries) ?? [],
+    [feedData],
+  );
 
   const earnedBadges = getEarnedBadges(milestones, streaks, stats);
   const selectedBadgeIds =
@@ -171,7 +174,7 @@ export default function ProfileScreen() {
     </Pressable>
   );
 
-  function ProfileHeader() {
+  const profileHeader = useMemo(() => {
     if (isDesktop) {
       return (
         <View className="bg-card border-b border-border" style={{ paddingHorizontal: 24, paddingVertical: 14 }}>
@@ -329,7 +332,8 @@ export default function ProfileScreen() {
         </View>
       </View>
     );
-  }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profile, isPremium, streaks, badgeNodes, user?.id, colorScheme, signOut, isDesktop]);
 
   const badgePicker = (
     <>
@@ -360,7 +364,7 @@ export default function ProfileScreen() {
           <title>Profile | Suds</title>
         </Head>
         <SafeAreaView className="flex-1 bg-background" edges={topEdges}>
-          <ProfileHeader />
+          {profileHeader}
           {badgePicker}
           <View style={{ flex: 1, flexDirection: "row", maxWidth: 1400, width: "100%", alignSelf: "center", paddingHorizontal: 24 }}>
             {/* Left: Activities feed */}
@@ -495,7 +499,7 @@ export default function ProfileScreen() {
   if (activeTab === "progress") {
     return (
       <SafeAreaView className="flex-1 bg-background" edges={topEdges}>
-        <ProfileHeader />
+        {profileHeader}
         {badgePicker}
         <TabBar active={activeTab} onChange={setActiveTab} />
         <ScrollView
@@ -591,7 +595,7 @@ export default function ProfileScreen() {
         <title>Profile | Suds</title>
       </Head>
       <SafeAreaView className="flex-1 bg-background" edges={topEdges}>
-        <ProfileHeader />
+        {profileHeader}
         {badgePicker}
         <TabBar active={activeTab} onChange={setActiveTab} />
         <FlatList

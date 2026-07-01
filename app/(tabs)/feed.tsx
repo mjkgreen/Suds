@@ -1,7 +1,7 @@
 import Head from "expo-router/head";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -45,14 +45,16 @@ export default function FeedScreen() {
     user?.id,
   );
 
-  const allEntries = data?.pages.flatMap((p) => p.entries) ?? [];
-  const seenKeys = new Set<string>();
-  const entries: FeedEntry[] = allEntries.filter((entry) => {
-    const key = entry.type === "session" ? `session-${entry.session_id}` : `drink-${entry.item.id}`;
-    if (seenKeys.has(key)) return false;
-    seenKeys.add(key);
-    return true;
-  });
+  const entries = useMemo<FeedEntry[]>(() => {
+    const allEntries = data?.pages.flatMap((p) => p.entries) ?? [];
+    const seenKeys = new Set<string>();
+    return allEntries.filter((entry) => {
+      const key = entry.type === "session" ? `session-${entry.session_id}` : `drink-${entry.item.id}`;
+      if (seenKeys.has(key)) return false;
+      seenKeys.add(key);
+      return true;
+    });
+  }, [data]);
 
   const handleEndReached = useCallback(() => {
     if (hasNextPage && !isFetchingNextPage) fetchNextPage();
