@@ -99,10 +99,14 @@ export const SessionCard = React.memo(function SessionCard({ group, currentUserI
     return () => clearInterval(interval);
   }, [isActive]);
 
-  const endTime = isActive ? currentTime.toISOString() : (group.ended_at ?? undefined);
+  // items are ordered newest-first; fall back to last drink time if session ended_at is missing
+  const lastDrinkTime = group.items[0]?.logged_at;
+  const endTime = isActive
+    ? currentTime.toISOString()
+    : (group.ended_at ?? lastDrinkTime ?? undefined);
   const duration = formatDuration(group.started_at, endTime);
   const hoursElapsed =
-    ((isActive ? currentTime : (group.ended_at ? new Date(group.ended_at) : new Date())).getTime() -
+    (new Date(endTime ?? (isActive ? currentTime.toISOString() : lastDrinkTime ?? new Date())).getTime() -
       new Date(group.started_at).getTime()) /
     (1000 * 60 * 60);
   const drinksPerHour = hoursElapsed >= 0.25 && totalQuantity > 0 ? (totalQuantity / hoursElapsed).toFixed(1) : "—";

@@ -14,7 +14,7 @@
   ],
   "expo": {
     "autolinking": {
-      "searchPaths": ["./modules"]
+      "nativeModulesDir": "./modules/suds-live-activity-bridge"
     }
   },
   "dependencies": {

@@ -49,6 +49,17 @@ return {
     };
   });
 
+  // Collect actual session start/end times from raw rows before FeedItem mapping strips them
+  const sessionTimes = new Map<string, { started_at: string | null; ended_at: string | null }>();
+  for (const row of (data ?? [])) {
+    if (row.session_id && !sessionTimes.has(row.session_id)) {
+      sessionTimes.set(row.session_id, {
+        started_at: row.session_started_at ?? null,
+        ended_at: row.session_ended_at ?? null,
+      });
+    }
+  }
+
   // Group rows that share a session_id into SessionFeedGroups
   const entries: FeedEntry[] = [];
   const seenSessions = new Set<string>();
@@ -57,14 +68,18 @@ return {
     if (row.session_id && !seenSessions.has(row.session_id)) {
       seenSessions.add(row.session_id);
       const sessionItems = rows.filter((r) => r.session_id === row.session_id);
+      const times = sessionTimes.get(row.session_id);
+      // Fall back to drink timestamps if session times aren't in the RPC response yet
+      const started_at = times?.started_at ?? sessionItems[sessionItems.length - 1].logged_at;
+      const ended_at = times?.ended_at ?? null;
       entries.push({
         type: 'session',
         session_id: row.session_id,
         session_title: row.session_title ?? null,
         profile: row.profile,
         items: sessionItems,
-        started_at: sessionItems[sessionItems.length - 1].logged_at,
-        ended_at: sessionItems[0].logged_at,
+        started_at,
+        ended_at,
       });
     } else if (!row.session_id) {
       entries.push({ type: 'drink', item: row });
