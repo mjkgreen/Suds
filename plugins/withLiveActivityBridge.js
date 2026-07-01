@@ -2,28 +2,15 @@ const { withDangerousMod } = require('@expo/config-plugins');
 const fs = require('fs');
 const path = require('path');
 
-const PATCH_MARKER = 'SudsLiveActivityBridgeModule';
-
-const PATCH_RUBY = `
-  # [Suds] Patch ExpoModulesProvider + ExpoConfigScript so our local module is registered
-  Dir.glob(File.join(installer.sandbox.root, "Target Support Files", "*", "ExpoModulesProvider.swift")).each do |fpath|
-    content = File.read(fpath)
-    unless content.include?("SudsLiveActivityBridgeModule")
-      content = content.sub("return [\\n", "return [\\n      SudsLiveActivityBridgeModule.self,\\n")
-      File.write(fpath, content)
-      puts "[Suds] Patched ExpoModulesProvider at #{fpath}"
-    end
-  end
-  Dir.glob(File.join(installer.sandbox.root, "Target Support Files", "*", "ExpoConfigScript.sh")).each do |fpath|
-    content = File.read(fpath)
-    unless content.include?('"suds-live-activity-bridge"')
-      content = content.sub("--packages ", '--packages "suds-live-activity-bridge" ')
-      File.write(fpath, content)
-      puts "[Suds] Patched ExpoConfigScript at #{fpath}"
-    end
-  end
-`;
-
+// expo-modules-autolinking doesn't find local modules in ./modules on EAS because
+// package.json `expo.autolinking` config is read by JS but the Ruby `use_expo_modules!`
+// call passes no searchPaths, so JS never receives the nativeModulesDir option.
+//
+// Fix: modify `use_expo_modules!` in the Podfile to pass an absolute searchPaths entry
+// for our module. Ruby passes it as a positional arg to the node resolve command, which
+// calls scanDependenciesInSearchPath on the module root → finds package.json → registers it.
+// Autolinking then adds the pod AND registers SudsLiveActivityBridgeModule in
+// ExpoModulesProvider — no post_install patching needed.
 const withLiveActivityBridge = (config) => {
   return withDangerousMod(config, [
     'ios',
@@ -31,27 +18,14 @@ const withLiveActivityBridge = (config) => {
       const podfilePath = path.join(config.modRequest.platformProjectRoot, 'Podfile');
       let contents = fs.readFileSync(podfilePath, 'utf8');
 
-      // 1. Add the pod explicitly BEFORE use_expo_modules!
-      if (!contents.includes("pod 'SudsLiveActivityBridge'")) {
+      // Pass the module path directly to use_expo_modules! so Ruby's base_command_args
+      // includes it as a positional searchPath for the node autolinking command.
+      // File.expand_path resolves relative to __dir__ (the ios/ directory) at pod install time.
+      if (!contents.includes('suds-live-activity-bridge')) {
         contents = contents.replace(
-          'use_expo_modules!',
-          `pod 'SudsLiveActivityBridge', :path => '../modules/suds-live-activity-bridge'\n  use_expo_modules!`
+          /^(\s*use_expo_modules!\s*)$/m,
+          `$1({ searchPaths: [File.expand_path('../modules/suds-live-activity-bridge', __dir__)] })`
         );
-      }
-
-      // 2. Inject patch code — merge into existing post_install if present,
-      //    otherwise append a new block. CocoaPods only allows one post_install.
-      if (!contents.includes(PATCH_MARKER)) {
-        const hookMatch = /^(post_install\s+do\s+\|\w+\|)/m.exec(contents);
-        if (hookMatch) {
-          // Merge into the existing hook — CocoaPods only allows one post_install block
-          contents = contents.replace(
-            /^(post_install\s+do\s+\|\w+\|)/m,
-            `$1${PATCH_RUBY}`
-          );
-        } else {
-          contents += `\npost_install do |installer|${PATCH_RUBY}end\n`;
-        }
       }
 
       fs.writeFileSync(podfilePath, contents);

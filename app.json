@@ -86,7 +86,8 @@
         {
           "contactsPermission": "Allow Suds to access your contacts to find friends."
         }
-      ]
+      ],
+      "./plugins/withLiveActivityBridge"
     ],
     "experiments": {
       "typedRoutes": true
