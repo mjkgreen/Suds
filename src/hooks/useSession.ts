@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useSessionStore } from '@/stores/sessionStore';
 import { Session, SessionWithRole } from '@/types/models';
-import { useLiveActivity } from './useLiveActivity';
+import { useLiveActivity, resumeActivity } from './useLiveActivity';
 import * as LiveActivityBridge from 'suds-live-activity-bridge';
 
 export function useActiveSession() {
@@ -112,8 +112,12 @@ export function useMyOpenSession(userId: string | undefined) {
       if (error) throw error;
       const session = data as SessionWithRole | null;
       setActiveSession(session);
-      // Clean up any orphaned Live Activities from a previous force-kill
-      if (!session) {
+      if (session) {
+        // Restore the JS timer so elapsed time, BAC, and drink count sync resume
+        // after a force-kill or background restart without a new startActivity call.
+        resumeActivity(session);
+      } else {
+        // Clean up any orphaned Live Activities from a previous force-kill
         LiveActivityBridge.endAllActivities().catch(() => {});
       }
       return session;

@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useCallback } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -61,7 +61,10 @@ export default function UserProfileScreen() {
     refetch: refetchFeed,
   } = useMyFeed(id);
 
-  const entries: FeedEntry[] = feedData?.pages.flatMap((p) => p.entries) ?? [];
+  const entries = useMemo<FeedEntry[]>(
+    () => feedData?.pages.flatMap((p) => p.entries) ?? [],
+    [feedData],
+  );
 
   const handleEndReached = useCallback(() => {
     if (hasNextPage && !isFetchingNextPage) fetchNextPage();
@@ -95,99 +98,98 @@ export default function UserProfileScreen() {
   const selectedBadgeIds = profile.displayed_badges ?? [];
   const selectedBadges = selectedBadgeIds.map(findBadgeById).filter(Boolean) as UserBadge[];
 
-  function ProfileHeader() {
-    return (
-      <View>
-        {/* Nav */}
-        <View className="flex-row items-center px-4 py-3 bg-background border-b border-border">
-          <Pressable onPress={() => router.back()} className="p-2 mr-2">
-            <Ionicons name="arrow-back" size={22} color="orange" />
-          </Pressable>
-          <Text className="font-bold text-foreground text-base flex-1">
-            @{profile!.username}
-          </Text>
+  const listHeader = useMemo(() => (
+    <View>
+      {/* Nav */}
+      <View className="flex-row items-center px-4 py-3 bg-background border-b border-border">
+        <Pressable onPress={() => router.back()} className="p-2 mr-2">
+          <Ionicons name="arrow-back" size={22} color="orange" />
+        </Pressable>
+        <Text className="font-bold text-foreground text-base flex-1">
+          @{profile!.username}
+        </Text>
+      </View>
+
+      {/* Profile card */}
+      <View className="bg-background px-6 pt-5 pb-5 border-b border-border">
+        <View className="flex-row items-start justify-between mb-4">
+          <Avatar
+            uri={profile!.avatar_url}
+            name={profile!.display_name ?? profile!.username}
+            size={72}
+          />
+          {!isOwnProfile && (
+            <Button
+              label={isFollowing ? 'Following' : 'Follow'}
+              variant={isFollowing ? 'secondary' : 'primary'}
+              size="md"
+              loading={follow.isPending || unfollow.isPending}
+              onPress={() => {
+                if (isFollowing) {
+                  unfollow.mutate(profile!.id);
+                } else {
+                  follow.mutate(profile!.id);
+                }
+              }}
+            />
+          )}
         </View>
 
-        {/* Profile card */}
-        <View className="bg-background px-6 pt-5 pb-5 border-b border-border">
-          <View className="flex-row items-start justify-between mb-4">
-            <Avatar
-              uri={profile!.avatar_url}
-              name={profile!.display_name ?? profile!.username}
-              size={72}
-            />
-            {!isOwnProfile && (
-              <Button
-                label={isFollowing ? 'Following' : 'Follow'}
-                variant={isFollowing ? 'secondary' : 'primary'}
-                size="md"
-                loading={follow.isPending || unfollow.isPending}
-                onPress={() => {
-                  if (isFollowing) {
-                    unfollow.mutate(profile!.id);
-                  } else {
-                    follow.mutate(profile!.id);
-                  }
-                }}
-              />
-            )}
+        <Text className="text-xl font-bold text-foreground">
+          {profile!.display_name ?? profile!.username}
+        </Text>
+        <Text className="text-muted-foreground text-sm">@{profile!.username}</Text>
+        {profile!.bio && (
+          <Text className="text-muted-foreground text-sm mt-2">{profile!.bio}</Text>
+        )}
+
+        <View className="flex-row items-center justify-between mt-3">
+          <View className="flex-row gap-6">
+            <Pressable onPress={() => router.push(`/user/${profile!.id}/followers`)}>
+              <Text className="text-muted-foreground text-sm">
+                <Text className="font-bold text-foreground">{profile!.followers_count ?? 0}</Text>{' '}
+                Followers
+              </Text>
+            </Pressable>
+            <Pressable onPress={() => router.push(`/user/${profile!.id}/following`)}>
+              <Text className="text-muted-foreground text-sm">
+                <Text className="font-bold text-foreground">{profile!.following_count ?? 0}</Text>{' '}
+                Following
+              </Text>
+            </Pressable>
           </View>
 
-          <Text className="text-xl font-bold text-foreground">
-            {profile!.display_name ?? profile!.username}
-          </Text>
-          <Text className="text-muted-foreground text-sm">@{profile!.username}</Text>
-          {profile!.bio && (
-            <Text className="text-muted-foreground text-sm mt-2">{profile!.bio}</Text>
-          )}
-
-          <View className="flex-row items-center justify-between mt-3">
-            <View className="flex-row gap-6">
-              <Pressable onPress={() => router.push(`/user/${profile!.id}/followers`)}>
-                <Text className="text-muted-foreground text-sm">
-                  <Text className="font-bold text-foreground">{profile!.followers_count ?? 0}</Text>{' '}
-                  Followers
-                </Text>
+          <View className="flex-row items-center gap-1.5">
+            {selectedBadges.map((b) => (
+              <Pressable
+                key={b.id}
+                className="w-8 h-10 items-center justify-center border-2 border-card shadow-sm -ml-2 first:ml-0"
+                onPress={() => setBadgeInfoVisible(true)}
+                style={{
+                    backgroundColor: TIER_COLORS[b.tier] + '40',
+                    borderColor: TIER_COLORS[b.tier],
+                    borderTopLeftRadius: 4,
+                    borderTopRightRadius: 4,
+                    borderBottomLeftRadius: 16,
+                    borderBottomRightRadius: 16,
+                }}
+              >
+                <Ionicons name={b.icon as any} size={16} color={TIER_COLORS[b.tier]} />
               </Pressable>
-              <Pressable onPress={() => router.push(`/user/${profile!.id}/following`)}>
-                <Text className="text-muted-foreground text-sm">
-                  <Text className="font-bold text-foreground">{profile!.following_count ?? 0}</Text>{' '}
-                  Following
-                </Text>
-              </Pressable>
-            </View>
-
-            <View className="flex-row items-center gap-1.5">
-              {selectedBadges.map((b) => (
-                <Pressable
-                  key={b.id}
-                  className="w-8 h-10 items-center justify-center border-2 border-card shadow-sm -ml-2 first:ml-0"
-                  onPress={() => setBadgeInfoVisible(true)}
-                  style={{
-                      backgroundColor: TIER_COLORS[b.tier] + '40',
-                      borderColor: TIER_COLORS[b.tier],
-                      borderTopLeftRadius: 4,
-                      borderTopRightRadius: 4,
-                      borderBottomLeftRadius: 16,
-                      borderBottomRightRadius: 16,
-                  }}
-                >
-                  <Ionicons name={b.icon as any} size={16} color={TIER_COLORS[b.tier]} />
-                </Pressable>
-              ))}
-            </View>
+            ))}
           </View>
         </View>
       </View>
-    );
-  }
+    </View>
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  ), [profile, isOwnProfile, isFollowing, follow.isPending, unfollow.isPending, selectedBadges]);
 
   return (
     <SafeAreaView className={`flex-1 bg-background ${isDark ? 'dark' : ''}`}>
-      <BadgeInfoModal 
-        badges={selectedBadges} 
-        isVisible={badgeInfoVisible} 
-        onClose={() => setBadgeInfoVisible(false)} 
+      <BadgeInfoModal
+        badges={selectedBadges}
+        isVisible={badgeInfoVisible}
+        onClose={() => setBadgeInfoVisible(false)}
       />
       <FlatList
         data={entries}
@@ -195,7 +197,7 @@ export default function UserProfileScreen() {
           entry.type === 'session' ? `session-${entry.session_id}` : `drink-${entry.item.id}`
         }
         renderItem={renderItem}
-        ListHeaderComponent={<ProfileHeader />}
+        ListHeaderComponent={listHeader}
         ListEmptyComponent={
           <View className="py-16 items-center">
             <Text className="text-3xl mb-2">🍺</Text>

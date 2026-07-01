@@ -21,19 +21,27 @@ struct SudsLiveActivityWidget: Widget {
         } dynamicIsland: { context in
             DynamicIsland {
                 DynamicIslandExpandedRegion(.leading) {
-                    Label(
-                        "\(context.state.drinkCount)",
-                        systemImage: "mug.fill"
-                    )
-                    .font(.title2.bold())
-                    .foregroundStyle(.orange)
+                    Label {
+                        Text("\(context.state.drinkCount)")
+                            .font(.title2.bold())
+                            .foregroundStyle(.orange)
+                    } icon: {
+                        Image("SudsLogo")
+                            .resizable()
+                            .renderingMode(.original)
+                            .scaledToFit()
+                            .frame(width: 22, height: 22)
+                    }
                 }
                 DynamicIslandExpandedRegion(.trailing) {
                     VStack(alignment: .trailing, spacing: 2) {
-                        Label(
-                            elapsedString(context.state.elapsedMinutes),
-                            systemImage: "clock"
-                        )
+                        Label {
+                            Text(context.attributes.sessionStartDate, style: .timer)
+                                .font(.caption.bold())
+                                .monospacedDigit()
+                        } icon: {
+                            Image(systemName: "clock")
+                        }
                         .font(.caption.bold())
                         .foregroundStyle(.secondary)
                         if !context.state.memberNames.isEmpty {
@@ -51,31 +59,47 @@ struct SudsLiveActivityWidget: Widget {
                 }
                 DynamicIslandExpandedRegion(.bottom) {
                     HStack(spacing: 12) {
-                        if let pace = paceString(context.state.drinkCount, context.state.elapsedMinutes) {
-                            Text("\(pace)/hr")
+                        let bac = computeBAC(
+                            drinkCount: context.state.drinkCount,
+                            sessionStart: context.attributes.sessionStartDate,
+                            weightLbs: context.attributes.weightLbs
+                        )
+                        if let pace = pacePerHour(drinkCount: context.state.drinkCount, sessionStart: context.attributes.sessionStartDate) {
+                            Text("\(String(format: "%.1f", pace))/hr")
                                 .font(.caption2)
                                 .foregroundStyle(.secondary)
                         }
-                        if context.state.bacEstimate > 0 {
-                            Text("~\(String(format: "%.3f", context.state.bacEstimate))%")
+                        if bac > 0 {
+                            Text("~\(String(format: "%.3f", bac))%")
                                 .font(.caption2.bold())
-                                .foregroundStyle(bacColor(context.state.bacEstimate))
+                                .foregroundStyle(bacColor(bac))
                         }
                         Spacer()
                         PlusOneButton(lastDrinkName: context.state.lastDrinkName)
                     }
                 }
             } compactLeading: {
-                Label("\(context.state.drinkCount)", systemImage: "mug.fill")
-                    .font(.caption.bold())
-                    .foregroundStyle(.orange)
+                HStack(spacing: 3) {
+                    Image("SudsLogo")
+                        .resizable()
+                        .renderingMode(.original)
+                        .scaledToFit()
+                        .frame(width: 14, height: 14)
+                    Text("\(context.state.drinkCount)")
+                        .font(.caption.bold())
+                        .foregroundStyle(.orange)
+                }
             } compactTrailing: {
-                Text(elapsedString(context.state.elapsedMinutes))
+                Text(context.attributes.sessionStartDate, style: .timer)
                     .font(.caption2.bold())
                     .foregroundStyle(.secondary)
+                    .monospacedDigit()
             } minimal: {
-                Image(systemName: "mug.fill")
-                    .foregroundStyle(.orange)
+                Image("SudsLogo")
+                    .resizable()
+                    .renderingMode(.original)
+                    .scaledToFit()
+                    .frame(width: 14, height: 14)
             }
         }
     }
@@ -87,14 +111,21 @@ struct LockScreenView: View {
     let context: ActivityViewContext<SudsSessionAttributes>
 
     var body: some View {
+        let bac = computeBAC(
+            drinkCount: context.state.drinkCount,
+            sessionStart: context.attributes.sessionStartDate,
+            weightLbs: context.attributes.weightLbs
+        )
         VStack(alignment: .leading, spacing: 8) {
             // Row 1: logo + session title + +1 button
             HStack(spacing: 8) {
                 ZStack {
-                    Color.orange
-                    Image(systemName: "mug.fill")
-                        .font(.system(size: 22, weight: .semibold))
-                        .foregroundStyle(.white)
+                    Color.white
+                    Image("SudsLogo")
+                        .resizable()
+                        .renderingMode(.original)
+                        .scaledToFit()
+                        .padding(6)
                 }
                 .frame(width: 44, height: 44)
                 .clipShape(RoundedRectangle(cornerRadius: 10))
@@ -124,18 +155,16 @@ struct LockScreenView: View {
                     label: "drinks",
                     color: .orange
                 )
-                StatCell(
-                    value: elapsedString(context.state.elapsedMinutes),
-                    label: "elapsed"
-                )
-                if let pace = paceString(context.state.drinkCount, context.state.elapsedMinutes) {
-                    StatCell(value: pace, label: "/hr")
+                // Elapsed time auto-updates every second via SwiftUI timer rendering
+                StatCell(timerDate: context.attributes.sessionStartDate, label: "elapsed")
+                if let pace = pacePerHour(drinkCount: context.state.drinkCount, sessionStart: context.attributes.sessionStartDate) {
+                    StatCell(value: String(format: "%.1f", pace), label: "/hr")
                 }
-                if context.state.bacEstimate > 0 {
+                if bac > 0 {
                     StatCell(
-                        value: "~\(String(format: "%.3f", context.state.bacEstimate))",
+                        value: "~\(String(format: "%.3f", bac))",
                         label: "% bac",
-                        color: bacColor(context.state.bacEstimate)
+                        color: bacColor(bac)
                     )
                 }
             }
@@ -147,15 +176,23 @@ struct LockScreenView: View {
 // MARK: - Stat Cell
 
 struct StatCell: View {
-    let value: String
+    var value: String = ""
     let label: String
     var color: Color = .primary
+    var timerDate: Date? = nil
 
     var body: some View {
         VStack(spacing: 0) {
-            Text(value)
-                .font(.callout.bold())
-                .foregroundStyle(color)
+            if let date = timerDate {
+                Text(date, style: .timer)
+                    .font(.callout.bold())
+                    .foregroundStyle(color)
+                    .monospacedDigit()
+            } else {
+                Text(value)
+                    .font(.callout.bold())
+                    .foregroundStyle(color)
+            }
             Text(label)
                 .font(.caption)
                 .foregroundStyle(.secondary)
@@ -197,16 +234,18 @@ struct PlusOneButton: View {
 
 // MARK: - Helpers
 
-private func elapsedString(_ minutes: Int) -> String {
-    let h = minutes / 60
-    let m = minutes % 60
-    return h > 0 ? "\(h)h \(m)m" : "\(m)m"
+private func computeBAC(drinkCount: Int, sessionStart: Date, weightLbs: Double) -> Double {
+    guard weightLbs > 0, drinkCount > 0 else { return 0 }
+    let elapsedHours = -sessionStart.timeIntervalSinceNow / 3600
+    let bac = (Double(drinkCount) * 0.6 * 5.14) / (weightLbs * 0.70) - (0.015 * elapsedHours)
+    return max(0, (bac * 1000).rounded() / 1000)
 }
 
-private func paceString(_ drinkCount: Int, _ elapsedMinutes: Int) -> String? {
-    guard drinkCount > 0, elapsedMinutes > 0 else { return nil }
-    let pace = Double(drinkCount) / (Double(elapsedMinutes) / 60.0)
-    return String(format: "%.1f", pace)
+private func pacePerHour(drinkCount: Int, sessionStart: Date) -> Double? {
+    guard drinkCount > 0 else { return nil }
+    let elapsedHours = -sessionStart.timeIntervalSinceNow / 3600
+    guard elapsedHours > 0 else { return nil }
+    return Double(drinkCount) / elapsedHours
 }
 
 private func bacColor(_ bac: Double) -> Color {

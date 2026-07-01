@@ -21,7 +21,7 @@ import { useProfile, useUserStats, useUpdateProfile } from "@/hooks/useProfile";
 import { useStreaks } from "@/hooks/useStreaks";
 import { useAuthStore } from "@/stores/authStore";
 import { useActiveSession, useEndSession } from "@/hooks/useSession";
-import { DrinkType, FeedEntry } from "@/types/models";
+import { DrinkType, FeedEntry, SessionFeedGroup } from "@/types/models";
 import { getDisplayName, getUsername } from "@/utils/profileHelpers";
 import { getEarnedBadges, findBadgeById, UserBadge, TIER_COLORS } from "@/utils/badgeHelpers";
 import { BadgeInfoModal } from "@/components/profile/BadgeInfoModal";
@@ -35,6 +35,20 @@ import { usePrefsStore } from "@/stores/prefsStore";
 import { useColorScheme } from "nativewind";
 
 type Tab = "progress" | "activities";
+
+function ProfileSessionCard({ group }: { group: SessionFeedGroup }) {
+  const activeSession = useActiveSession();
+  const { mutateAsync: endSession, isPending: isEnding } = useEndSession();
+  const isActive = !!activeSession && group.session_id === activeSession.id;
+  return (
+    <SessionCard
+      group={group}
+      isActive={isActive}
+      onEnd={isActive ? () => endSession(activeSession!.id) : undefined}
+      isEnding={isActive ? isEnding : undefined}
+    />
+  );
+}
 
 function StatBlock({ label, value }: { label: string; value: string | number }) {
   return (
@@ -68,7 +82,6 @@ export default function ProfileScreen() {
   const activeSession = useActiveSession();
   const topEdges = activeSession ? [] : ["top" as const];
   const { signOut } = useAuth();
-  const { mutateAsync: endSession, isPending: isEnding } = useEndSession();
   const [activeTab, setActiveTab] = useState<Tab>("progress");
   const [badgePickerVisible, setBadgePickerVisible] = useState(false);
   const [badgeInfoVisible, setBadgeInfoVisible] = useState(false);
@@ -110,18 +123,10 @@ export default function ProfileScreen() {
 
   const renderActivityItem = useCallback(({ item: entry }: { item: FeedEntry }) => {
     if (entry.type === "session") {
-      const isActive = !!activeSession && entry.session_id === activeSession.id;
-      return (
-        <SessionCard
-          group={entry}
-          isActive={isActive}
-          onEnd={isActive ? () => endSession(activeSession!.id) : undefined}
-          isEnding={isActive ? isEnding : undefined}
-        />
-      );
+      return <ProfileSessionCard group={entry} />;
     }
     return <DrinkCard item={entry.item} />;
-  }, [activeSession, endSession, isEnding]);
+  }, []);
 
   const onRefresh = useCallback(() => {
     refetchProfile();

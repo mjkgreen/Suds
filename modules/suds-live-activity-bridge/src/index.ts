@@ -8,21 +8,25 @@ export type LiveActivityInfo = {
   elapsedMinutes: number;
   lastDrinkName: string;
   memberCount: number;
-  bacEstimate: number;
   memberNames: string;
 };
 
 type LiveActivityBridge = {
   isSupported(): boolean;
   getActivities(): Promise<LiveActivityInfo[]>;
-  startActivity(sessionTitle: string, drinkCount: number, memberCount: number, memberNames: string): Promise<string | null>;
+  startActivity(
+    sessionTitle: string,
+    drinkCount: number,
+    memberCount: number,
+    memberNames: string,
+    sessionStartMs: number,
+    weightLbs: number,
+  ): Promise<string | null>;
   updateActivity(
     activityId: string,
     drinkCount: number,
-    elapsedMinutes: number,
     lastDrinkName: string,
     memberCount: number,
-    bacEstimate: number,
     memberNames: string,
   ): Promise<void>;
   endActivity(activityId: string): Promise<void>;
@@ -65,20 +69,20 @@ export async function startActivity(
   drinkCount: number,
   memberCount: number,
   memberNames: string,
+  sessionStartMs: number,
+  weightLbs: number,
 ): Promise<string | null> {
-  return Bridge?.startActivity(sessionTitle, drinkCount, memberCount, memberNames) ?? null;
+  return Bridge?.startActivity(sessionTitle, drinkCount, memberCount, memberNames, sessionStartMs, weightLbs) ?? null;
 }
 
 export async function updateActivity(
   activityId: string,
   drinkCount: number,
-  elapsedMinutes: number,
   lastDrinkName: string,
   memberCount: number,
-  bacEstimate: number,
   memberNames: string,
 ): Promise<void> {
-  await Bridge?.updateActivity(activityId, drinkCount, elapsedMinutes, lastDrinkName, memberCount, bacEstimate, memberNames);
+  await Bridge?.updateActivity(activityId, drinkCount, lastDrinkName, memberCount, memberNames);
 }
 
 export async function endActivity(activityId: string): Promise<void> {

@@ -3,9 +3,7 @@ import { deleteDrinkPhoto, uploadDrinkPhoto } from '@/lib/storage';
 import { supabase } from '@/lib/supabase';
 import { DrinkLog, LogDrinkFormData } from '@/types/models';
 import { useSessionStore } from '@/stores/sessionStore';
-import { useAuthStore } from '@/stores/authStore';
 import * as LiveActivityBridge from 'suds-live-activity-bridge';
-import { computeBAC, weightToLbs } from './useLiveActivity';
 
 function capitalise(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1);
@@ -18,25 +16,17 @@ function updateLiveActivity(sessionId: string | null | undefined, drinkType: str
     liveActivityDrinkCount,
     liveActivityMemberCount,
     liveActivityMemberNames,
-    activeSession,
     setLiveActivityDrinkCount,
     setLiveActivityLastDrinkName,
   } = useSessionStore.getState();
   if (!liveActivityId) return;
 
   const newCount = liveActivityDrinkCount + 1;
-  // Use DB-authoritative started_at to stay consistent with the timer in useLiveActivity.ts
-  const elapsed = activeSession?.started_at
-    ? Math.floor((Date.now() - new Date(activeSession.started_at).getTime()) / 60_000)
-    : 0;
-  const { profile } = useAuthStore.getState();
-  const wLbs = weightToLbs(profile?.weight, profile?.weight_unit);
-  const bac = computeBAC(newCount, elapsed, wLbs);
 
   setLiveActivityDrinkCount(newCount);
   setLiveActivityLastDrinkName(drinkName);
   LiveActivityBridge.updateSharedLastDrink(drinkType, drinkName);
-  LiveActivityBridge.updateActivity(liveActivityId, newCount, elapsed, drinkName, liveActivityMemberCount, bac, liveActivityMemberNames).catch(
+  LiveActivityBridge.updateActivity(liveActivityId, newCount, drinkName, liveActivityMemberCount, liveActivityMemberNames).catch(
     (e) => { console.warn('[LiveActivity] updateActivity failed:', e); },
   );
 }

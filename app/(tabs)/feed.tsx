@@ -24,7 +24,29 @@ import { useQuickLogDrink } from "@/hooks/useDrinkLog";
 import { useActiveSession, useEndSession, useStartSession } from "@/hooks/useSession";
 import { useUnreadNotificationCount } from "@/hooks/useInAppNotifications";
 import { useAuthStore } from "@/stores/authStore";
-import { FeedEntry } from "@/types/models";
+import { FeedEntry, SessionFeedGroup } from "@/types/models";
+
+function FeedSessionCard({ group, currentUserId }: { group: SessionFeedGroup; currentUserId?: string }) {
+  const activeSession = useActiveSession();
+  const { mutateAsync: endSession, isPending: isEnding } = useEndSession();
+  const { mutateAsync: quickLogDrink } = useQuickLogDrink();
+  const { user } = useAuthStore();
+  const isActive = !!activeSession && group.session_id === activeSession.id;
+  return (
+    <SessionCard
+      group={group}
+      currentUserId={currentUserId}
+      isActive={isActive}
+      onEnd={isActive ? () => endSession(activeSession!.id) : undefined}
+      isEnding={isActive ? isEnding : undefined}
+      onQuickLog={
+        isActive && user
+          ? (item) => quickLogDrink({ userId: user.id, item, sessionId: activeSession!.id })
+          : undefined
+      }
+    />
+  );
+}
 
 export default function FeedScreen() {
   const { user } = useAuthStore();
@@ -36,8 +58,6 @@ export default function FeedScreen() {
   const [showStartModal, setShowStartModal] = useState(false);
   const [sessionTitle, setSessionTitle] = useState("");
   const { mutateAsync: startSession, isPending: isStarting } = useStartSession();
-  const { mutateAsync: endSession, isPending: isEnding } = useEndSession();
-  const { mutateAsync: quickLogDrink } = useQuickLogDrink();
 
   const unreadCount = useUnreadNotificationCount();
 
@@ -62,24 +82,10 @@ export default function FeedScreen() {
 
   const renderItem = useCallback(({ item: entry }: { item: FeedEntry }) => {
     if (entry.type === "session") {
-      const isActive = !!activeSession && entry.session_id === activeSession.id;
-      return (
-        <SessionCard
-          group={entry}
-          currentUserId={user?.id}
-          isActive={isActive}
-          onEnd={isActive ? () => endSession(activeSession!.id) : undefined}
-          isEnding={isActive ? isEnding : undefined}
-          onQuickLog={
-            isActive && user
-              ? (item) => quickLogDrink({ userId: user.id, item, sessionId: activeSession!.id })
-              : undefined
-          }
-        />
-      );
+      return <FeedSessionCard group={entry} currentUserId={user?.id} />;
     }
     return <DrinkCard item={entry.item} currentUserId={user?.id} />;
-  }, [activeSession, user, endSession, isEnding, quickLogDrink]);
+  }, [user?.id]);
 
   async function handleStartSession() {
     if (!user) return;
