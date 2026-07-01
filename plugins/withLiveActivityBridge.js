@@ -21,11 +21,17 @@ const withLiveActivityBridge = (config) => {
       // Pass the module path directly to use_expo_modules! so Ruby's base_command_args
       // includes it as a positional searchPath for the node autolinking command.
       // File.expand_path resolves relative to __dir__ (the ios/ directory) at pod install time.
+      //
+      // Using simple string replacement instead of regex to handle any trailing content
+      // on the use_expo_modules! line (comments, whitespace, etc.).
       if (!contents.includes('suds-live-activity-bridge')) {
-        contents = contents.replace(
-          /^(\s*use_expo_modules!\s*)$/m,
-          `$1({ searchPaths: [File.expand_path('../modules/suds-live-activity-bridge', __dir__)] })`
-        );
+        const searchPathArg = `{ searchPaths: [File.expand_path('../modules/suds-live-activity-bridge', __dir__)] }`;
+        if (contents.includes('use_expo_modules!')) {
+          contents = contents.replace(
+            'use_expo_modules!',
+            `use_expo_modules!(${searchPathArg})`
+          );
+        }
       }
 
       fs.writeFileSync(podfilePath, contents);
