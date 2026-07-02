@@ -41,8 +41,6 @@ type LiveActivityBridge = {
     sessionStartMs: number,
     lastDrinkType: string,
     lastDrinkName: string,
-    accessToken: string,
-    accessTokenExpiresAt: number,
   ): void;
   updateSharedLastDrink(drinkType: string, drinkName: string): void;
   updateSharedAuthTokens(accessToken: string, refreshToken: string, accessTokenExpiresAt: number): void;
@@ -113,10 +111,8 @@ export function writeSharedSession(
   sessionStartMs: number,
   lastDrinkType: string,
   lastDrinkName: string,
-  accessToken: string,
-  accessTokenExpiresAt: number,
 ): void {
-  Bridge?.writeSharedSession(sessionId, userId, refreshToken, weightLbs, supabaseUrl, anonKey, sessionStartMs, lastDrinkType, lastDrinkName, accessToken, accessTokenExpiresAt);
+  Bridge?.writeSharedSession(sessionId, userId, refreshToken, weightLbs, supabaseUrl, anonKey, sessionStartMs, lastDrinkType, lastDrinkName);
 }
 
 export function updateSharedLastDrink(drinkType: string, drinkName: string): void {

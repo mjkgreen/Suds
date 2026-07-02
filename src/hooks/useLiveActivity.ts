@@ -184,7 +184,10 @@ export function useLiveActivity() {
         _sessionStartMs,
         '',
         '',
+      );
+      LiveActivityBridge.updateSharedAuthTokens(
         session.access_token,
+        session.refresh_token,
         session.expires_at ?? 0,
       );
     } else {

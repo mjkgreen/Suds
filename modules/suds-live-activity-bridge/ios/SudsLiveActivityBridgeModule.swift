@@ -127,8 +127,7 @@ public class SudsLiveActivityBridgeModule: Module {
 
     Function("writeSharedSession") { (sessionId: String, userId: String, refreshToken: String,
                                        weightLbs: Double, supabaseUrl: String, anonKey: String,
-                                       sessionStartMs: Double, lastDrinkType: String, lastDrinkName: String,
-                                       accessToken: String, accessTokenExpiresAt: Double) in
+                                       sessionStartMs: Double, lastDrinkType: String, lastDrinkName: String) in
       guard let d = UserDefaults(suiteName: "group.com.sudssocial.app") else { return }
       d.set(sessionId, forKey: "sessionId")
       d.set(userId, forKey: "userId")
@@ -139,8 +138,6 @@ public class SudsLiveActivityBridgeModule: Module {
       d.set(sessionStartMs / 1000.0, forKey: "sessionStart") // JS ms → Swift seconds
       d.set(lastDrinkType, forKey: "lastDrinkType")
       d.set(lastDrinkName, forKey: "lastDrinkName")
-      d.set(accessToken, forKey: "accessToken")
-      d.set(accessTokenExpiresAt, forKey: "accessTokenExpiresAt") // Unix seconds
     }
 
     Function("updateSharedLastDrink") { (drinkType: String, drinkName: String) in
