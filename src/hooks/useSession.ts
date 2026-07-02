@@ -27,7 +27,7 @@ export function useStartSession() {
     onSuccess: (session) => {
       setActiveSession(session);
       queryClient.invalidateQueries({ queryKey: ['feed'] });
-      startActivity({ sessionTitle: session.title ?? 'Session', drinkCount: 0, elapsedMinutes: 0 });
+      startActivity({ sessionTitle: session.title ?? 'Session', drinkCount: 0 });
     },
   });
 }

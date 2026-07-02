@@ -9,19 +9,11 @@ import { formatMemberNames } from '@/utils/profileHelpers';
 export interface SessionActivityState {
   sessionTitle: string;
   drinkCount: number;
-  elapsedMinutes: number;
 }
 
 export function weightToLbs(weight: number | null | undefined, unit: 'kg' | 'lb' | null | undefined): number {
   if (!weight || weight <= 0) return 0;
   return unit === 'kg' ? weight * 2.20462 : weight;
-}
-
-// Kept for useDrinkLog — no longer used for pushing to the widget, but exported for BAC display in-app.
-export function computeBAC(drinkCount: number, elapsedMinutes: number, weightLbs: number): number {
-  if (weightLbs <= 0 || drinkCount === 0) return 0;
-  const bac = (drinkCount * 0.6 * 5.14) / (weightLbs * 0.70) - (0.015 * elapsedMinutes / 60);
-  return Math.max(0, Math.round(bac * 1000) / 1000);
 }
 
 // Module-level — survive hook remounts across screen navigation.
@@ -45,6 +37,10 @@ async function _refresh(): Promise<void> {
         supabase.from('drink_logs').select('*', { count: 'exact', head: true }).eq('session_id', activeSession.id),
         supabase.rpc('get_session_members_with_profiles', { p_session_id: activeSession.id }),
       ]);
+
+      // Re-check after await — endActivity may have run while we were waiting
+      if (!useSessionStore.getState().liveActivityId) return;
+
       if (drinkRes.count !== null) {
         drinkCount = drinkRes.count;
         useSessionStore.getState().setLiveActivityDrinkCount(drinkCount);
@@ -74,30 +70,43 @@ function _ensureTimerRunning(): void {
   _timer = setInterval(() => { void _refresh(); }, 60_000);
 }
 
-// Register once at module load. When the app returns to the foreground, immediately sync
+// Registered once at module load. When the app returns to the foreground, immediately sync
 // drink count + members (picks up +1 intent drinks logged while backgrounded) and restart
 // the 60-second timer if it was cleared.
-if (Platform.OS === 'ios') {
-  AppState.addEventListener('change', (nextState) => {
-    if (nextState === 'active') {
-      const { liveActivityId } = useSessionStore.getState();
-      if (liveActivityId && _sessionStartMs) {
-        void _refresh();
-        _ensureTimerRunning();
+const _appStateSub = Platform.OS === 'ios'
+  ? AppState.addEventListener('change', (nextState) => {
+      if (nextState === 'active') {
+        const { liveActivityId } = useSessionStore.getState();
+        if (liveActivityId && _sessionStartMs) {
+          void _refresh();
+          _ensureTimerRunning();
+        }
       }
-    }
-  });
-}
+    })
+  : null;
 
 // Called by useMyOpenSession when the app opens and finds an existing active session.
-// Restores the module-level timer state without touching the native activity.
+// Restores the module-level timer state without touching the native activity, and
+// recovers liveActivityId from the native ActivityKit state (wiped by a force-kill).
 export function resumeActivity(session: SessionWithRole): void {
   if (Platform.OS !== 'ios') return;
   _sessionStartMs = session.started_at
     ? new Date(session.started_at).getTime()
     : Date.now();
-  void _refresh();
-  _ensureTimerRunning();
+
+  void (async () => {
+    try {
+      const activities = await LiveActivityBridge.getActivities();
+      if (activities.length > 0) {
+        // Restore the ID that was wiped from Zustand by the force-kill
+        useSessionStore.getState().setLiveActivityId(activities[0].id);
+      }
+    } catch {
+      // getActivities failed — _refresh will no-op until a drink log provides the ID
+    }
+    void _refresh();
+    _ensureTimerRunning();
+  })();
 }
 
 export function useLiveActivity() {
@@ -136,7 +145,6 @@ export function useLiveActivity() {
       console.warn('[LiveActivity] writeSharedSession skipped — missing sessionId, userId, or refresh_token. +1 button will not log drinks.');
     }
 
-    console.warn('[LiveActivity] isSupported:', LiveActivityBridge.isSupported());
     let id: string | null = null;
     try {
       id = await LiveActivityBridge.startActivity(state.sessionTitle, state.drinkCount, 1, '', _sessionStartMs, weightLbs);
@@ -144,7 +152,6 @@ export function useLiveActivity() {
       console.warn('[LiveActivity] startActivity threw:', e);
       return;
     }
-    console.warn('[LiveActivity] startActivity id:', id);
     if (!id) return;
 
     setLiveActivityId(id);

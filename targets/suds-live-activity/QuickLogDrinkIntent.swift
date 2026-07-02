@@ -15,9 +15,6 @@ struct QuickLogDrinkIntent: AppIntent {
               let anonKey = d.string(forKey: "anonKey")
         else { return .result() }
 
-        let weightLbs = d.double(forKey: "weightLbs")
-        let sessionStart = d.double(forKey: "sessionStart")
-
         // Fall back to a generic beer entry when no drink has been logged yet
         let rawDrinkType = d.string(forKey: "lastDrinkType") ?? ""
         let rawDrinkName = d.string(forKey: "lastDrinkName") ?? ""
@@ -26,21 +23,15 @@ struct QuickLogDrinkIntent: AppIntent {
 
         // Optimistic update — widget reflects the tap before any network calls.
         // The JS 60s timer reconciles if the DB write later fails.
+        // elapsed time and BAC are now computed declaratively in the widget view
+        // from sessionStartDate (static attribute) + drinkCount, so they don't
+        // need to be pushed here.
         for activity in Activity<SudsSessionAttributes>.activities {
             let s = activity.contentState
-            let newCount = s.drinkCount + 1
-            let elapsed = sessionStart > 0
-                ? Int((Date().timeIntervalSince1970 - sessionStart) / 60)
-                : s.elapsedMinutes
-            let newBAC: Double = weightLbs > 0
-                ? max(0, (Double(newCount) * 0.6 * 5.14) / (weightLbs * 0.70) - (0.015 * Double(elapsed) / 60))
-                : 0.0
             await activity.update(using: SudsSessionAttributes.ContentState(
-                drinkCount: newCount,
-                elapsedMinutes: elapsed,
+                drinkCount: s.drinkCount + 1,
                 lastDrinkName: drinkName,
                 memberCount: s.memberCount,
-                bacEstimate: newBAC,
                 memberNames: s.memberNames
             ))
         }
