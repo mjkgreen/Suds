@@ -156,7 +156,7 @@ struct LockScreenView: View {
                     color: .orange
                 )
                 // Elapsed time auto-updates every second via SwiftUI timer rendering
-                StatCell(timerDate: context.attributes.sessionStartDate, label: "elapsed")
+                StatCell(label: "elapsed", timerDate: context.attributes.sessionStartDate)
                 if let pace = pacePerHour(drinkCount: context.state.drinkCount, sessionStart: context.attributes.sessionStartDate) {
                     StatCell(value: String(format: "%.1f", pace), label: "/hr")
                 }
