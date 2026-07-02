@@ -121,12 +121,11 @@ const _appStateSub = Platform.OS === 'ios'
 // Darwin cross-process signal from QuickLogDrinkIntent — fires the moment the widget posts
 // a notification, letting the main-app process call Activity.update() immediately (not throttled
 // like widget-extension calls). This collapses the visible lag from ~60s to ~instant.
-const _quickLogSub = Platform.OS === 'ios'
-  ? (LiveActivityBridge as unknown as { addListener: (event: string, cb: () => void) => { remove: () => void } })
-      .addListener('onQuickLog', () => {
-        const { liveActivityId } = useSessionStore.getState();
-        if (liveActivityId && _sessionStartMs) void _refresh();
-      })
+const _quickLogSub = Platform.OS === 'ios' && typeof (LiveActivityBridge as any).addListener === 'function'
+  ? (LiveActivityBridge as any).addListener('onQuickLog', () => {
+      const { liveActivityId } = useSessionStore.getState();
+      if (liveActivityId && _sessionStartMs) void _refresh();
+    })
   : null;
 
 // Called by useMyOpenSession when the app opens and finds an existing active session.

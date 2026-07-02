@@ -5,13 +5,13 @@ import WidgetKit
 
 // MARK: - Logo
 
-private var sudsLogo: Image {
+private let sudsLogo: Image = {
     guard let data = Data(base64Encoded: sudsLogoBase64),
           let ui = UIImage(data: data) else {
         return Image(systemName: "drop.fill")
     }
     return Image(uiImage: ui.withRenderingMode(.alwaysOriginal))
-}
+}()
 
 // MARK: - Widget Bundle
 
@@ -118,11 +118,6 @@ struct LockScreenView: View {
     let context: ActivityViewContext<SudsSessionAttributes>
 
     var body: some View {
-        let bac = computeBAC(
-            drinkCount: context.state.drinkCount,
-            sessionStart: context.attributes.sessionStartDate,
-            weightLbs: context.attributes.weightLbs
-        )
         VStack(alignment: .leading, spacing: 8) {
             // Row 1: logo + session title + +1 button
             HStack(spacing: 8) {
@@ -154,28 +149,35 @@ struct LockScreenView: View {
                 PlusOneButton(lastDrinkName: context.state.lastDrinkName, isLogging: context.state.isLogging)
             }
 
-            // Row 2: stats — each cell takes equal width so the timer growth doesn't shift siblings
-            HStack(spacing: 0) {
-                StatCell(
-                    value: "\(context.state.drinkCount)",
-                    label: "drinks",
-                    color: .orange
+            // Row 2: TimelineView triggers a rerender every 60s so pace and BAC
+            // recompute from the current time without needing a ContentState push.
+            TimelineView(.periodic(from: .now, by: 60)) { _ in
+                let bac = computeBAC(
+                    drinkCount: context.state.drinkCount,
+                    sessionStart: context.attributes.sessionStartDate,
+                    weightLbs: context.attributes.weightLbs
                 )
-                .frame(maxWidth: .infinity)
-                // Elapsed time auto-updates every second via SwiftUI timer rendering
-                StatCell(label: "elapsed", timerDate: context.attributes.sessionStartDate)
-                    .frame(maxWidth: .infinity)
-                if let pace = pacePerHour(drinkCount: context.state.drinkCount, sessionStart: context.attributes.sessionStartDate) {
-                    StatCell(value: String(format: "%.1f", pace), label: "/hr")
-                        .frame(maxWidth: .infinity)
-                }
-                if bac > 0 {
+                HStack(spacing: 0) {
                     StatCell(
-                        value: "~\(String(format: "%.3f", bac))",
-                        label: "% bac",
-                        color: bacColor(bac)
+                        value: "\(context.state.drinkCount)",
+                        label: "drinks",
+                        color: .orange
                     )
                     .frame(maxWidth: .infinity)
+                    StatCell(label: "elapsed", timerDate: context.attributes.sessionStartDate)
+                        .frame(maxWidth: .infinity)
+                    if let pace = pacePerHour(drinkCount: context.state.drinkCount, sessionStart: context.attributes.sessionStartDate) {
+                        StatCell(value: String(format: "%.1f", pace), label: "/hr")
+                            .frame(maxWidth: .infinity)
+                    }
+                    if bac > 0 {
+                        StatCell(
+                            value: "~\(String(format: "%.3f", bac))",
+                            label: "% bac",
+                            color: bacColor(bac)
+                        )
+                        .frame(maxWidth: .infinity)
+                    }
                 }
             }
         }

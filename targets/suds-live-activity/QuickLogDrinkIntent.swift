@@ -72,7 +72,7 @@ struct QuickLogDrinkIntent: AppIntent {
             }
         }
 
-        var req = URLRequest(url: URL(string: "\(supabaseUrl)/rest/v1/drink_logs")!)
+        var req = URLRequest(url: URL(string: "\(supabaseUrl)/rest/v1/drink_logs")!, timeoutInterval: 20)
         req.httpMethod = "POST"
         req.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
         req.setValue(anonKey, forHTTPHeaderField: "apikey")
@@ -96,7 +96,7 @@ struct QuickLogDrinkIntent: AppIntent {
         supabaseUrl: String,
         anonKey: String
     ) async throws -> (String, String?, Double)? {
-        var req = URLRequest(url: URL(string: "\(supabaseUrl)/auth/v1/token?grant_type=refresh_token")!)
+        var req = URLRequest(url: URL(string: "\(supabaseUrl)/auth/v1/token?grant_type=refresh_token")!, timeoutInterval: 20)
         req.httpMethod = "POST"
         req.setValue(anonKey, forHTTPHeaderField: "apikey")
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
