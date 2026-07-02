@@ -8,7 +8,4 @@ module.exports = {
   entitlements: {
     'com.apple.security.application-groups': ['group.com.sudssocial.app'],
   },
-  images: {
-    SudsLogo: '../../assets/Suds.png',
-  },
 };

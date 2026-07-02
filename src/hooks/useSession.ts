@@ -139,6 +139,6 @@ export function useSessionDrinks(sessionId: string | undefined) {
       return data;
     },
     enabled: !!sessionId,
-    refetchInterval: 15_000,
+    refetchInterval: 5_000,
   });
 }

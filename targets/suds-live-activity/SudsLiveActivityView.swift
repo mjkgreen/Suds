@@ -148,17 +148,20 @@ struct LockScreenView: View {
                 PlusOneButton(lastDrinkName: context.state.lastDrinkName)
             }
 
-            // Row 2: stats
-            HStack(spacing: 14) {
+            // Row 2: stats — each cell takes equal width so the timer growth doesn't shift siblings
+            HStack(spacing: 0) {
                 StatCell(
                     value: "\(context.state.drinkCount)",
                     label: "drinks",
                     color: .orange
                 )
+                .frame(maxWidth: .infinity)
                 // Elapsed time auto-updates every second via SwiftUI timer rendering
                 StatCell(label: "elapsed", timerDate: context.attributes.sessionStartDate)
+                    .frame(maxWidth: .infinity)
                 if let pace = pacePerHour(drinkCount: context.state.drinkCount, sessionStart: context.attributes.sessionStartDate) {
                     StatCell(value: String(format: "%.1f", pace), label: "/hr")
+                        .frame(maxWidth: .infinity)
                 }
                 if bac > 0 {
                     StatCell(
@@ -166,6 +169,7 @@ struct LockScreenView: View {
                         label: "% bac",
                         color: bacColor(bac)
                     )
+                    .frame(maxWidth: .infinity)
                 }
             }
         }
@@ -182,21 +186,26 @@ struct StatCell: View {
     var timerDate: Date? = nil
 
     var body: some View {
-        VStack(spacing: 0) {
+        VStack(alignment: .center, spacing: 0) {
             if let date = timerDate {
                 Text(date, style: .timer)
                     .font(.callout.bold())
                     .foregroundStyle(color)
                     .monospacedDigit()
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
             } else {
                 Text(value)
                     .font(.callout.bold())
                     .foregroundStyle(color)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
             }
             Text(label)
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
+        .frame(maxWidth: .infinity)
     }
 }
 
@@ -244,7 +253,7 @@ private func computeBAC(drinkCount: Int, sessionStart: Date, weightLbs: Double) 
 private func pacePerHour(drinkCount: Int, sessionStart: Date) -> Double? {
     guard drinkCount > 0 else { return nil }
     let elapsedHours = -sessionStart.timeIntervalSinceNow / 3600
-    guard elapsedHours > 0 else { return nil }
+    guard elapsedHours >= 1.0 / 12.0 else { return nil } // suppress for first 5 min
     return Double(drinkCount) / elapsedHours
 }
 

@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase';
 import * as LiveActivityBridge from 'suds-live-activity-bridge';
 import { SessionMember, SessionWithRole } from '@/types/models';
 import { formatMemberNames } from '@/utils/profileHelpers';
+import type { RealtimeChannel } from '@supabase/supabase-js';
 
 export interface SessionActivityState {
   sessionTitle: string;
@@ -19,6 +20,7 @@ export function weightToLbs(weight: number | null | undefined, unit: 'kg' | 'lb'
 // Module-level — survive hook remounts across screen navigation.
 // JS (Hermes) is single-threaded so these are safe without locks.
 let _timer: ReturnType<typeof setInterval> | null = null;
+let _channel: RealtimeChannel | null = null;
 let _sessionStartMs: number | null = null; // authoritative epoch: activeSession.started_at
 
 // Pull fresh drink count + members from DB and push a ContentState update.
@@ -70,6 +72,21 @@ function _ensureTimerRunning(): void {
   _timer = setInterval(() => { void _refresh(); }, 60_000);
 }
 
+// Realtime subscription — fires _refresh() the moment the intent's DB write lands,
+// collapsing the 60-second wait to the intent's own JWT-refresh + network latency (~3-5s).
+function _subscribeToSessionDrinks(sessionId: string): void {
+  if (_channel) return;
+  _channel = supabase
+    .channel(`la-drinks-${sessionId}`)
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'drink_logs', filter: `session_id=eq.${sessionId}` },
+      () => { void _refresh(); })
+    .subscribe();
+}
+
+function _unsubscribeFromSessionDrinks(): void {
+  if (_channel) { void supabase.removeChannel(_channel); _channel = null; }
+}
+
 // Registered once at module load. When the app returns to the foreground, immediately sync
 // drink count + members (picks up +1 intent drinks logged while backgrounded) and restart
 // the 60-second timer if it was cleared.
@@ -106,6 +123,7 @@ export function resumeActivity(session: SessionWithRole): void {
     }
     void _refresh();
     _ensureTimerRunning();
+    if (session.id) { _subscribeToSessionDrinks(session.id); }
   })();
 }
 
@@ -161,6 +179,7 @@ export function useLiveActivity() {
     setLiveActivityMemberNames('');
 
     _ensureTimerRunning();
+    if (activeSession?.id) { _subscribeToSessionDrinks(activeSession.id); }
   }
 
   async function updateActivity(state: Partial<SessionActivityState>): Promise<void> {
@@ -181,6 +200,7 @@ export function useLiveActivity() {
 
   async function endActivity(): Promise<void> {
     if (Platform.OS !== 'ios') return;
+    _unsubscribeFromSessionDrinks();
     if (_timer) { clearInterval(_timer); _timer = null; }
     _sessionStartMs = null;
 
