@@ -20,30 +20,34 @@ private extension Notification.Name {
 public class SudsLiveActivityBridgeModule: Module {
   private var quickLogObserver: NSObjectProtocol?
 
+  private func setupDarwinObserver() {
+    CFNotificationCenterAddObserver(
+      CFNotificationCenterGetDarwinNotifyCenter(), nil, sudsQuickLogCallback,
+      "com.sudssocial.app.quicklog" as CFString, nil, .deliverImmediately
+    )
+    quickLogObserver = NotificationCenter.default.addObserver(
+      forName: .sudsQuickLogInternal, object: nil, queue: .main
+    ) { [weak self] _ in
+      self?.sendEvent("onQuickLog", [:])
+    }
+  }
+
+  private func teardownDarwinObserver() {
+    CFNotificationCenterRemoveObserver(
+      CFNotificationCenterGetDarwinNotifyCenter(), nil,
+      CFNotificationName("com.sudssocial.app.quicklog" as CFString), nil
+    )
+    if let obs = quickLogObserver { NotificationCenter.default.removeObserver(obs) }
+  }
+
   public func definition() -> ModuleDefinition {
     Name("SudsLiveActivityBridge")
 
     Events("onQuickLog")
 
-    OnCreate {
-        CFNotificationCenterAddObserver(
-            CFNotificationCenterGetDarwinNotifyCenter(), nil, sudsQuickLogCallback,
-            "com.sudssocial.app.quicklog" as CFString, nil, .deliverImmediately
-        )
-        self.quickLogObserver = NotificationCenter.default.addObserver(
-            forName: .sudsQuickLogInternal, object: nil, queue: .main
-        ) { [weak self] _ in
-            self?.sendEvent("onQuickLog", [:])
-        }
-    }
+    OnCreate { self.setupDarwinObserver() }
 
-    OnDestroy {
-        CFNotificationCenterRemoveObserver(
-            CFNotificationCenterGetDarwinNotifyCenter(), nil,
-            CFNotificationName("com.sudssocial.app.quicklog" as CFString), nil
-        )
-        if let obs = self.quickLogObserver { NotificationCenter.default.removeObserver(obs) }
-    }
+    OnDestroy { self.teardownDarwinObserver() }
 
     Function("isSupported") { () -> Bool in
       guard #available(iOS 16.1, *) else { return false }
