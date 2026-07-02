@@ -13,5 +13,6 @@ struct SudsSessionAttributes: ActivityAttributes {
         var lastDrinkName: String
         var memberCount: Int
         var memberNames: String
+        var isLogging: Bool = false
     }
 }
