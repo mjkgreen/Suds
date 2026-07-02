@@ -3,6 +3,16 @@ import AppIntents
 import SwiftUI
 import WidgetKit
 
+// MARK: - Logo
+
+private var sudsLogo: Image {
+    guard let data = Data(base64Encoded: sudsLogoBase64),
+          let ui = UIImage(data: data) else {
+        return Image(systemName: "drop.fill")
+    }
+    return Image(uiImage: ui.withRenderingMode(.alwaysOriginal))
+}
+
 // MARK: - Widget Bundle
 
 @main
@@ -26,9 +36,8 @@ struct SudsLiveActivityWidget: Widget {
                             .font(.title2.bold())
                             .foregroundStyle(.orange)
                     } icon: {
-                        Image("SudsLogo")
+                        sudsLogo
                             .resizable()
-                            .renderingMode(.original)
                             .scaledToFit()
                             .frame(width: 22, height: 22)
                     }
@@ -75,14 +84,13 @@ struct SudsLiveActivityWidget: Widget {
                                 .foregroundStyle(bacColor(bac))
                         }
                         Spacer()
-                        PlusOneButton(lastDrinkName: context.state.lastDrinkName)
+                        PlusOneButton(lastDrinkName: context.state.lastDrinkName, isLogging: context.state.isLogging)
                     }
                 }
             } compactLeading: {
                 HStack(spacing: 3) {
-                    Image("SudsLogo")
+                    sudsLogo
                         .resizable()
-                        .renderingMode(.original)
                         .scaledToFit()
                         .frame(width: 14, height: 14)
                     Text("\(context.state.drinkCount)")
@@ -95,9 +103,8 @@ struct SudsLiveActivityWidget: Widget {
                     .foregroundStyle(.secondary)
                     .monospacedDigit()
             } minimal: {
-                Image("SudsLogo")
+                sudsLogo
                     .resizable()
-                    .renderingMode(.original)
                     .scaledToFit()
                     .frame(width: 14, height: 14)
             }
@@ -121,9 +128,8 @@ struct LockScreenView: View {
             HStack(spacing: 8) {
                 ZStack {
                     Color.white
-                    Image("SudsLogo")
+                    sudsLogo
                         .resizable()
-                        .renderingMode(.original)
                         .scaledToFit()
                         .padding(6)
                 }
@@ -145,7 +151,7 @@ struct LockScreenView: View {
 
                 Spacer()
 
-                PlusOneButton(lastDrinkName: context.state.lastDrinkName)
+                PlusOneButton(lastDrinkName: context.state.lastDrinkName, isLogging: context.state.isLogging)
             }
 
             // Row 2: stats — each cell takes equal width so the timer growth doesn't shift siblings
@@ -194,16 +200,22 @@ struct StatCell: View {
                     .monospacedDigit()
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: .infinity, alignment: .center)
             } else {
                 Text(value)
                     .font(.callout.bold())
                     .foregroundStyle(color)
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: .infinity, alignment: .center)
             }
             Text(label)
                 .font(.caption)
                 .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .frame(maxWidth: .infinity, alignment: .center)
         }
         .frame(maxWidth: .infinity)
     }
@@ -213,10 +225,22 @@ struct StatCell: View {
 
 struct PlusOneButton: View {
     let lastDrinkName: String
+    var isLogging: Bool = false
 
     var body: some View {
         Group {
-            if #available(iOS 17.0, *) {
+            if isLogging {
+                VStack(spacing: 2) {
+                    ProgressView()
+                        .progressViewStyle(.circular)
+                        .tint(.orange)
+                        .frame(width: 22, height: 22)
+                    Text("Logging…")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+                .frame(width: 60)
+            } else if #available(iOS 17.0, *) {
                 Button(intent: QuickLogDrinkIntent()) {
                     VStack(spacing: 2) {
                         Image(systemName: "plus.circle.fill")

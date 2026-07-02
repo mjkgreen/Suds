@@ -24,29 +24,48 @@ import { useQuickLogDrink } from "@/hooks/useDrinkLog";
 import { useActiveSession, useEndSession, useStartSession } from "@/hooks/useSession";
 import { useUnreadNotificationCount } from "@/hooks/useInAppNotifications";
 import { useAuthStore } from "@/stores/authStore";
-import { FeedEntry, SessionFeedGroup } from "@/types/models";
+import { FeedEntry, FeedItem, SessionFeedGroup } from "@/types/models";
 
-function FeedSessionCard({ group, currentUserId }: { group: SessionFeedGroup; currentUserId?: string }) {
-  const activeSession = useActiveSession();
+interface FeedSessionCardProps {
+  group: SessionFeedGroup;
+  currentUserId?: string;
+  activeSessionId?: string;
+  userId?: string;
+}
+
+const FeedSessionCard = React.memo(function FeedSessionCard({
+  group,
+  currentUserId,
+  activeSessionId,
+  userId,
+}: FeedSessionCardProps) {
   const { mutateAsync: endSession, isPending: isEnding } = useEndSession();
   const { mutateAsync: quickLogDrink } = useQuickLogDrink();
-  const { user } = useAuthStore();
-  const isActive = !!activeSession && group.session_id === activeSession.id;
+  const isActive = !!activeSessionId && group.session_id === activeSessionId;
+
+  const onEnd = useCallback(() => {
+    if (activeSessionId) endSession(activeSessionId);
+  }, [endSession, activeSessionId]);
+
+  const onQuickLog = useCallback(
+    (item: FeedItem) => {
+      if (!userId || !activeSessionId) return Promise.resolve();
+      return quickLogDrink({ userId, item, sessionId: activeSessionId });
+    },
+    [quickLogDrink, userId, activeSessionId]
+  );
+
   return (
     <SessionCard
       group={group}
       currentUserId={currentUserId}
       isActive={isActive}
-      onEnd={isActive ? () => endSession(activeSession!.id) : undefined}
+      onEnd={isActive ? onEnd : undefined}
       isEnding={isActive ? isEnding : undefined}
-      onQuickLog={
-        isActive && user
-          ? (item) => quickLogDrink({ userId: user.id, item, sessionId: activeSession!.id })
-          : undefined
-      }
+      onQuickLog={isActive && userId ? onQuickLog : undefined}
     />
   );
-}
+});
 
 export default function FeedScreen() {
   const { user } = useAuthStore();
@@ -82,10 +101,17 @@ export default function FeedScreen() {
 
   const renderItem = useCallback(({ item: entry }: { item: FeedEntry }) => {
     if (entry.type === "session") {
-      return <FeedSessionCard group={entry} currentUserId={user?.id} />;
+      return (
+        <FeedSessionCard
+          group={entry}
+          currentUserId={user?.id}
+          activeSessionId={activeSession?.id}
+          userId={user?.id}
+        />
+      );
     }
     return <DrinkCard item={entry.item} currentUserId={user?.id} />;
-  }, [user?.id]);
+  }, [user?.id, activeSession?.id]);
 
   async function handleStartSession() {
     if (!user) return;
@@ -191,6 +217,10 @@ export default function FeedScreen() {
           onEndReached={handleEndReached}
           onEndReachedThreshold={0.4}
           refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor="#f59e0b" />}
+          initialNumToRender={6}
+          maxToRenderPerBatch={4}
+          windowSize={7}
+          removeClippedSubviews={Platform.OS !== "web"}
         />
 
         {/* Start session modal */}

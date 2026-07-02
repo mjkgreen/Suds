@@ -1,5 +1,6 @@
 import AppIntents
 import ActivityKit
+import CoreFoundation
 
 @available(iOS 17.0, *)
 struct QuickLogDrinkIntent: AppIntent {
@@ -32,19 +33,43 @@ struct QuickLogDrinkIntent: AppIntent {
                 drinkCount: s.drinkCount + 1,
                 lastDrinkName: drinkName,
                 memberCount: s.memberCount,
-                memberNames: s.memberNames
+                memberNames: s.memberNames,
+                isLogging: true
             ))
         }
 
-        // Persist to DB — refresh the JWT first (Supabase tokens expire after 1 hour).
-        guard let (accessToken, newRefreshToken) = try? await refreshAccessToken(
-            refreshToken: storedRefreshToken,
-            supabaseUrl: supabaseUrl,
-            anonKey: anonKey
-        ) else { return .result() }
+        // Signal the main app to call Activity.update() from its process (not throttled like widget-extension calls).
+        let cfCenter = CFNotificationCenterGetDarwinNotifyCenter()
+        CFNotificationCenterPostNotification(
+            cfCenter,
+            CFNotificationName("com.sudssocial.app.quicklog" as CFString),
+            nil, nil, true
+        )
 
-        if let newToken = newRefreshToken {
-            d.set(newToken, forKey: "refreshToken")
+        // Persist to DB. Prefer a still-valid cached access token over refreshing — Supabase
+        // refresh tokens are single-use, and the main app may rotate one concurrently, so
+        // refreshing on every tap risks "Invalid Refresh Token: Already Used" and forces the
+        // user's session to be torn down.
+        let now = Date().timeIntervalSince1970
+        let cachedAccessToken = d.string(forKey: "accessToken")
+        let cachedExpiresAt = d.double(forKey: "accessTokenExpiresAt")
+
+        let accessToken: String
+        if let cached = cachedAccessToken, cachedExpiresAt > now + 30 {
+            accessToken = cached
+        } else {
+            guard let (freshAccessToken, newRefreshToken, expiresIn) = try? await refreshAccessToken(
+                refreshToken: storedRefreshToken,
+                supabaseUrl: supabaseUrl,
+                anonKey: anonKey
+            ) else { return .result() }
+
+            accessToken = freshAccessToken
+            d.set(freshAccessToken, forKey: "accessToken")
+            d.set(now + expiresIn, forKey: "accessTokenExpiresAt")
+            if let newToken = newRefreshToken {
+                d.set(newToken, forKey: "refreshToken")
+            }
         }
 
         var req = URLRequest(url: URL(string: "\(supabaseUrl)/rest/v1/drink_logs")!)
@@ -70,7 +95,7 @@ struct QuickLogDrinkIntent: AppIntent {
         refreshToken: String,
         supabaseUrl: String,
         anonKey: String
-    ) async throws -> (String, String?)? {
+    ) async throws -> (String, String?, Double)? {
         var req = URLRequest(url: URL(string: "\(supabaseUrl)/auth/v1/token?grant_type=refresh_token")!)
         req.httpMethod = "POST"
         req.setValue(anonKey, forHTTPHeaderField: "apikey")
@@ -80,6 +105,7 @@ struct QuickLogDrinkIntent: AppIntent {
         guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               let accessToken = json["access_token"] as? String
         else { return nil }
-        return (accessToken, json["refresh_token"] as? String)
+        let expiresIn = (json["expires_in"] as? Double) ?? 3600
+        return (accessToken, json["refresh_token"] as? String, expiresIn)
     }
 }

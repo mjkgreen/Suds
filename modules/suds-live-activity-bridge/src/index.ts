@@ -41,9 +41,19 @@ type LiveActivityBridge = {
     sessionStartMs: number,
     lastDrinkType: string,
     lastDrinkName: string,
+    accessToken: string,
+    accessTokenExpiresAt: number,
   ): void;
   updateSharedLastDrink(drinkType: string, drinkName: string): void;
+  updateSharedAuthTokens(accessToken: string, refreshToken: string, accessTokenExpiresAt: number): void;
+  readSharedAuthTokens(): SharedAuthTokens | null;
   clearSharedSession(): void;
+};
+
+export type SharedAuthTokens = {
+  accessToken: string;
+  refreshToken: string;
+  accessTokenExpiresAt: number;
 };
 
 let Bridge: LiveActivityBridge | null = null;
@@ -103,12 +113,25 @@ export function writeSharedSession(
   sessionStartMs: number,
   lastDrinkType: string,
   lastDrinkName: string,
+  accessToken: string,
+  accessTokenExpiresAt: number,
 ): void {
-  Bridge?.writeSharedSession(sessionId, userId, refreshToken, weightLbs, supabaseUrl, anonKey, sessionStartMs, lastDrinkType, lastDrinkName);
+  Bridge?.writeSharedSession(sessionId, userId, refreshToken, weightLbs, supabaseUrl, anonKey, sessionStartMs, lastDrinkType, lastDrinkName, accessToken, accessTokenExpiresAt);
 }
 
 export function updateSharedLastDrink(drinkType: string, drinkName: string): void {
   Bridge?.updateSharedLastDrink(drinkType, drinkName);
+}
+
+// Push the app's freshly-rotated refresh token to the widget extension's shared storage.
+// Supabase refresh tokens are single-use; without this the widget (a separate OS process)
+// can retry a token this app already consumed, or vice versa.
+export function updateSharedAuthTokens(accessToken: string, refreshToken: string, accessTokenExpiresAt: number): void {
+  Bridge?.updateSharedAuthTokens(accessToken, refreshToken, accessTokenExpiresAt);
+}
+
+export function readSharedAuthTokens(): SharedAuthTokens | null {
+  return Bridge?.readSharedAuthTokens() ?? null;
 }
 
 export function clearSharedSession(): void {

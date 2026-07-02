@@ -87,6 +87,21 @@ function _unsubscribeFromSessionDrinks(): void {
   if (_channel) { void supabase.removeChannel(_channel); _channel = null; }
 }
 
+// The +1 widget intent runs in a separate OS process and self-refreshes the Supabase session
+// independently when its cached access token expires, rotating the single-use refresh token.
+// If this app doesn't pick up that rotation, its own next auto-refresh retries the now-stale
+// token and Supabase force-signs the user out ("Invalid Refresh Token: Already Used"). Adopt
+// the widget's copy whenever it's newer than what this app currently holds.
+function _reconcileAuthFromSharedStorage(): void {
+  const shared = LiveActivityBridge.readSharedAuthTokens();
+  const { session } = useAuthStore.getState();
+  if (!shared || !session || shared.refreshToken === session.refresh_token) return;
+  void supabase.auth.setSession({
+    access_token: shared.accessToken,
+    refresh_token: shared.refreshToken,
+  });
+}
+
 // Registered once at module load. When the app returns to the foreground, immediately sync
 // drink count + members (picks up +1 intent drinks logged while backgrounded) and restart
 // the 60-second timer if it was cleared.
@@ -95,11 +110,23 @@ const _appStateSub = Platform.OS === 'ios'
       if (nextState === 'active') {
         const { liveActivityId } = useSessionStore.getState();
         if (liveActivityId && _sessionStartMs) {
+          _reconcileAuthFromSharedStorage();
           void _refresh();
           _ensureTimerRunning();
         }
       }
     })
+  : null;
+
+// Darwin cross-process signal from QuickLogDrinkIntent — fires the moment the widget posts
+// a notification, letting the main-app process call Activity.update() immediately (not throttled
+// like widget-extension calls). This collapses the visible lag from ~60s to ~instant.
+const _quickLogSub = Platform.OS === 'ios'
+  ? (LiveActivityBridge as unknown as { addListener: (event: string, cb: () => void) => { remove: () => void } })
+      .addListener('onQuickLog', () => {
+        const { liveActivityId } = useSessionStore.getState();
+        if (liveActivityId && _sessionStartMs) void _refresh();
+      })
   : null;
 
 // Called by useMyOpenSession when the app opens and finds an existing active session.
@@ -158,6 +185,8 @@ export function useLiveActivity() {
         _sessionStartMs,
         '',
         '',
+        session.access_token,
+        session.expires_at ?? 0,
       );
     } else {
       console.warn('[LiveActivity] writeSharedSession skipped — missing sessionId, userId, or refresh_token. +1 button will not log drinks.');

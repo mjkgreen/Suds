@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/stores/authStore';
 import { Profile } from '@/types/models';
 import { sendSignupEmail } from '@/lib/email';
+import * as LiveActivityBridge from 'suds-live-activity-bridge';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import * as Crypto from 'expo-crypto';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
@@ -54,6 +55,11 @@ export function useAuth() {
         } else {
           setProfile(null);
           setLoading(false);
+        }
+        // Keep the +1 widget's shared storage in sync with every token rotation this app
+        // performs, so it never retries a refresh token that's already been consumed.
+        if (Platform.OS === 'ios' && session?.access_token && session?.refresh_token) {
+          LiveActivityBridge.updateSharedAuthTokens(session.access_token, session.refresh_token, session.expires_at ?? 0);
         }
       },
     );
