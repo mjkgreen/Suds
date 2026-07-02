@@ -33,7 +33,7 @@ export function useUserStats(userId: string | undefined) {
     queryFn: async () => {
       const { data, error } = await supabase.rpc('get_user_stats', {
         p_user_id: userId!,
-      } as any);
+      });
       if (error) throw error;
       return data as UserStats;
     },
@@ -52,8 +52,8 @@ export function useUpdateProfile() {
       userId: string;
       updates: Partial<Pick<Profile, 'display_name' | 'bio' | 'avatar_url' | 'username' | 'height' | 'height_unit' | 'weight' | 'weight_unit' | 'birthdate' | 'displayed_badges'>>;
     }) => {
-      const { data, error } = await (supabase
-        .from('profiles') as any)
+      const { data, error } = await supabase
+        .from('profiles')
         .update(updates)
         .eq('id', userId)
         .select()

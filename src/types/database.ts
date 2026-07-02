@@ -26,6 +26,8 @@ export interface Database {
           weight_unit: string | null;
           birthdate: string | null;
           onboarded: boolean;
+          subscription_tier: 'free' | 'premium';
+          displayed_badges: string[] | null;
           created_at: string;
           updated_at: string;
         };
@@ -41,6 +43,8 @@ export interface Database {
           weight_unit?: string | null;
           birthdate?: string | null;
           onboarded?: boolean;
+          subscription_tier?: 'free' | 'premium';
+          displayed_badges?: string[] | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -55,7 +59,31 @@ export interface Database {
           weight_unit?: string | null;
           birthdate?: string | null;
           onboarded?: boolean;
+          subscription_tier?: 'free' | 'premium';
+          displayed_badges?: string[] | null;
           updated_at?: string;
+        };
+      };
+      sessions: {
+        Row: {
+          id: string;
+          user_id: string;
+          title: string | null;
+          started_at: string;
+          ended_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          title?: string | null;
+          started_at?: string;
+          ended_at?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          title?: string | null;
+          ended_at?: string | null;
         };
       };
       drink_logs: {
@@ -64,12 +92,16 @@ export interface Database {
           user_id: string;
           drink_type: string;
           drink_name: string | null;
+          brand: string | null;
           quantity: number;
           location_name: string | null;
           location_lat: number | null;
           location_lng: number | null;
           notes: string | null;
           photo_url: string | null;
+          photo_urls: string[];
+          rating: number | null;
+          event_name: string | null;
           session_id: string | null;
           logged_at: string;
           ended_at: string | null;
@@ -80,12 +112,16 @@ export interface Database {
           user_id: string;
           drink_type: string;
           drink_name?: string | null;
+          brand?: string | null;
           quantity: number;
           location_name?: string | null;
           location_lat?: number | null;
           location_lng?: number | null;
           notes?: string | null;
           photo_url?: string | null;
+          photo_urls?: string[];
+          rating?: number | null;
+          event_name?: string | null;
           session_id?: string | null;
           logged_at?: string;
           ended_at?: string | null;
@@ -94,15 +130,53 @@ export interface Database {
         Update: {
           drink_type?: string;
           drink_name?: string | null;
+          brand?: string | null;
           quantity?: number;
           location_name?: string | null;
           location_lat?: number | null;
           location_lng?: number | null;
           notes?: string | null;
           photo_url?: string | null;
+          photo_urls?: string[];
+          rating?: number | null;
+          event_name?: string | null;
           session_id?: string | null;
           logged_at?: string;
           ended_at?: string | null;
+        };
+      };
+      drink_likes: {
+        Row: {
+          id: string;
+          drink_log_id: string;
+          user_id: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          drink_log_id: string;
+          user_id: string;
+          created_at?: string;
+        };
+        Update: never;
+      };
+      drink_comments: {
+        Row: {
+          id: string;
+          drink_log_id: string;
+          user_id: string;
+          content: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          drink_log_id: string;
+          user_id: string;
+          content: string;
+          created_at?: string;
+        };
+        Update: {
+          content?: string;
         };
       };
       follows: {
@@ -270,8 +344,17 @@ export interface Database {
         Returns: {
           total_drinks: number;
           total_quantity: number;
+          favorite_drink_types: { drink_type: string; count: number }[];
           drinks_this_week: number;
           drinks_this_month: number;
+          activity_by_day: { date: string; count: number; alcohol_count: number; water_count: number }[];
+          happy_hour_count: number;
+          last_call_count: number;
+          early_bird_count: number;
+          unique_countries_count: number;
+          weekly_limit: number;
+          goal_updated_at: string | null;
+          user_created_at: string;
         }[];
       };
       get_my_active_session: {
@@ -304,6 +387,34 @@ export interface Database {
       accept_session_invite: {
         Args: { p_token: string };
         Returns: Record<string, unknown>;
+      };
+      get_advanced_stats: {
+        Args: { p_user_id: string };
+        Returns: Json;
+      };
+      get_milestones: {
+        Args: { p_user_id: string };
+        Returns: Json;
+      };
+      get_streaks: {
+        Args: { p_user_id: string };
+        Returns: {
+          drink_streak: number;
+          sober_streak: number;
+          last_drink_date: string | null;
+        };
+      };
+      delete_session_with_drinks: {
+        Args: { p_session_id: string };
+        Returns: undefined;
+      };
+      delete_account: {
+        Args: Record<string, never>;
+        Returns: undefined;
+      };
+      upsert_push_token: {
+        Args: { p_token: string; p_platform: 'ios' | 'android' };
+        Returns: undefined;
       };
     };
     Enums: Record<string, never>;

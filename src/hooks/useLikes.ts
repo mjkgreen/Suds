@@ -7,7 +7,7 @@ export function useLike(currentUserId: string | undefined) {
   const likeMutation = useMutation({
     mutationFn: async (drinkLogId: string) => {
       const { error } = await supabase
-        .from('drink_likes' as any)
+        .from('drink_likes')
         .insert({ drink_log_id: drinkLogId, user_id: currentUserId! });
       if (error) throw error;
     },
@@ -20,7 +20,7 @@ export function useLike(currentUserId: string | undefined) {
   const unlikeMutation = useMutation({
     mutationFn: async (drinkLogId: string) => {
       const { error } = await supabase
-        .from('drink_likes' as any)
+        .from('drink_likes')
         .delete()
         .eq('drink_log_id', drinkLogId)
         .eq('user_id', currentUserId!);

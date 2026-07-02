@@ -83,7 +83,7 @@ export function useDeleteSession() {
 
   return useMutation({
     mutationFn: async (sessionId: string) => {
-      const { error } = await supabase.rpc('delete_session_with_drinks', { p_session_id: sessionId } as any);
+      const { error } = await supabase.rpc('delete_session_with_drinks', { p_session_id: sessionId });
       if (error) throw error;
     },
     onSuccess: (_data, sessionId) => {

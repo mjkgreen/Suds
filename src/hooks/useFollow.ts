@@ -22,7 +22,7 @@ export function useFollow(currentUserId: string | undefined) {
 
   const followMutation = useMutation({
     mutationFn: async (targetUserId: string) => {
-      const { error } = await (supabase.from('follows') as any).insert({
+      const { error } = await supabase.from('follows').insert({
         follower_id: currentUserId!,
         following_id: targetUserId,
       });

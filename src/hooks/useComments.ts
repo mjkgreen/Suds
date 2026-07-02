@@ -33,7 +33,7 @@ export function useAddComment(currentUserId: string | undefined) {
   return useMutation({
     mutationFn: async ({ drinkLogId, content }: { drinkLogId: string; content: string }) => {
       const { error } = await supabase
-        .from('drink_comments' as any)
+        .from('drink_comments')
         .insert({ drink_log_id: drinkLogId, user_id: currentUserId!, content });
       if (error) throw error;
     },
@@ -51,7 +51,7 @@ export function useDeleteComment(currentUserId: string | undefined) {
   return useMutation({
     mutationFn: async ({ commentId, drinkLogId }: { commentId: string; drinkLogId: string }) => {
       const { error } = await supabase
-        .from('drink_comments' as any)
+        .from('drink_comments')
         .delete()
         .eq('id', commentId)
         .eq('user_id', currentUserId!);

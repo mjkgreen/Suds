@@ -74,7 +74,7 @@ export function useLogDrink() {
         photoUrls.push(url);
       }
 
-      const { data, error } = await (supabase.from('drink_logs') as any)
+      const { data, error } = await supabase.from('drink_logs')
         .insert({
           user_id: userId,
           drink_type: formData.drink_type,
@@ -147,7 +147,7 @@ export function useUpdateDrinkLog() {
 
       const finalPhotoUrls = [...keptPhotoUrls, ...uploadedUrls].slice(0, MAX_PHOTOS);
 
-      const { data, error } = await (supabase.from('drink_logs') as any)
+      const { data, error } = await supabase.from('drink_logs')
         .update({
           drink_type: formData.drink_type,
           drink_name: formData.drink_name || null,
@@ -193,7 +193,7 @@ export function useQuickLogDrink() {
       item: Pick<DrinkLog, 'drink_type' | 'drink_name' | 'brand' | 'quantity' | 'location_name' | 'location_lat' | 'location_lng'>;
       sessionId: string;
     }) => {
-      const { data, error } = await (supabase.from('drink_logs') as any)
+      const { data, error } = await supabase.from('drink_logs')
         .insert({
           user_id: userId,
           drink_type: item.drink_type,
@@ -250,7 +250,7 @@ export function useRemoveDrinkFromSession() {
 
   return useMutation({
     mutationFn: async ({ id, sessionId, userId }: { id: string; sessionId: string; userId: string }) => {
-      const { error } = await (supabase.from('drink_logs') as any)
+      const { error } = await supabase.from('drink_logs')
         .update({ session_id: null })
         .eq('id', id);
       if (error) throw error;
