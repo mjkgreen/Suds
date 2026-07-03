@@ -117,10 +117,9 @@ struct LockScreenView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 10))
 
                 VStack(alignment: .leading, spacing: 1) {
-                    Text(context.attributes.sessionTitle)
+                    (Text("Suds: ").foregroundStyle(.orange) + Text(context.attributes.sessionTitle).foregroundStyle(.primary))
                         .font(.subheadline.bold())
-                        .foregroundStyle(.primary)
-                        .lineLimit(2)
+                        .lineLimit(1)
                     if !context.state.memberNames.isEmpty {
                         Text("with \(context.state.memberNames)")
                             .font(.caption2)

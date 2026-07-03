@@ -1,13 +1,26 @@
 import AppIntents
 import ActivityKit
 import CoreFoundation
+import os
 
 @available(iOS 17.0, *)
 struct QuickLogDrinkIntent: AppIntent {
     static let title: LocalizedStringResource = "Log a drink"
     static let isDiscoverable = false
 
+    // OSAllocatedUnfairLock provides atomic check-and-set, unlike a plain `var` which
+    // gives no synchronization guarantee on Swift's cooperative thread pool.
+    nonisolated(unsafe) private static let _lock = OSAllocatedUnfairLock(initialState: false)
+
     func perform() async throws -> some IntentResult {
+        let alreadyInFlight = QuickLogDrinkIntent._lock.withLock { state -> Bool in
+            if state { return true }
+            state = true
+            return false
+        }
+        guard !alreadyInFlight else { return .result() }
+        defer { QuickLogDrinkIntent._lock.withLock { $0 = false } }
+
         guard let d = UserDefaults(suiteName: "group.com.sudssocial.app"),
               let sessionId = d.string(forKey: "sessionId"),
               let userId = d.string(forKey: "userId"),
@@ -36,9 +49,6 @@ struct QuickLogDrinkIntent: AppIntent {
 
         // Optimistic update — widget reflects the tap before any network calls.
         // The JS 60s timer reconciles if the DB write later fails.
-        // elapsed time and BAC are now computed declaratively in the widget view
-        // from sessionStartDate (static attribute) + drinkCount, so they don't
-        // need to be pushed here.
         for activity in Activity<SudsSessionAttributes>.activities {
             let s = activity.contentState
             await activity.update(using: SudsSessionAttributes.ContentState(
@@ -49,14 +59,6 @@ struct QuickLogDrinkIntent: AppIntent {
                 isLogging: true
             ))
         }
-
-        // Signal the main app to call Activity.update() from its process (not throttled like widget-extension calls).
-        let cfCenter = CFNotificationCenterGetDarwinNotifyCenter()
-        CFNotificationCenterPostNotification(
-            cfCenter,
-            CFNotificationName("com.sudssocial.app.quicklog" as CFString),
-            nil, nil, true
-        )
 
         // Persist to DB. Prefer a still-valid cached access token over refreshing — Supabase
         // refresh tokens are single-use, and the main app may rotate one concurrently, so
@@ -74,7 +76,17 @@ struct QuickLogDrinkIntent: AppIntent {
                 refreshToken: storedRefreshToken,
                 supabaseUrl: supabaseUrl,
                 anonKey: anonKey
-            ) else { return .result() }
+            ) else {
+                // Token refresh failed — clear the optimistic spinner before giving up.
+                for activity in Activity<SudsSessionAttributes>.activities {
+                    let s = activity.contentState
+                    await activity.update(using: SudsSessionAttributes.ContentState(
+                        drinkCount: s.drinkCount, lastDrinkName: s.lastDrinkName,
+                        memberCount: s.memberCount, memberNames: s.memberNames, isLogging: false
+                    ))
+                }
+                return .result()
+            }
 
             accessToken = freshAccessToken
             d.set(freshAccessToken, forKey: "accessToken")
@@ -100,6 +112,26 @@ struct QuickLogDrinkIntent: AppIntent {
         ]
         req.httpBody = try? JSONSerialization.data(withJSONObject: body)
         _ = try? await URLSession.shared.data(for: req)
+
+        // DB write complete — clear the spinner before signalling the main app.
+        // Darwin fires AFTER the INSERT so _refresh() finds the committed row.
+        for activity in Activity<SudsSessionAttributes>.activities {
+            let s = activity.contentState
+            await activity.update(using: SudsSessionAttributes.ContentState(
+                drinkCount: s.drinkCount,
+                lastDrinkName: drinkName,
+                memberCount: s.memberCount,
+                memberNames: s.memberNames,
+                isLogging: false
+            ))
+        }
+
+        let cfCenter = CFNotificationCenterGetDarwinNotifyCenter()
+        CFNotificationCenterPostNotification(
+            cfCenter,
+            CFNotificationName("com.sudssocial.app.quicklog" as CFString),
+            nil, nil, true
+        )
 
         return .result()
     }

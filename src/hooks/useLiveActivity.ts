@@ -2,6 +2,7 @@ import { AppState, Platform } from 'react-native';
 import { useAuthStore } from '@/stores/authStore';
 import { useSessionStore } from '@/stores/sessionStore';
 import { supabase } from '@/lib/supabase';
+import { queryClient } from '@/lib/queryClient';
 import * as LiveActivityBridge from 'suds-live-activity-bridge';
 import { SessionMember, SessionWithRole } from '@/types/models';
 import { formatMemberNames } from '@/utils/profileHelpers';
@@ -21,6 +22,8 @@ export function weightToLbs(weight: number | null | undefined, unit: 'kg' | 'lb'
 // JS (Hermes) is single-threaded so these are safe without locks.
 let _timer: ReturnType<typeof setInterval> | null = null;
 let _channel: RealtimeChannel | null = null;
+let _channelSessionId: string | null = null;
+let _reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 let _sessionStartMs: number | null = null; // authoritative epoch: activeSession.started_at
 
 // Pull fresh drink count + members from DB and push a ContentState update.
@@ -74,17 +77,56 @@ function _ensureTimerRunning(): void {
 
 // Realtime subscription — fires _refresh() the moment the intent's DB write lands,
 // collapsing the 60-second wait to the intent's own JWT-refresh + network latency (~3-5s).
+// Status callback detects CLOSED/CHANNEL_ERROR (e.g., WebSocket drop on iOS background)
+// and schedules a reconnect so the channel doesn't silently die.
 function _subscribeToSessionDrinks(sessionId: string): void {
-  if (_channel) return;
+  // If the session has already ended (endActivity cleared liveActivityId), a pending
+  // reconnect timer may still fire this function. Abort so we don't create a ghost
+  // channel that leaks a WebSocket subscription after the session is over.
+  if (!useSessionStore.getState().liveActivityId) return;
+
+  // Clear stale channel if it's for a different session (or was left over after a session end
+  // that didn't reach endActivity). Without this, the `if (_channel) return` guard below
+  // would permanently block subscriptions for the new session.
+  if (_channel && _channelSessionId !== sessionId) {
+    void supabase.removeChannel(_channel);
+    _channel = null;
+    _channelSessionId = null;
+  }
+  if (_channel) return; // already subscribed to this session
+
+  _channelSessionId = sessionId;
   _channel = supabase
     .channel(`la-drinks-${sessionId}`)
-    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'drink_logs', filter: `session_id=eq.${sessionId}` },
-      () => { void _refresh(); })
-    .subscribe();
+    .on(
+      'postgres_changes',
+      { event: 'INSERT', schema: 'public', table: 'drink_logs', filter: `session_id=eq.${sessionId}` },
+      () => {
+        void _refresh();
+        void queryClient.invalidateQueries({ queryKey: ['feed'] });
+      },
+    )
+    .subscribe((status) => {
+      // WebSocket drops (common on iOS background/foreground) leave the channel in
+      // CLOSED or CHANNEL_ERROR without triggering a reconnect by default. Detect it
+      // and retry after 5s so the channel stays live for the duration of the session.
+      // Cancel any pending timer first to prevent duplicate channels from multiple callbacks.
+      if (status === 'CHANNEL_ERROR' || status === 'CLOSED') {
+        _channel = null;
+        _channelSessionId = null;
+        if (_reconnectTimer) clearTimeout(_reconnectTimer);
+        _reconnectTimer = setTimeout(() => {
+          _reconnectTimer = null;
+          _subscribeToSessionDrinks(sessionId);
+        }, 5_000);
+      }
+    });
 }
 
 function _unsubscribeFromSessionDrinks(): void {
+  if (_reconnectTimer) { clearTimeout(_reconnectTimer); _reconnectTimer = null; }
   if (_channel) { void supabase.removeChannel(_channel); _channel = null; }
+  _channelSessionId = null;
 }
 
 // The +1 widget intent runs in a separate OS process and self-refreshes the Supabase session
@@ -103,28 +145,33 @@ function _reconcileAuthFromSharedStorage(): void {
 }
 
 // Registered once at module load. When the app returns to the foreground, immediately sync
-// drink count + members (picks up +1 intent drinks logged while backgrounded) and restart
-// the 60-second timer if it was cleared.
+// drink count + members (picks up +1 intent drinks logged while backgrounded), restart
+// the 60-second timer if it was cleared, and resubscribe the realtime channel if it died
+// while the app was backgrounded (WebSocket drops are common on iOS).
 const _appStateSub = Platform.OS === 'ios'
   ? AppState.addEventListener('change', (nextState) => {
       if (nextState === 'active') {
-        const { liveActivityId } = useSessionStore.getState();
+        const { liveActivityId, activeSession } = useSessionStore.getState();
         if (liveActivityId && _sessionStartMs) {
           _reconcileAuthFromSharedStorage();
           void _refresh();
           _ensureTimerRunning();
+          if (activeSession?.id) _subscribeToSessionDrinks(activeSession.id);
         }
       }
     })
   : null;
 
-// Darwin cross-process signal from QuickLogDrinkIntent — fires the moment the widget posts
-// a notification, letting the main-app process call Activity.update() immediately (not throttled
-// like widget-extension calls). This collapses the visible lag from ~60s to ~instant.
+// Darwin cross-process signal from QuickLogDrinkIntent — fires after the widget's DB write
+// completes, letting the main-app process call Activity.update() with the correct committed
+// count (not throttled like widget-extension calls).
 const _quickLogSub = Platform.OS === 'ios' && typeof (LiveActivityBridge as any).addListener === 'function'
   ? (LiveActivityBridge as any).addListener('onQuickLog', () => {
       const { liveActivityId } = useSessionStore.getState();
-      if (liveActivityId && _sessionStartMs) void _refresh();
+      if (liveActivityId && _sessionStartMs) {
+        void _refresh();
+        void queryClient.invalidateQueries({ queryKey: ['feed'] });
+      }
     })
   : null;
 
