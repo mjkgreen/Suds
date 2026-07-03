@@ -7,8 +7,13 @@ import SwiftUI
 // lock-screen vibrant-material desaturation that affects raster UIImage content.
 struct SudsGlassShape: Shape {
     func path(in rect: CGRect) -> Path {
-        let sc = min(rect.width, rect.height) / 1024.0
-        let dx = rect.minX; let dy = rect.minY
+        // Actual content bounds within the 1024×1024 viewBox.
+        // Scaling to these instead of 1024 fills the frame rather than using ~54% of it.
+        let minX: CGFloat = 235.0
+        let minY: CGFloat = 133.5
+        let sc = min(rect.width / 554.0, rect.height / 756.5)
+        let dx = rect.minX + (rect.width  - 554.0 * sc) / 2 - minX * sc
+        let dy = rect.minY + (rect.height - 756.5 * sc) / 2 - minY * sc
         func pt(_ px: CGFloat, _ py: CGFloat) -> CGPoint {
             CGPoint(x: px * sc + dx, y: py * sc + dy)
         }
@@ -298,7 +303,6 @@ struct SudsGlassShape: Shape {
             Color.white
             SudsGlassShape()
                 .fill(Color.orange, style: FillStyle(eoFill: true))
-                .padding(6)
         }
         .frame(width: 44, height: 44)
         .clipShape(RoundedRectangle(cornerRadius: 10))
