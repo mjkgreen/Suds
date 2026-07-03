@@ -93,16 +93,22 @@ public class SudsLiveActivityBridgeModule: Module {
     }
 
     // Awaited directly so the JS promise resolves only after ActivityKit commits the update.
+    // Reads intentIsLogging from shared UserDefaults rather than hardcoding false — while the
+    // widget intent is in flight it sets intentIsLogging = true, so every _refresh() call from
+    // the main app (triggered by realtime, Darwin, or the 60s timer) preserves the spinner
+    // instead of killing it.
     AsyncFunction("updateActivity") { (activityId: String, drinkCount: Int,
                                         lastDrinkName: String, memberCount: Int,
                                         memberNames: String) async in
       guard #available(iOS 16.1, *) else { return }
+      let isLogging = UserDefaults(suiteName: "group.com.sudssocial.app")?
+        .bool(forKey: "intentIsLogging") ?? false
       let state = SudsSessionAttributes.ContentState(
         drinkCount: drinkCount,
         lastDrinkName: lastDrinkName,
         memberCount: memberCount,
         memberNames: memberNames,
-        isLogging: false
+        isLogging: isLogging
       )
       for activity in Activity<SudsSessionAttributes>.activities where activity.id == activityId {
         await activity.update(using: state)
@@ -138,6 +144,9 @@ public class SudsLiveActivityBridgeModule: Module {
       d.set(sessionStartMs / 1000.0, forKey: "sessionStart") // JS ms → Swift seconds
       d.set(lastDrinkType, forKey: "lastDrinkType")
       d.set(lastDrinkName, forKey: "lastDrinkName")
+      // Clear any stale flag left by a jetsam-killed intent process — a new session
+      // means no intent is in flight, so isLogging should never start as true.
+      d.set(false, forKey: "intentIsLogging")
     }
 
     Function("updateSharedLastDrink") { (drinkType: String, drinkName: String) in
@@ -173,7 +182,8 @@ public class SudsLiveActivityBridgeModule: Module {
     Function("clearSharedSession") { () in
       guard let d = UserDefaults(suiteName: "group.com.sudssocial.app") else { return }
       ["sessionId", "userId", "refreshToken", "weightLbs", "supabaseUrl", "anonKey", "sessionStart",
-       "lastDrinkType", "lastDrinkName", "accessToken", "accessTokenExpiresAt"]
+       "lastDrinkType", "lastDrinkName", "accessToken", "accessTokenExpiresAt",
+       "lastQuickLogTapAt", "intentIsLogging"]
         .forEach { d.removeObject(forKey: $0) }
     }
   }

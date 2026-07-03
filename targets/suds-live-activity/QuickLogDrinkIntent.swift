@@ -1,26 +1,13 @@
 import AppIntents
 import ActivityKit
 import CoreFoundation
-import os
 
 @available(iOS 17.0, *)
 struct QuickLogDrinkIntent: AppIntent {
     static let title: LocalizedStringResource = "Log a drink"
     static let isDiscoverable = false
 
-    // OSAllocatedUnfairLock provides atomic check-and-set, unlike a plain `var` which
-    // gives no synchronization guarantee on Swift's cooperative thread pool.
-    nonisolated(unsafe) private static let _lock = OSAllocatedUnfairLock(initialState: false)
-
     func perform() async throws -> some IntentResult {
-        let alreadyInFlight = QuickLogDrinkIntent._lock.withLock { state -> Bool in
-            if state { return true }
-            state = true
-            return false
-        }
-        guard !alreadyInFlight else { return .result() }
-        defer { QuickLogDrinkIntent._lock.withLock { $0 = false } }
-
         guard let d = UserDefaults(suiteName: "group.com.sudssocial.app"),
               let sessionId = d.string(forKey: "sessionId"),
               let userId = d.string(forKey: "userId"),
@@ -41,14 +28,26 @@ struct QuickLogDrinkIntent: AppIntent {
             return .result()
         }
 
+        // Cross-process cooldown — UserDefaults persists even if the extension process
+        // is killed and restarted between taps. Prevents double-inserts.
+        let lastTap = d.double(forKey: "lastQuickLogTapAt")
+        let now = Date().timeIntervalSince1970
+        guard now - lastTap >= 5.0 else { return .result() }
+        d.set(now, forKey: "lastQuickLogTapAt")
+
+        // Signal to the bridge's updateActivity that an intent is in flight.
+        // While intentIsLogging = true, every _refresh() in the main app will pass
+        // isLogging: true through to the ContentState, preserving the spinner.
+        d.set(true, forKey: "intentIsLogging")
+        defer { d.set(false, forKey: "intentIsLogging") }
+
         // Fall back to a generic beer entry when no drink has been logged yet
         let rawDrinkType = d.string(forKey: "lastDrinkType") ?? ""
         let rawDrinkName = d.string(forKey: "lastDrinkName") ?? ""
         let drinkType = rawDrinkType.isEmpty ? "beer" : rawDrinkType
         let drinkName = rawDrinkName.isEmpty ? "Beer" : rawDrinkName
 
-        // Optimistic update — widget reflects the tap before any network calls.
-        // The JS 60s timer reconciles if the DB write later fails.
+        // Optimistic update — count+1 and spinner appear immediately.
         for activity in Activity<SudsSessionAttributes>.activities {
             let s = activity.contentState
             await activity.update(using: SudsSessionAttributes.ContentState(
@@ -62,9 +61,7 @@ struct QuickLogDrinkIntent: AppIntent {
 
         // Persist to DB. Prefer a still-valid cached access token over refreshing — Supabase
         // refresh tokens are single-use, and the main app may rotate one concurrently, so
-        // refreshing on every tap risks "Invalid Refresh Token: Already Used" and forces the
-        // user's session to be torn down.
-        let now = Date().timeIntervalSince1970
+        // refreshing on every tap risks "Invalid Refresh Token: Already Used".
         let cachedAccessToken = d.string(forKey: "accessToken")
         let cachedExpiresAt = d.double(forKey: "accessTokenExpiresAt")
 
@@ -77,7 +74,8 @@ struct QuickLogDrinkIntent: AppIntent {
                 supabaseUrl: supabaseUrl,
                 anonKey: anonKey
             ) else {
-                // Token refresh failed — clear the optimistic spinner before giving up.
+                // Token refresh failed — clear spinner before giving up.
+                d.set(false, forKey: "intentIsLogging")
                 for activity in Activity<SudsSessionAttributes>.activities {
                     let s = activity.contentState
                     await activity.update(using: SudsSessionAttributes.ContentState(
@@ -111,10 +109,29 @@ struct QuickLogDrinkIntent: AppIntent {
             "logged_at": ISO8601DateFormatter().string(from: Date()),
         ]
         req.httpBody = try? JSONSerialization.data(withJSONObject: body)
-        _ = try? await URLSession.shared.data(for: req)
+        guard let (_, response) = try? await URLSession.shared.data(for: req),
+              let http = response as? HTTPURLResponse,
+              (200..<300).contains(http.statusCode) else {
+            // DB write failed — roll back optimistic count and clear spinner.
+            d.set(false, forKey: "intentIsLogging")
+            for activity in Activity<SudsSessionAttributes>.activities {
+                let s = activity.contentState
+                await activity.update(using: SudsSessionAttributes.ContentState(
+                    drinkCount: max(0, s.drinkCount - 1), lastDrinkName: s.lastDrinkName,
+                    memberCount: s.memberCount, memberNames: s.memberNames, isLogging: false
+                ))
+            }
+            return .result()
+        }
 
-        // DB write complete — clear the spinner before signalling the main app.
-        // Darwin fires AFTER the INSERT so _refresh() finds the committed row.
+        // DB write confirmed. Clear intentIsLogging explicitly before Darwin so the
+        // Darwin-triggered _refresh() in the main app immediately sees false and
+        // calls updateActivity(isLogging: false) to clear the spinner.
+        // defer is a backup — runs on return.
+        d.set(false, forKey: "intentIsLogging")
+
+        // Self-clear the widget directly (fallback: handles case where main app is dead
+        // or backgrounded and never receives Darwin).
         for activity in Activity<SudsSessionAttributes>.activities {
             let s = activity.contentState
             await activity.update(using: SudsSessionAttributes.ContentState(

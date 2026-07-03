@@ -112,6 +112,7 @@ struct LockScreenView: View {
                     Color.white
                     SudsGlassShape()
                         .fill(Color.orange, style: FillStyle(eoFill: true))
+                        .padding(1)
                 }
                 .frame(width: 44, height: 44)
                 .clipShape(RoundedRectangle(cornerRadius: 10))
