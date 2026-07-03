@@ -14,7 +14,19 @@ struct QuickLogDrinkIntent: AppIntent {
               let storedRefreshToken = d.string(forKey: "refreshToken"),
               let supabaseUrl = d.string(forKey: "supabaseUrl"),
               let anonKey = d.string(forKey: "anonKey")
-        else { return .result() }
+        else {
+            for activity in Activity<SudsSessionAttributes>.activities {
+                let s = activity.contentState
+                await activity.update(using: SudsSessionAttributes.ContentState(
+                    drinkCount: s.drinkCount,
+                    lastDrinkName: "⚠️ no session",
+                    memberCount: s.memberCount,
+                    memberNames: s.memberNames,
+                    isLogging: false
+                ))
+            }
+            return .result()
+        }
 
         // Fall back to a generic beer entry when no drink has been logged yet
         let rawDrinkType = d.string(forKey: "lastDrinkType") ?? ""
@@ -72,7 +84,8 @@ struct QuickLogDrinkIntent: AppIntent {
             }
         }
 
-        var req = URLRequest(url: URL(string: "\(supabaseUrl)/rest/v1/drink_logs")!, timeoutInterval: 20)
+        guard let drinkLogsUrl = URL(string: "\(supabaseUrl)/rest/v1/drink_logs") else { return .result() }
+        var req = URLRequest(url: drinkLogsUrl, timeoutInterval: 20)
         req.httpMethod = "POST"
         req.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
         req.setValue(anonKey, forHTTPHeaderField: "apikey")
@@ -96,7 +109,8 @@ struct QuickLogDrinkIntent: AppIntent {
         supabaseUrl: String,
         anonKey: String
     ) async throws -> (String, String?, Double)? {
-        var req = URLRequest(url: URL(string: "\(supabaseUrl)/auth/v1/token?grant_type=refresh_token")!, timeoutInterval: 20)
+        guard let tokenUrl = URL(string: "\(supabaseUrl)/auth/v1/token?grant_type=refresh_token") else { return nil }
+        var req = URLRequest(url: tokenUrl, timeoutInterval: 20)
         req.httpMethod = "POST"
         req.setValue(anonKey, forHTTPHeaderField: "apikey")
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")

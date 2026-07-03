@@ -3,16 +3,6 @@ import AppIntents
 import SwiftUI
 import WidgetKit
 
-// MARK: - Logo
-
-private let sudsLogo: Image = {
-    guard let data = Data(base64Encoded: sudsLogoBase64),
-          let ui = UIImage(data: data) else {
-        return Image(systemName: "drop.fill")
-    }
-    return Image(uiImage: ui.withRenderingMode(.alwaysOriginal))
-}()
-
 // MARK: - Widget Bundle
 
 @main
@@ -36,9 +26,8 @@ struct SudsLiveActivityWidget: Widget {
                             .font(.title2.bold())
                             .foregroundStyle(.orange)
                     } icon: {
-                        sudsLogo
-                            .resizable()
-                            .scaledToFit()
+                        SudsGlassShape()
+                            .fill(Color.orange, style: FillStyle(eoFill: true))
                             .frame(width: 22, height: 22)
                     }
                 }
@@ -89,9 +78,8 @@ struct SudsLiveActivityWidget: Widget {
                 }
             } compactLeading: {
                 HStack(spacing: 3) {
-                    sudsLogo
-                        .resizable()
-                        .scaledToFit()
+                    SudsGlassShape()
+                        .fill(Color.orange, style: FillStyle(eoFill: true))
                         .frame(width: 14, height: 14)
                     Text("\(context.state.drinkCount)")
                         .font(.caption.bold())
@@ -103,9 +91,8 @@ struct SudsLiveActivityWidget: Widget {
                     .foregroundStyle(.secondary)
                     .monospacedDigit()
             } minimal: {
-                sudsLogo
-                    .resizable()
-                    .scaledToFit()
+                SudsGlassShape()
+                    .fill(Color.orange, style: FillStyle(eoFill: true))
                     .frame(width: 14, height: 14)
             }
         }
@@ -123,9 +110,8 @@ struct LockScreenView: View {
             HStack(spacing: 8) {
                 ZStack {
                     Color.white
-                    sudsLogo
-                        .resizable()
-                        .scaledToFit()
+                    SudsGlassShape()
+                        .fill(Color.orange, style: FillStyle(eoFill: true))
                         .padding(6)
                 }
                 .frame(width: 44, height: 44)

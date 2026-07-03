@@ -137,6 +137,23 @@ export function resumeActivity(session: SessionWithRole): void {
     ? new Date(session.started_at).getTime()
     : Date.now();
 
+  // Re-populate shared UserDefaults so the widget intent guard never fails after
+  // a force-kill + relaunch. startActivity() does this for new sessions; resumeActivity
+  // must do it for existing ones.
+  const { session: authSession, profile } = useAuthStore.getState();
+  const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
+  const anonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+  if (session.id && authSession?.user?.id && authSession?.refresh_token && supabaseUrl && anonKey) {
+    LiveActivityBridge.writeSharedSession(
+      session.id, authSession.user.id, authSession.refresh_token,
+      weightToLbs(profile?.weight, profile?.weight_unit),
+      supabaseUrl, anonKey, _sessionStartMs, '', '',
+    );
+    LiveActivityBridge.updateSharedAuthTokens(
+      authSession.access_token, authSession.refresh_token, authSession.expires_at ?? 0,
+    );
+  }
+
   void (async () => {
     try {
       const activities = await LiveActivityBridge.getActivities();
