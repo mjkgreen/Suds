@@ -136,14 +136,6 @@ export default function ProfileScreen() {
 
   const isLoading = profileLoading || feedLoading;
 
-  if (isLoading) {
-    return (
-      <SafeAreaView className="flex-1 bg-background items-center justify-center">
-        <ActivityIndicator size="large" color="#f59e0b" />
-      </SafeAreaView>
-    );
-  }
-
   const badgeNodes = (
     <Pressable style={{ flexDirection: "row", alignItems: "center", gap: 4 }} onPress={() => setBadgeInfoVisible(true)}>
       {selectedBadges.map((b) => (
@@ -360,6 +352,14 @@ export default function ProfileScreen() {
       />
     </>
   );
+
+  if (isLoading) {
+    return (
+      <SafeAreaView className="flex-1 bg-background items-center justify-center">
+        <ActivityIndicator size="large" color="#f59e0b" />
+      </SafeAreaView>
+    );
+  }
 
   if (isDesktop) {
     const borderColor = colorScheme === "dark" ? "#1f2937" : "#e5e7eb";
