@@ -50,6 +50,7 @@ struct QuickLogDrinkIntent: LiveActivityIntent {
         // While intentIsLogging = true, every _refresh() in the main app will pass
         // isLogging: true through to the ContentState, preserving the spinner.
         d.set(true, forKey: "intentIsLogging")
+        d.set(now, forKey: "intentIsLoggingAt") // staleness marker — see bridge updateActivity
         d.synchronize() // force plist flush before first await so main app reads true immediately
         defer { d.set(false, forKey: "intentIsLogging") }
 

@@ -130,6 +130,11 @@ const withLiveActivityBridge = (config) => {
     const iosRoot = modConfig.modRequest.platformProjectRoot;
     if (!projectName) return modConfig;
 
+    if (!fs.existsSync(APP_INTENT_SOURCE)) {
+      console.warn(`[withLiveActivityBridge] Missing ${APP_INTENT_SOURCE} — +1 Live Activity button will not update in real time`);
+      return modConfig;
+    }
+
     const destRelative = path.join(projectName, APP_INTENT_FILENAME);
     const destAbsolute = path.join(iosRoot, destRelative);
     fs.copyFileSync(APP_INTENT_SOURCE, destAbsolute);

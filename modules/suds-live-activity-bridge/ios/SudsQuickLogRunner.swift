@@ -44,7 +44,10 @@ public enum SudsQuickLogRunner {
 
     // While intentIsLogging = true, _refresh() in JS passes isLogging: true through
     // every ContentState push, preserving the spinner until the DB write lands.
+    // The timestamp lets updateActivity treat a flag orphaned by a killed process
+    // as stale (30s cutoff) instead of preserving the spinner forever.
     d.set(true, forKey: "intentIsLogging")
+    d.set(now, forKey: "intentIsLoggingAt")
 
     let rawDrinkType = d.string(forKey: "lastDrinkType") ?? ""
     let rawDrinkName = d.string(forKey: "lastDrinkName") ?? ""
