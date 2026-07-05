@@ -40,7 +40,7 @@ async function _refresh(): Promise<void> {
       const currentUserId = useAuthStore.getState().session?.user?.id;
       const [drinkRes, membersRes] = await Promise.all([
         supabase.from('drink_logs').select('*', { count: 'exact', head: true }).eq('session_id', activeSession.id),
-        supabase.rpc('get_session_members_with_profiles', { p_session_id: activeSession.id }),
+        (supabase.rpc as any)('get_session_members_with_profiles', { p_session_id: activeSession.id }),
       ]);
 
       // Re-check after await — endActivity may have run while we were waiting
@@ -65,6 +65,7 @@ async function _refresh(): Promise<void> {
       memberCount,
       memberNames,
     );
+    void queryClient.invalidateQueries({ queryKey: ['feed'] });
   } catch {
     // Silently ignore — timer will retry on the next tick
   }

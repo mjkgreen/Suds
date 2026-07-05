@@ -39,6 +39,7 @@ struct QuickLogDrinkIntent: AppIntent {
         // While intentIsLogging = true, every _refresh() in the main app will pass
         // isLogging: true through to the ContentState, preserving the spinner.
         d.set(true, forKey: "intentIsLogging")
+        d.synchronize() // force plist flush before first await so main app reads true immediately
         defer { d.set(false, forKey: "intentIsLogging") }
 
         // Fall back to a generic beer entry when no drink has been logged yet
@@ -129,6 +130,7 @@ struct QuickLogDrinkIntent: AppIntent {
         // calls updateActivity(isLogging: false) to clear the spinner.
         // defer is a backup — runs on return.
         d.set(false, forKey: "intentIsLogging")
+        d.synchronize() // ensure false is visible to main app before Darwin fires _refresh()
 
         // Self-clear the widget directly (fallback: handles case where main app is dead
         // or backgrounded and never receives Darwin).
