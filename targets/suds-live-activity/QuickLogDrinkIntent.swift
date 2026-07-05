@@ -2,10 +2,21 @@ import AppIntents
 import ActivityKit
 import CoreFoundation
 
+// LiveActivityIntent → the system runs perform() in the MAIN APP's process, not this
+// widget extension's. That is essential: Activity<SudsSessionAttributes>.activities is
+// always EMPTY inside the widget extension process (ActivityKit only exposes activities
+// to the process that requested them), so any activity.update() here is a silent no-op —
+// which is exactly why the spinner and optimistic +1 never rendered as a plain AppIntent.
+//
+// The app target compiles its own QuickLogDrinkIntent (see
+// modules/suds-live-activity-bridge/app-target/QuickLogDrinkIntent.swift) that delegates
+// to SudsQuickLogRunner. This copy exists so Button(intent:) compiles in this target and
+// as a last-resort fallback (DB write still works from here; UI updates don't).
 @available(iOS 17.0, *)
-struct QuickLogDrinkIntent: AppIntent {
+struct QuickLogDrinkIntent: LiveActivityIntent {
     static let title: LocalizedStringResource = "Log a drink"
     static let isDiscoverable = false
+    static let openAppWhenRun = false
 
     func perform() async throws -> some IntentResult {
         guard let d = UserDefaults(suiteName: "group.com.sudssocial.app"),

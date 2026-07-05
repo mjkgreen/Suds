@@ -133,3 +133,18 @@ export function readSharedAuthTokens(): SharedAuthTokens | null {
 export function clearSharedSession(): void {
   Bridge?.clearSharedSession();
 }
+
+export type QuickLogSubscription = { remove: () => void };
+
+// Subscribe to the Darwin-notification relay fired by the +1 quick-log intent after its
+// DB write commits. The native module (expo-modules-core NativeModule) exposes
+// addListener directly; this wrapper exists because consumers import the TS module
+// namespace, which otherwise has no addListener — `(LiveActivityBridge as any).addListener`
+// on the namespace was always undefined, so the event silently never reached JS.
+export function addQuickLogListener(listener: () => void): QuickLogSubscription | null {
+  const emitter = Bridge as unknown as {
+    addListener?: (eventName: string, listener: () => void) => QuickLogSubscription;
+  } | null;
+  if (!emitter?.addListener) return null;
+  return emitter.addListener('onQuickLog', listener);
+}
