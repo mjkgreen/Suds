@@ -85,20 +85,15 @@ export default function UserProfileScreen() {
 
   const isLoading = profileLoading || feedLoading;
 
-  if (isLoading) {
-    return (
-      <SafeAreaView className={`flex-1 bg-background items-center justify-center ${isDark ? 'dark' : ''}`}>
-        <ActivityIndicator size="large" color="#f59e0b" />
-      </SafeAreaView>
-    );
-  }
-
-  if (!profile) return null;
-
-  const selectedBadgeIds = profile.displayed_badges ?? [];
-  const selectedBadges = selectedBadgeIds.map(findBadgeById).filter(Boolean) as UserBadge[];
+  const selectedBadgeIds = profile?.displayed_badges ?? [];
+  const selectedBadges = useMemo(
+    () => selectedBadgeIds.map(findBadgeById).filter(Boolean) as UserBadge[],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [profile],
+  );
 
   const listHeader = useMemo(() => (
+    profile ? (
     <View>
       {/* Nav */}
       <View className="flex-row items-center px-4 py-3 bg-background border-b border-border">
@@ -181,8 +176,19 @@ export default function UserProfileScreen() {
         </View>
       </View>
     </View>
+    ) : null
   // eslint-disable-next-line react-hooks/exhaustive-deps
   ), [profile, isOwnProfile, isFollowing, follow.isPending, unfollow.isPending, selectedBadges]);
+
+  if (isLoading) {
+    return (
+      <SafeAreaView className={`flex-1 bg-background items-center justify-center ${isDark ? 'dark' : ''}`}>
+        <ActivityIndicator size="large" color="#f59e0b" />
+      </SafeAreaView>
+    );
+  }
+
+  if (!profile) return null;
 
   return (
     <SafeAreaView className={`flex-1 bg-background ${isDark ? 'dark' : ''}`}>
