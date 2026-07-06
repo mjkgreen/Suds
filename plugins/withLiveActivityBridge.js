@@ -1,6 +1,16 @@
-const { withDangerousMod, withXcodeProject } = require('@expo/config-plugins');
+const { withDangerousMod, withXcodeProject, IOSConfig } = require('@expo/config-plugins');
 const fs = require('fs');
 const path = require('path');
+
+// Swift file compiled directly into the APP target (not the pod, not the widget).
+// It declares QuickLogDrinkIntent as a LiveActivityIntent so iOS executes the +1
+// button in the app's process — the only process where ActivityKit exposes the
+// running activities. Kept outside modules/.../ios/ so the podspec doesn't build it.
+const APP_INTENT_SOURCE = path.join(
+  __dirname,
+  '../modules/suds-live-activity-bridge/app-target/QuickLogDrinkIntent.swift'
+);
+const APP_INTENT_FILENAME = 'QuickLogDrinkIntent.swift';
 
 const PATCH_PHASE_NAME = '[Suds] Patch ExpoModulesProvider';
 
@@ -104,6 +114,37 @@ const withLiveActivityBridge = (config) => {
         (p) => p.comment === '[Expo] Configure project'
       );
       buildPhases.splice(newExpoIdx + 1, 0, ourPhase);
+    }
+
+    return modConfig;
+  });
+
+  // 3. Copy the app-target QuickLogDrinkIntent into the generated project and add it
+  //    to the app target's Compile Sources. This guarantees the AppIntents metadata
+  //    processor sees the LiveActivityIntent in the app itself, so taps on the Live
+  //    Activity's +1 button execute in the app process (where activities are visible)
+  //    instead of the widget extension process (where they are not).
+  config = withXcodeProject(config, (modConfig) => {
+    const project = modConfig.modResults;
+    const projectName = modConfig.modRequest.projectName;
+    const iosRoot = modConfig.modRequest.platformProjectRoot;
+    if (!projectName) return modConfig;
+
+    if (!fs.existsSync(APP_INTENT_SOURCE)) {
+      console.warn(`[withLiveActivityBridge] Missing ${APP_INTENT_SOURCE} — +1 Live Activity button will not update in real time`);
+      return modConfig;
+    }
+
+    const destRelative = path.join(projectName, APP_INTENT_FILENAME);
+    const destAbsolute = path.join(iosRoot, destRelative);
+    fs.copyFileSync(APP_INTENT_SOURCE, destAbsolute);
+
+    if (!project.hasFile(destRelative)) {
+      IOSConfig.XcodeUtils.addBuildSourceFileToGroup({
+        filepath: destRelative,
+        groupName: projectName,
+        project,
+      });
     }
 
     return modConfig;

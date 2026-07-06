@@ -101,8 +101,12 @@ public class SudsLiveActivityBridgeModule: Module {
                                         lastDrinkName: String, memberCount: Int,
                                         memberNames: String) async in
       guard #available(iOS 16.1, *) else { return }
-      let isLogging = UserDefaults(suiteName: "group.com.sudssocial.app")?
-        .bool(forKey: "intentIsLogging") ?? false
+      let d = UserDefaults(suiteName: "group.com.sudssocial.app")
+      let flag = d?.bool(forKey: "intentIsLogging") ?? false
+      let setAt = d?.double(forKey: "intentIsLoggingAt") ?? 0
+      // A jetsam-killed intent can never clear its own flag, so treat anything older
+      // than 30s as stale — otherwise the spinner would be preserved forever.
+      let isLogging = flag && (Date().timeIntervalSince1970 - setAt) < 30
       let state = SudsSessionAttributes.ContentState(
         drinkCount: drinkCount,
         lastDrinkName: lastDrinkName,
@@ -183,7 +187,7 @@ public class SudsLiveActivityBridgeModule: Module {
       guard let d = UserDefaults(suiteName: "group.com.sudssocial.app") else { return }
       ["sessionId", "userId", "refreshToken", "weightLbs", "supabaseUrl", "anonKey", "sessionStart",
        "lastDrinkType", "lastDrinkName", "accessToken", "accessTokenExpiresAt",
-       "lastQuickLogTapAt", "intentIsLogging"]
+       "lastQuickLogTapAt", "intentIsLogging", "intentIsLoggingAt"]
         .forEach { d.removeObject(forKey: $0) }
     }
   }

@@ -66,6 +66,7 @@ async function _refresh(): Promise<void> {
       memberNames,
     );
     void queryClient.invalidateQueries({ queryKey: ['feed'] });
+    void queryClient.invalidateQueries({ queryKey: ['my-feed'] });
   } catch {
     // Silently ignore — timer will retry on the next tick
   }
@@ -105,6 +106,7 @@ function _subscribeToSessionDrinks(sessionId: string): void {
       () => {
         void _refresh();
         void queryClient.invalidateQueries({ queryKey: ['feed'] });
+        void queryClient.invalidateQueries({ queryKey: ['my-feed'] });
       },
     )
     .subscribe((status) => {
@@ -163,15 +165,15 @@ const _appStateSub = Platform.OS === 'ios'
     })
   : null;
 
-// Darwin cross-process signal from QuickLogDrinkIntent — fires after the widget's DB write
-// completes, letting the main-app process call Activity.update() with the correct committed
-// count (not throttled like widget-extension calls).
-const _quickLogSub = Platform.OS === 'ios' && typeof (LiveActivityBridge as any).addListener === 'function'
-  ? (LiveActivityBridge as any).addListener('onQuickLog', () => {
+// Darwin signal from QuickLogDrinkIntent — fires after the intent's DB write commits,
+// letting this JS runtime pull the authoritative count and refresh the feed instantly.
+const _quickLogSub = Platform.OS === 'ios'
+  ? LiveActivityBridge.addQuickLogListener(() => {
       const { liveActivityId } = useSessionStore.getState();
       if (liveActivityId && _sessionStartMs) {
         void _refresh();
         void queryClient.invalidateQueries({ queryKey: ['feed'] });
+        void queryClient.invalidateQueries({ queryKey: ['my-feed'] });
       }
     })
   : null;
