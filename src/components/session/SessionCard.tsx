@@ -1,5 +1,5 @@
 import * as Haptics from "expo-haptics";
-import { Ionicons } from "@expo/vector-icons";
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useState, useEffect } from "react";
 import { ActivityIndicator, Platform, Pressable, Text, View, useWindowDimensions } from "react-native";
@@ -155,7 +155,7 @@ export const SessionCard = React.memo(function SessionCard({ group, currentUserI
                       borderBottomRightRadius: 8,
                     }}
                   >
-                    <Ionicons name={b.icon as any} size={10} color={TIER_COLORS[b.tier]} />
+                    <MaterialCommunityIcons name={b.icon as any} size={10} color={TIER_COLORS[b.tier]} />
                   </View>
                 );
               })}
