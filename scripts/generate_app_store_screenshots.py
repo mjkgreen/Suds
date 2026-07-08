@@ -20,8 +20,8 @@ import urllib.request
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-ASSETS = os.path.join(ROOT, "assets")
-OUT_DIR = os.path.join(ASSETS, "app-store")
+SRC_DIR = os.path.join(ROOT, "imagesforapple")
+OUT_DIR = os.path.join(ROOT, "assets", "app-store")
 FONT_CACHE = os.path.join(ROOT, ".cache", "fonts")
 
 CANVAS = (1284, 2778)  # Apple 6.7" portrait
@@ -36,22 +36,22 @@ BEZEL = (16, 16, 18)
 
 SHOTS = [
     {
-        "src": "feed.png",
+        "src": "01feed.png",
         "out": "01-feed.png",
         "headline": "See what your\ncrew is drinking",
         "subhead": "Nights out, rounds, and ratings —\nall in one live feed.",
     },
     {
-        "src": "map.png",
+        "src": "02map.png",
         "out": "02-map.png",
         "headline": "Every round,\non the map",
         "subhead": "Hold anywhere to drop a drink and\ntrace the night’s route.",
     },
     {
-        "src": "view-stats.png",
-        "out": "03-stats.png",
-        "headline": "Know your pace",
-        "subhead": "Weekly limits, streaks, and trends\nthat keep you honest.",
+        "src": "08nightout.png",
+        "out": "03-nightout.png",
+        "headline": "Track the whole\nnight out",
+        "subhead": "Rounds, spots, and pace — one session\nfrom first pour to last call.",
     },
 ]
 
@@ -133,7 +133,7 @@ def compose(shot) -> Image.Image:
     draw_centered(draw, w, y + 34, shot["subhead"], subhead_font, INK_SOFT, line_gap=14)
 
     # Device frame, bleeding off the bottom edge
-    shot_img = Image.open(os.path.join(ASSETS, shot["src"])).convert("RGB")
+    shot_img = Image.open(os.path.join(SRC_DIR, shot["src"])).convert("RGB")
     screen_w = 1016
     screen_h = round(shot_img.height * screen_w / shot_img.width)
     shot_img = shot_img.resize((screen_w, screen_h), Image.LANCZOS)
