@@ -23,7 +23,6 @@
         "NSLocationWhenInUseUsageDescription": "Suds uses your location to tag where you had drinks.",
         "NSCameraUsageDescription": "Suds uses your camera to add photos to drink logs.",
         "NSPhotoLibraryUsageDescription": "Suds uses your photo library to add photos to drink logs.",
-        "NSContactsUsageDescription": "Suds uses your contacts to help you find friends.",
         "NSSupportsLiveActivities": true,
         "ITSAppUsesNonExemptEncryption": false
       },
@@ -42,9 +41,7 @@
         "android.permission.ACCESS_FINE_LOCATION",
         "android.permission.CAMERA",
         "android.permission.READ_EXTERNAL_STORAGE",
-        "android.permission.ACCESS_COARSE_LOCATION",
-        "android.permission.RECORD_AUDIO",
-        "android.permission.READ_CONTACTS"
+        "android.permission.ACCESS_COARSE_LOCATION"
       ]
     },
     "web": {
@@ -70,7 +67,9 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "Allow Suds to access your photos."
+          "photosPermission": "Suds uses your photo library to add photos to drink logs.",
+          "cameraPermission": "Suds uses your camera to add photos to drink logs.",
+          "microphonePermission": false
         }
       ],
       "expo-font",
@@ -81,12 +80,6 @@
         }
       ],
       "@bacons/apple-targets",
-      [
-        "expo-contacts",
-        {
-          "contactsPermission": "Allow Suds to access your contacts to find friends."
-        }
-      ],
       "./plugins/withLiveActivityBridge"
     ],
     "experiments": {

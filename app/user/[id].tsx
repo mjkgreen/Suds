@@ -4,6 +4,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useMemo } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   Pressable,
   RefreshControl,
@@ -16,6 +17,8 @@ import { Button } from '@/components/common/Button';
 import { DrinkCard } from '@/components/drink/DrinkCard';
 import { SessionCard } from '@/components/session/SessionCard';
 import { useFollow, useIsFollowing } from '@/hooks/useFollow';
+import { useBlocks, useIsBlocked } from '@/hooks/useBlocks';
+import { useReportContent } from '@/hooks/useReports';
 import { useMyFeed } from '@/hooks/useFeed';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/stores/authStore';
@@ -79,11 +82,49 @@ export default function UserProfileScreen() {
 
   const { data: isFollowing } = useIsFollowing(currentUser?.id, id);
   const { follow, unfollow } = useFollow(currentUser?.id);
+  const isBlocked = useIsBlocked(currentUser?.id, id);
+  const { block, unblock } = useBlocks(currentUser?.id);
+  const reportContent = useReportContent(currentUser?.id);
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
   const [badgeInfoVisible, setBadgeInfoVisible] = useState(false);
 
   const isLoading = profileLoading || feedLoading;
+
+  const handleReportUser = useCallback(() => {
+    if (!profile) return;
+    Alert.alert(`Report @${profile.username}?`, 'Why are you reporting this user?', [
+      { text: 'Cancel', style: 'cancel' },
+      ...['Spam', 'Inappropriate content', 'Harassment'].map((reason) => ({
+        text: reason,
+        onPress: () =>
+          reportContent.mutate({ targetType: 'user' as const, targetId: profile.id, reason }),
+      })),
+    ]);
+  }, [profile, reportContent]);
+
+  const handleBlockUser = useCallback(() => {
+    if (!profile) return;
+    Alert.alert(
+      `Block @${profile.username}?`,
+      "You won't see each other's drinks, comments, or likes, and you'll stop following each other.",
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Block', style: 'destructive', onPress: () => block.mutate(profile.id) },
+      ],
+    );
+  }, [profile, block]);
+
+  const handleMoreOptions = useCallback(() => {
+    if (!profile) return;
+    Alert.alert(`@${profile.username}`, undefined, [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Report User', onPress: handleReportUser },
+      isBlocked
+        ? { text: 'Unblock User', onPress: () => unblock.mutate(profile.id) }
+        : { text: 'Block User', style: 'destructive' as const, onPress: handleBlockUser },
+    ]);
+  }, [profile, isBlocked, unblock, handleReportUser, handleBlockUser]);
 
   const selectedBadgeIds = profile?.displayed_badges ?? [];
   const selectedBadges = useMemo(
@@ -114,19 +155,38 @@ export default function UserProfileScreen() {
             size={72}
           />
           {!isOwnProfile && (
-            <Button
-              label={isFollowing ? 'Following' : 'Follow'}
-              variant={isFollowing ? 'secondary' : 'primary'}
-              size="md"
-              loading={follow.isPending || unfollow.isPending}
-              onPress={() => {
-                if (isFollowing) {
-                  unfollow.mutate(profile!.id);
-                } else {
-                  follow.mutate(profile!.id);
-                }
-              }}
-            />
+            <View className="flex-row items-center gap-2">
+              {isBlocked ? (
+                <Button
+                  label="Unblock"
+                  variant="secondary"
+                  size="md"
+                  loading={unblock.isPending}
+                  onPress={() => unblock.mutate(profile!.id)}
+                />
+              ) : (
+                <Button
+                  label={isFollowing ? 'Following' : 'Follow'}
+                  variant={isFollowing ? 'secondary' : 'primary'}
+                  size="md"
+                  loading={follow.isPending || unfollow.isPending}
+                  onPress={() => {
+                    if (isFollowing) {
+                      unfollow.mutate(profile!.id);
+                    } else {
+                      follow.mutate(profile!.id);
+                    }
+                  }}
+                />
+              )}
+              <Pressable onPress={handleMoreOptions} hitSlop={8} className="p-2">
+                <Ionicons
+                  name="ellipsis-horizontal"
+                  size={20}
+                  color="hsl(var(--muted-foreground))"
+                />
+              </Pressable>
+            </View>
           )}
         </View>
 
@@ -178,7 +238,7 @@ export default function UserProfileScreen() {
     </View>
     ) : null
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  ), [profile, isOwnProfile, isFollowing, follow.isPending, unfollow.isPending, selectedBadges]);
+  ), [profile, isOwnProfile, isFollowing, follow.isPending, unfollow.isPending, isBlocked, unblock.isPending, handleMoreOptions, selectedBadges]);
 
   if (isLoading) {
     return (
@@ -206,8 +266,10 @@ export default function UserProfileScreen() {
         ListHeaderComponent={listHeader}
         ListEmptyComponent={
           <View className="py-16 items-center">
-            <Text className="text-3xl mb-2">🍺</Text>
-            <Text className="text-muted-foreground text-base">No drinks logged yet.</Text>
+            <Text className="text-3xl mb-2">{isBlocked ? '🚫' : '🍺'}</Text>
+            <Text className="text-muted-foreground text-base">
+              {isBlocked ? "You've blocked this user." : 'No drinks logged yet.'}
+            </Text>
           </View>
         }
         ListFooterComponent={

@@ -11,6 +11,8 @@ import { DrinkBadge } from "@/components/drink/DrinkBadge";
 import { DrinkIcon } from "@/components/icons/DrinkIcon";
 import { useDeleteDrinkLog } from "@/hooks/useDrinkLog";
 import { useAddComment, useComments, useDeleteComment } from "@/hooks/useComments";
+import { useBlocks } from "@/hooks/useBlocks";
+import { useReportContent } from "@/hooks/useReports";
 import { useLikers } from "@/hooks/useLikers";
 import { AvatarStack } from "@/components/social/AvatarStack";
 import { LikersModal } from "@/components/social/LikersModal";
@@ -38,6 +40,8 @@ export default function DrinkDetailScreen() {
   const { data: likers } = useLikers(id);
   const addComment = useAddComment(user?.id);
   const deleteComment = useDeleteComment(user?.id);
+  const { block } = useBlocks(user?.id);
+  const reportContent = useReportContent(user?.id);
 
   async function handleSendComment() {
     const trimmed = commentText.trim();
@@ -65,6 +69,55 @@ export default function DrinkDetailScreen() {
     },
     enabled: !!id,
   });
+
+  function handleReportPost() {
+    if (!data) return;
+    Alert.alert("Report this post?", "Why are you reporting it?", [
+      { text: "Cancel", style: "cancel" },
+      ...["Spam", "Inappropriate content", "Harassment"].map((reason) => ({
+        text: reason,
+        onPress: () => reportContent.mutate({ targetType: "drink_log" as const, targetId: data.id, reason }),
+      })),
+    ]);
+  }
+
+  function handleBlockAuthor() {
+    if (!data?.profile) return;
+    const username = data.profile.username;
+    Alert.alert(
+      `Block @${username}?`,
+      "You won't see each other's drinks, comments, or likes, and you'll stop following each other.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Block",
+          style: "destructive",
+          onPress: () => {
+            block.mutate(data.user_id);
+            router.back();
+          },
+        },
+      ],
+    );
+  }
+
+  function handleMoreOptions() {
+    Alert.alert("Options", undefined, [
+      { text: "Cancel", style: "cancel" },
+      { text: "Report Post", onPress: handleReportPost },
+      { text: "Block User", style: "destructive", onPress: handleBlockAuthor },
+    ]);
+  }
+
+  function handleReportComment(comment: DrinkComment) {
+    Alert.alert("Report this comment?", "Why are you reporting it?", [
+      { text: "Cancel", style: "cancel" },
+      ...["Spam", "Inappropriate content", "Harassment"].map((reason) => ({
+        text: reason,
+        onPress: () => reportContent.mutate({ targetType: "comment" as const, targetId: comment.id, reason }),
+      })),
+    ]);
+  }
 
   async function handleDelete() {
     if (!data || !user) return;
@@ -115,7 +168,9 @@ export default function DrinkDetailScreen() {
             </Pressable>
           </View>
         ) : (
-          <View className="w-10" />
+          <Pressable onPress={handleMoreOptions} className="p-2">
+            <Ionicons name="ellipsis-horizontal" size={22} color="hsl(var(--muted-foreground))" />
+          </Pressable>
         )}
       </View>
 
@@ -243,6 +298,7 @@ export default function DrinkDetailScreen() {
                   isOwn={comment.user_id === user?.id}
                   onDelete={() => deleteComment.mutate({ commentId: comment.id, drinkLogId: id! })}
                   isDeleting={deleteComment.isPending && (deleteComment.variables as any)?.commentId === comment.id}
+                  onReport={() => handleReportComment(comment)}
                   onNavigate={(userId) => router.push(`/user/${userId}`)}
                 />
               ))}
@@ -291,10 +347,11 @@ interface CommentRowProps {
   isOwn: boolean;
   onDelete: () => void;
   isDeleting: boolean;
+  onReport: () => void;
   onNavigate: (userId: string) => void;
 }
 
-function CommentRow({ comment, isOwn, onDelete, isDeleting, onNavigate }: CommentRowProps) {
+function CommentRow({ comment, isOwn, onDelete, isDeleting, onReport, onNavigate }: CommentRowProps) {
   const profile = comment.profile;
   return (
     <View className="flex-row gap-3">
@@ -311,13 +368,17 @@ function CommentRow({ comment, isOwn, onDelete, isDeleting, onNavigate }: Commen
         </View>
         <Text className="text-foreground text-sm mt-0.5 leading-5">{comment.content}</Text>
       </View>
-      {isOwn && (
+      {isOwn ? (
         <Pressable onPress={onDelete} disabled={isDeleting} hitSlop={8} className="pt-0.5">
           {isDeleting ? (
             <ActivityIndicator size="small" color="gray" />
           ) : (
             <Ionicons name="trash-outline" size={15} color="gray" />
           )}
+        </Pressable>
+      ) : (
+        <Pressable onPress={onReport} hitSlop={8} className="pt-0.5">
+          <Ionicons name="flag-outline" size={15} color="gray" />
         </Pressable>
       )}
     </View>

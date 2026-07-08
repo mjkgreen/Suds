@@ -192,6 +192,40 @@ export interface Database {
         };
         Update: never;
       };
+      user_blocks: {
+        Row: {
+          blocker_id: string;
+          blocked_id: string;
+          created_at: string;
+        };
+        Insert: {
+          blocker_id: string;
+          blocked_id: string;
+          created_at?: string;
+        };
+        Update: never;
+      };
+      content_reports: {
+        Row: {
+          id: string;
+          reporter_id: string;
+          target_type: 'drink_log' | 'comment' | 'user';
+          target_id: string;
+          reason: string;
+          details: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          reporter_id: string;
+          target_type: 'drink_log' | 'comment' | 'user';
+          target_id: string;
+          reason: string;
+          details?: string | null;
+          created_at?: string;
+        };
+        Update: never;
+      };
       push_tokens: {
         Row: {
           id: string;
@@ -410,6 +444,10 @@ export interface Database {
       };
       delete_account: {
         Args: Record<string, never>;
+        Returns: undefined;
+      };
+      block_user: {
+        Args: { p_blocked: string };
         Returns: undefined;
       };
       upsert_push_token: {

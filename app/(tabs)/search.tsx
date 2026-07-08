@@ -7,6 +7,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Avatar } from "@/components/common/Avatar";
 import { Button } from "@/components/common/Button";
 import { useFollow, useIsFollowing } from "@/hooks/useFollow";
+import { useBlockedIds } from "@/hooks/useBlocks";
 import { supabase } from "@/lib/supabase";
 import { useAuthStore } from "@/stores/authStore";
 import { useActiveSession } from "@/hooks/useSession";
@@ -76,6 +77,9 @@ export default function SearchScreen() {
     enabled: debouncedQuery.length > 1,
   });
 
+  const { data: blockedIds } = useBlockedIds(user?.id);
+  const visibleResults = (results ?? []).filter((p) => !(blockedIds ?? []).includes(p.id));
+
   return (
     <>
       <Head>
@@ -105,7 +109,7 @@ export default function SearchScreen() {
           </View>
         ) : (
           <FlatList
-            data={results ?? []}
+            data={visibleResults}
             keyExtractor={(item) => item.id}
             renderItem={renderItem}
             ListEmptyComponent={

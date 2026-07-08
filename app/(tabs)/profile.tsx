@@ -78,7 +78,7 @@ function TabBar({ active, onChange }: { active: Tab; onChange: (t: Tab) => void 
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const { user, isPremium } = useAuthStore();
+  const { user } = useAuthStore();
   const activeSession = useActiveSession();
   const topEdges = activeSession ? [] : ["top" as const];
   const { signOut } = useAuth();
@@ -176,19 +176,7 @@ export default function ProfileScreen() {
       return (
         <View className="bg-card border-b border-border" style={{ paddingHorizontal: 24, paddingVertical: 14 }}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 16 }}>
-            {/* Avatar with Plus badge */}
-            <View style={{ position: "relative" }}>
-              <Avatar uri={profile?.avatar_url} name={profile ? getDisplayName(profile) : "User"} size={52} />
-              {isPremium && (
-                <View style={{
-                  position: "absolute", bottom: -4, right: -4,
-                  backgroundColor: "#f59e0b", borderRadius: 6,
-                  paddingHorizontal: 4, paddingVertical: 1,
-                }}>
-                  <Text style={{ color: "#fff", fontSize: 9, fontWeight: "700" }}>Plus</Text>
-                </View>
-              )}
-            </View>
+            <Avatar uri={profile?.avatar_url} name={profile ? getDisplayName(profile) : "User"} size={52} />
 
             {/* Name + username + bio */}
             <View style={{ gap: 1 }}>
@@ -238,11 +226,6 @@ export default function ProfileScreen() {
 
             {/* Action buttons */}
             <View style={{ flexDirection: "row", gap: 8 }}>
-              {!isPremium && (
-                <Pressable className="bg-primary rounded-xl px-3 py-1.5" onPress={() => router.push("/paywall")}>
-                  <Text className="text-primary-foreground font-bold text-xs">Upgrade</Text>
-                </Pressable>
-              )}
               <Pressable className="bg-accent rounded-xl p-2" onPress={() => router.push("/user/edit")}>
                 <Ionicons name="pencil-sharp" size={16} color="#6b7280" />
               </Pressable>
@@ -263,18 +246,8 @@ export default function ProfileScreen() {
         <View className="flex-row items-start justify-between mb-4">
           <View className="flex-row items-center gap-2">
             <Avatar uri={profile?.avatar_url} name={profile ? getDisplayName(profile) : "User"} size={72} />
-            {isPremium && (
-              <View className="bg-primary rounded-full px-2 py-0.5 self-start mt-1">
-                <Text className="text-primary-foreground text-xs font-bold">Plus</Text>
-              </View>
-            )}
           </View>
           <View className="flex-row gap-2">
-            {!isPremium && (
-              <Pressable className="bg-primary rounded-xl px-4 py-2" onPress={() => router.push("/paywall")}>
-                <Text className="text-primary-foreground font-bold text-sm">Upgrade</Text>
-              </Pressable>
-            )}
             <Pressable className="bg-accent rounded-xl p-2" onPress={() => router.push("/user/edit")}>
               <Ionicons name="pencil-sharp" size={20} color="#6b7280" />
             </Pressable>
@@ -330,7 +303,7 @@ export default function ProfileScreen() {
       </View>
     );
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [profile, isPremium, streaks, badgeNodes, user?.id, colorScheme, signOut, isDesktop]);
+  }, [profile, streaks, badgeNodes, user?.id, colorScheme, signOut, isDesktop]);
 
   const badgePicker = (
     <>

@@ -42,3 +42,4 @@ yarn-error.*
 .env
 scripts/generate-apple-jwt.js
 apple-secret.txt
+supabase/.temp/

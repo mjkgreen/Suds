@@ -368,6 +368,40 @@ export default function SettingsScreen() {
     </View>
   );
 
+  const legalSection = (
+    <View style={{ marginBottom: 28 }}>
+      <Text className="text-muted-foreground text-xs font-bold uppercase tracking-wider mb-4 ml-1">
+        Legal
+      </Text>
+      <View className="bg-card rounded-2xl overflow-hidden border border-border">
+        <Pressable
+          onPress={() => router.push("/terms")}
+          className="flex-row items-center justify-between px-4 py-4 border-b border-border"
+        >
+          <View className="flex-row items-center gap-3">
+            <View className="w-8 h-8 rounded-lg bg-accent items-center justify-center">
+              <Ionicons name="document-text" size={18} color="#f59e0b" />
+            </View>
+            <Text className="text-foreground font-medium">Terms of Service</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color="#9ca3af" />
+        </Pressable>
+        <Pressable
+          onPress={() => router.push("/privacy")}
+          className="flex-row items-center justify-between px-4 py-4"
+        >
+          <View className="flex-row items-center gap-3">
+            <View className="w-8 h-8 rounded-lg bg-accent items-center justify-center">
+              <Ionicons name="shield-checkmark" size={18} color="#f59e0b" />
+            </View>
+            <Text className="text-foreground font-medium">Privacy Policy</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color="#9ca3af" />
+        </Pressable>
+      </View>
+    </View>
+  );
+
   return (
     <SafeAreaView className={`flex-1 bg-background ${isDark ? "dark" : ""}`}>
       <View className="flex-row items-center px-4 py-3 bg-background border-b border-border">
@@ -389,6 +423,7 @@ export default function SettingsScreen() {
               <View style={{ flex: 1 }}>
                 {bacSection}
                 {accountSection}
+                {legalSection}
               </View>
             </View>
           </View>
@@ -399,6 +434,7 @@ export default function SettingsScreen() {
             {notificationsSection}
             {bacSection}
             {accountSection}
+            {legalSection}
           </>
         )}
       </ScrollView>

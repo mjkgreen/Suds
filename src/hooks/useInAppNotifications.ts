@@ -16,7 +16,15 @@ export function useInAppNotifications(): UseQueryResult<InAppNotification[]> {
         .order('created_at', { ascending: false })
         .limit(50);
       if (error) throw new Error(error.message);
-      return (data ?? []) as InAppNotification[];
+
+      // Hide notifications from users the current user has blocked
+      // (RLS scopes user_blocks rows to the current user).
+      const { data: blocks } = await supabase.from('user_blocks').select('blocked_id');
+      const blockedIds = new Set((blocks ?? []).map((row: any) => row.blocked_id));
+
+      return ((data ?? []) as InAppNotification[]).filter(
+        (n) => !n.actor_id || !blockedIds.has(n.actor_id),
+      );
     },
   });
 }

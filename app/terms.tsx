@@ -74,10 +74,9 @@ export default function TermsScreen() {
 
       <Section title="5. Premium Subscriptions" isDark={isDark}>
         <Body isDark={isDark}>
-          Suds offers optional premium features via in-app purchases processed by Apple. Subscriptions automatically
-          renew unless cancelled at least 24 hours before the end of the current period. You can manage or cancel
-          subscriptions in your Apple ID account settings. We do not offer refunds for partial subscription periods
-          except as required by law.
+          Suds is currently free to use. If we introduce optional premium features in the future, they will be offered
+          via in-app purchases processed by Apple, with pricing and renewal terms disclosed before purchase, and these
+          Terms will be updated accordingly.
         </Body>
       </Section>
 

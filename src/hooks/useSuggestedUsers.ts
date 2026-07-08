@@ -12,8 +12,14 @@ export function useSuggestedUsers(userId: string | undefined) {
         .select("following_id")
         .eq("follower_id", userId!);
 
+      // Get IDs the user has blocked (RLS scopes rows to the current user)
+      const { data: blockedData } = await supabase
+        .from("user_blocks")
+        .select("blocked_id");
+
       const followingIds = (followingData ?? []).map((r: any) => r.following_id);
-      const excludeIds = [userId!, ...followingIds];
+      const blockedIds = (blockedData ?? []).map((r: any) => r.blocked_id);
+      const excludeIds = [userId!, ...followingIds, ...blockedIds];
 
       // Fetch profiles not already followed, ordered by follower count
       const { data, error } = await (supabase

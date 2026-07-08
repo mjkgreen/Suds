@@ -89,7 +89,6 @@ export default function PrivacyScreen() {
             "Show your drink history and statistics to you.",
             "Enable social features: sharing drink logs with followers, activity feed.",
             "Send optional notifications (e.g., session reminders).",
-            "Process premium subscriptions via Apple (we do not handle payment data directly).",
             "Diagnose bugs and improve app stability.",
           ]}
         />
@@ -103,7 +102,6 @@ export default function PrivacyScreen() {
           isDark={isDark}
           items={[
             "With Supabase (our database and authentication provider) to store and retrieve your data securely.",
-            "With RevenueCat to manage premium subscription status.",
             "With other users: your public profile, username, and drink logs you choose to share are visible to your followers. You control your privacy settings.",
             "If required by law or to protect the rights and safety of users.",
           ]}

@@ -40,7 +40,7 @@ When prompted, enter your Supabase database password.
 Add your Resend API key to Supabase secrets:
 
 ```bash
-supabase secrets set RESEND_API_KEY=re_XjZvRdFu_KcAb8vkbq2Bzq76fdRrpdr9z
+supabase secrets set RESEND_API_KEY=re_your_api_key_here
 ```
 
 Optionally, set a custom from email:
