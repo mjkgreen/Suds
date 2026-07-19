@@ -3,7 +3,8 @@ import * as Haptics from "expo-haptics";
 import * as ImagePicker from "expo-image-picker";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
-import { Alert, Keyboard, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } from "react-native";
+import { Alert, Platform, Pressable, Text, View } from "react-native";
+import { KeyboardAwareScrollView, KeyboardToolbar } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Button } from "@/components/common/Button";
 import { DrinkFormBody } from "@/components/drink/DrinkFormBody";
@@ -13,7 +14,7 @@ import { useLocation } from "@/hooks/useLocation";
 import { useActiveSession, useEndSession } from "@/hooks/useSession";
 import { useAuthStore } from "@/stores/authStore";
 import { usePrefsStore } from "@/stores/prefsStore";
-import { sanitizeGPSResult } from "@/utils/locationPrivacy";
+import { resolveLocationName } from "@/utils/locationPrivacy";
 import { LogDrinkFormData } from "@/types/models";
 
 const DEFAULT_VALUES: LogDrinkFormData = {
@@ -41,18 +42,9 @@ export default function LogScreen() {
   const [photoBase64s, setPhotoBase64s] = useState<(string | null)[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [isKeyboardVisible, setKeyboardVisible] = useState(false);
   const [locationClearedByUser, setLocationClearedByUser] = useState(false);
 
   const insets = useSafeAreaInsets();
-
-  useEffect(() => {
-    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
-    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
-    const showSub = Keyboard.addListener(showEvent, () => setKeyboardVisible(true));
-    const hideSub = Keyboard.addListener(hideEvent, () => setKeyboardVisible(false));
-    return () => { showSub.remove(); hideSub.remove(); };
-  }, []);
 
   const params = useLocalSearchParams<{ lat?: string; lng?: string; name?: string }>();
 
@@ -80,13 +72,7 @@ export default function LogScreen() {
       if (locationEnabled && !locationClearedByUser && !params.lat && !params.lng && !locationName) {
         getCurrentLocation().then((result) => {
           if (result) {
-            const { name, lat, lng } = hideAddresses
-              ? sanitizeGPSResult(result.lat, result.lng, result.address)
-              : {
-                  name: result.name ?? `${result.lat.toFixed(4)}, ${result.lng.toFixed(4)}`,
-                  lat: result.lat,
-                  lng: result.lng,
-                };
+            const { name, lat, lng } = resolveLocationName(result, hideAddresses);
 
             setValue("location_name", name);
             setValue("location_lat", lat);
@@ -163,11 +149,6 @@ export default function LogScreen() {
     <>
       <Head><title>Log a Drink | Suds</title></Head>
       <View className="flex-1 bg-background" style={{ paddingTop: activeSession ? 0 : insets.top }}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        className="flex-1"
-        keyboardVerticalOffset={0}
-      >
         <View className="flex-1 relative">
           {/* Header */}
           <View className="flex-row items-center justify-between px-6 py-2 bg-transparent border-b border-border/50">
@@ -178,10 +159,12 @@ export default function LogScreen() {
             <View className="w-12" />
           </View>
 
-          <ScrollView
+          <KeyboardAwareScrollView
             className="flex-1"
             contentContainerStyle={{ paddingBottom: 150 }}
-            keyboardShouldPersistTaps="always"
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="interactive"
+            bottomOffset={16}
           >
             {/* Session Banner */}
             <View className="px-6 pt-4 pb-0">
@@ -219,23 +202,21 @@ export default function LogScreen() {
               error={error}
               isInSession={!!activeSession}
             />
-          </ScrollView>
+          </KeyboardAwareScrollView>
 
-          {!isKeyboardVisible && (
-            <View
-              className="absolute bottom-0 left-0 right-0 px-6 bg-transparent"
-              style={{ paddingBottom: Math.max(insets.bottom, 15), paddingTop: 0 }}
-            >
-              <Button
-                label={photoUris.length > 0 && submitting ? "Uploading photos…" : "Log It"}
-                onPress={handleSubmit(onSubmit)}
-                loading={submitting}
-                size="lg"
-              />
-            </View>
-          )}
+          <View
+            className="absolute bottom-0 left-0 right-0 px-6 bg-transparent"
+            style={{ paddingBottom: Math.max(insets.bottom, 15), paddingTop: 0 }}
+          >
+            <Button
+              label={photoUris.length > 0 && submitting ? "Uploading photos…" : "Log It"}
+              onPress={handleSubmit(onSubmit)}
+              loading={submitting}
+              size="lg"
+            />
+          </View>
         </View>
-      </KeyboardAvoidingView>
+        <KeyboardToolbar />
       </View>
     </>
   );
