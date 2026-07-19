@@ -6,8 +6,10 @@ import { Image } from "expo-image";
 import { LocationPicker } from "@/components/common/LocationPicker";
 import { ScrollPicker } from "@/components/common/ScrollPicker";
 import { SimpleDateTimePicker } from "@/components/common/SimpleDateTimePicker";
-import { CombinedDrinkInput } from "@/components/drink/CombinedDrinkInput";
+import { AutocompleteTextInput } from "@/components/drink/AutocompleteTextInput";
 import { DrinkTypePicker } from "@/components/drink/DrinkTypePicker";
+import { getTypesForBrand, getTypesForName, searchBrands, searchDrinkNames } from "@/lib/drinkSearch";
+import { DrinkType } from "@/types/models";
 import { LogDrinkFormData } from "@/types/models";
 
 const MAX_PHOTOS = 3;
@@ -49,6 +51,14 @@ export function DrinkFormBody({
   const drinkName = watch("drink_name");
   const brand = watch("brand");
 
+  // Only auto-switch the type when the picked entry belongs to exactly one type;
+  // ambiguous entries (e.g. Jack Daniel's in cocktail + spirit) leave it alone.
+  function autoSetType(types: DrinkType[]) {
+    if (types.length === 1 && types[0] !== drinkType) {
+      setValue("drink_type", types[0]);
+    }
+  }
+
   return (
     <>
       {/* Event Name — hidden when already in an active session */}
@@ -89,28 +99,34 @@ export function DrinkFormBody({
       </View>
 
       <View className="px-6 gap-5">
-        {/* Drink & Brand */}
-        <View style={{ zIndex: 50 }}>
-          <Text className="text-foreground font-semibold mb-2">Drink & Brand (optional)</Text>
-          <Controller
-            control={control}
-            name="drink_name"
-            render={() => (
-              <CombinedDrinkInput
-                value={drinkName && brand ? `${drinkName}, ${brand}` : drinkName || brand}
-                onChange={(data) => {
-                  setValue("drink_name", data.name);
-                  setValue("brand", data.brand);
-                  if (data.type) setValue("drink_type", data.type);
-                }}
-                placeholder="e.g. IPA, Guinness"
-                selectedType={drinkType}
-              />
-            )}
+        {/* Brand */}
+        <View style={{ zIndex: 60 }}>
+          <Text className="text-foreground font-semibold mb-2">Brand (optional)</Text>
+          <AutocompleteTextInput
+            value={brand ?? ""}
+            onChangeText={(text) => setValue("brand", text)}
+            onSelectSuggestion={(s) => {
+              setValue("brand", s.label);
+              autoSetType(getTypesForBrand(s.label));
+            }}
+            getSuggestions={(q) => searchBrands(q, drinkType)}
+            placeholder="e.g. Guinness, Moosehead"
           />
-          <Text className="text-muted-foreground text-[10px] mt-1 ml-1 italic">
-            Tip: Comma separate name and brand (e.g. IPA, Lagunitas)
-          </Text>
+        </View>
+
+        {/* Drink Name */}
+        <View style={{ zIndex: 50 }}>
+          <Text className="text-foreground font-semibold mb-2">Drink Name (optional)</Text>
+          <AutocompleteTextInput
+            value={drinkName ?? ""}
+            onChangeText={(text) => setValue("drink_name", text)}
+            onSelectSuggestion={(s) => {
+              setValue("drink_name", s.label);
+              autoSetType(getTypesForName(s.label));
+            }}
+            getSuggestions={(q) => searchDrinkNames(q, drinkType)}
+            placeholder="e.g. IPA, Old Fashioned"
+          />
         </View>
 
         {/* Rating & Quantity Row */}
