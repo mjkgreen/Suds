@@ -422,6 +422,18 @@ export interface Database {
         Args: { p_token: string };
         Returns: Record<string, unknown>;
       };
+      get_or_create_session_share_link: {
+        Args: { p_session_id: string };
+        Returns: Record<string, unknown>;
+      };
+      get_open_invite_preview: {
+        Args: { p_token: string };
+        Returns: Record<string, unknown>;
+      };
+      join_session_by_token: {
+        Args: { p_token: string };
+        Returns: Record<string, unknown>;
+      };
       get_advanced_stats: {
         Args: { p_user_id: string };
         Returns: Json;

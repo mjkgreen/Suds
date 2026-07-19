@@ -13,9 +13,24 @@ import { useColorScheme } from 'nativewind';
 import { useThemeStore } from '@/stores/themeStore';
 import { useNotifications } from '@/hooks/useNotifications';
 import { useNotificationRealtime } from '@/hooks/useInAppNotifications';
+import { getPendingInviteToken, clearPendingInviteToken, setPendingInviteToken } from '@/lib/pendingInvite';
+import { AnalyticsEvents, identify, track } from '@/lib/analytics';
 
 // Module-level store for deep links that arrive before auth resolves
 let pendingDeepLink: string | null = null;
+
+// Extract an open-invite token from any supported link shape:
+// https://drink-with-suds.com/join/{token} or suds://join/{token}
+function parseJoinToken(parsed: ReturnType<typeof Linking.parse>): string | null {
+  const path = parsed.path ?? '';
+  if (parsed.hostname === 'join') {
+    // suds://join/{token} → hostname "join", path "{token}"
+    const token = path.replace(/^\/?/, '');
+    return token || null;
+  }
+  const match = path.match(/^\/?join\/([^/?#]+)/);
+  return match ? match[1] : null;
+}
 
 function ThemeSync() {
   const { themePreference } = useThemeStore();
@@ -42,15 +57,30 @@ function AuthGuard() {
   useNotifications({ userId: user?.id });
   useNotificationRealtime();
 
-  // Deep link handler: suds://session/join?token=xxx and suds://log
+  // Deep link handler: suds://session/join?token=xxx, suds://log,
+  // suds://join/{token}, and universal links (https://drink-with-suds.com/join/{token})
   const url = Linking.useURL();
   const handledUrlRef = useRef<string | null>(null);
 
   useEffect(() => {
     const target = url ?? pendingDeepLink;
-    if (!target || !session) {
-      // Store link so we can process it once auth resolves
-      if (url && !session) pendingDeepLink = url;
+    if (!target) return;
+
+    if (!session) {
+      const parsedUnauthed = Linking.parse(target);
+      const joinToken = parseJoinToken(parsedUnauthed);
+      if (joinToken && handledUrlRef.current !== target) {
+        // Invite links are public: park the token for post-signup claim and
+        // show the invite preview even before auth.
+        handledUrlRef.current = target;
+        pendingDeepLink = null;
+        setPendingInviteToken(joinToken);
+        track(AnalyticsEvents.InvitePendingStored, { source: 'deep_link' });
+        router.push(`/join/${joinToken}` as never);
+        return;
+      }
+      // Store other links so we can process them once auth resolves
+      if (url) pendingDeepLink = url;
       return;
     }
     if (handledUrlRef.current === target) return;
@@ -58,7 +88,10 @@ function AuthGuard() {
     pendingDeepLink = null;
 
     const parsed = Linking.parse(target);
-    if (parsed.hostname === 'session' && parsed.path === '/join') {
+    const joinToken = parseJoinToken(parsed);
+    if (joinToken) {
+      router.push(`/join/${joinToken}` as never);
+    } else if (parsed.hostname === 'session' && parsed.path === '/join') {
       const token = parsed.queryParams?.token as string | undefined;
       if (token) router.push(`/session/join/${token}` as never);
     } else if (parsed.hostname === 'log') {
@@ -66,14 +99,34 @@ function AuthGuard() {
     }
   }, [url, session]);
 
+  // Deferred deep-link claim: a join token parked before sign-up is surfaced
+  // once the user is fully onboarded, landing them in the inviter's session.
+  const claimedInviteRef = useRef(false);
+  useEffect(() => {
+    if (!session || !profile?.onboarded || claimedInviteRef.current) return;
+    claimedInviteRef.current = true;
+    getPendingInviteToken().then((token) => {
+      if (!token) return;
+      clearPendingInviteToken();
+      track(AnalyticsEvents.InviteClaimPrompted, {});
+      router.push(`/join/${token}` as never);
+    });
+  }, [session, profile?.onboarded]);
+
+  // Tie analytics events to the signed-in user
+  useEffect(() => {
+    identify(user?.id);
+  }, [user?.id]);
+
   useEffect(() => {
     if (isLoading) return;
 
     const segs = segments as string[];
     const inAuthGroup = segs[0] === '(auth)';
     const isOnboarding = segs[0] === '(auth)' && segs[1] === 'onboarding';
-    // Public web routes: root index, terms, privacy, support
-    const isPublicRoute = segs.length === 0 || ['terms', 'privacy', 'support'].includes(segs[0]);
+    // Public routes: root index, terms, privacy, support, and open invite
+    // landing pages (join links must work for people without accounts)
+    const isPublicRoute = segs.length === 0 || ['terms', 'privacy', 'support', 'join'].includes(segs[0]);
 
     if (!session && !inAuthGroup && !isPublicRoute) {
       router.replace('/(auth)/sign-in');
@@ -118,6 +171,7 @@ function AuthGuard() {
         <Stack.Screen name="drink/[id]" options={{ presentation: 'modal' }} />
         <Stack.Screen name="session/[id]" options={{ presentation: 'modal' }} />
         <Stack.Screen name="session/join/[token]" options={{ presentation: 'modal', title: 'Join Session' }} />
+        <Stack.Screen name="join/[token]" options={{ title: 'Join the Night Out' }} />
         <Stack.Screen name="drink/edit/[id]" />
         <Stack.Screen name="user/[id]" />
         <Stack.Screen name="user/edit" />

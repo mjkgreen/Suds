@@ -1,0 +1,16 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": ["935735W5AA.com.sudssocial.app"],
+        "components": [
+          { "/": "/join/*", "comment": "Open session invite links" },
+          { "/": "/u/*", "comment": "Public profile links" }
+        ]
+      }
+    ]
+  },
+  "webcredentials": {
+    "apps": ["935735W5AA.com.sudssocial.app"]
+  }
+}

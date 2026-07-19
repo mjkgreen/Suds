@@ -28,7 +28,8 @@
       },
       "entitlements": {
         "com.apple.security.application-groups": ["group.com.sudssocial.app"]
-      }
+      },
+      "associatedDomains": ["applinks:drink-with-suds.com"]
     },
     "android": {
       "adaptiveIcon": {
@@ -42,6 +43,17 @@
         "android.permission.CAMERA",
         "android.permission.READ_EXTERNAL_STORAGE",
         "android.permission.ACCESS_COARSE_LOCATION"
+      ],
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            { "scheme": "https", "host": "drink-with-suds.com", "pathPrefix": "/join" },
+            { "scheme": "https", "host": "drink-with-suds.com", "pathPrefix": "/u" }
+          ],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
       ]
     },
     "web": {

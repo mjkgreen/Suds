@@ -11,8 +11,8 @@ import { calculateBAC, ProfileInput, DrinkInput } from "@/utils/bacHelpers";
 import { formatDuration } from "@/utils/dateHelpers";
 import { DrinkLog, isAlcoholicDrink } from "@/types/models";
 import { Avatar } from "@/components/common/Avatar";
-import { FollowerPickerModal } from "@/components/session/FollowerPickerModal";
-import { useSessionInvites } from "@/hooks/useSessionMembers";
+import { InviteShareModal } from "@/components/session/InviteShareModal";
+import { SessionRecapModal } from "@/components/share/SessionRecapModal";
 
 export function SessionBanner() {
   const { top } = useSafeAreaInsets();
@@ -23,6 +23,9 @@ export function SessionBanner() {
   const { mutateAsync: leaveSession, isPending: isLeaving } = useLeaveSession();
   const [confirmEnd, setConfirmEnd] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
+  // Just-ended session id: keeps the recap share modal alive after
+  // activeSession goes null (peak-delight share moment)
+  const [recapSessionId, setRecapSessionId] = useState<string | null>(null);
 
   const isHost = activeSession?.my_role === "host";
   const isPending = isEnding || isLeaving;
@@ -30,7 +33,6 @@ export function SessionBanner() {
   const { sex, weight, weightUnit } = usePrefsStore();
   const { data: sessionDrinks } = useSessionDrinks(activeSession?.id);
   const { data: members } = useSessionMembers(activeSession?.id);
-  const { data: existingInvites } = useSessionInvites(isHost ? activeSession?.id : undefined);
 
   const [currentTime, setCurrentTime] = useState(() => new Date());
 
@@ -49,7 +51,9 @@ export function SessionBanner() {
       return;
     }
     if (isHost) {
-      await endSession(activeSession.id);
+      const endedId = activeSession.id;
+      await endSession(endedId);
+      setRecapSessionId(endedId);
     } else {
       await leaveSession({ sessionId: activeSession.id, userId: user.id });
     }
@@ -79,7 +83,16 @@ export function SessionBanner() {
     return calculateBAC(profileInput, drinkInputs, currentTime);
   }, [activeSession, weight, weightUnit, sex, drinkInputs, currentTime]);
 
-  if (!activeSession) return null;
+  if (!activeSession) {
+    // Banner is gone, but the recap share moment survives the session's end
+    return recapSessionId ? (
+      <SessionRecapModal
+        visible
+        sessionId={recapSessionId}
+        onClose={() => setRecapSessionId(null)}
+      />
+    ) : null;
+  }
 
   const bannerBgColor =
     liveBAC >= 0.08 ? "bg-red-600" : liveBAC > 0.0 ? "bg-amber-500" : "bg-emerald-600";
@@ -129,15 +142,13 @@ export function SessionBanner() {
           </View>
 
           <View className="flex-row items-center gap-2">
-            {/* Invite button (host only) */}
-            {isHost && (
-              <Pressable
-                onPress={() => setShowInviteModal(true)}
-                className="bg-white/20 active:bg-white/30 rounded-full p-1.5"
-              >
-                <Ionicons name="person-add-outline" size={16} color="#fff" />
-              </Pressable>
-            )}
+            {/* Invite button — any member can share the night */}
+            <Pressable
+              onPress={() => setShowInviteModal(true)}
+              className="bg-white/20 active:bg-white/30 rounded-full p-1.5"
+            >
+              <Ionicons name="person-add-outline" size={16} color="#fff" />
+            </Pressable>
 
             {/* End / Leave button */}
             <Pressable
@@ -194,15 +205,13 @@ export function SessionBanner() {
         )}
       </Pressable>
 
-      {isHost && (
-        <FollowerPickerModal
-          visible={showInviteModal}
-          onClose={() => setShowInviteModal(false)}
-          sessionId={activeSession.id}
-          currentInvites={existingInvites ?? []}
-          currentMembers={members ?? []}
-        />
-      )}
+      <InviteShareModal
+        visible={showInviteModal}
+        onClose={() => setShowInviteModal(false)}
+        sessionId={activeSession.id}
+        isHost={isHost}
+        currentMembers={members ?? []}
+      />
     </>
   );
 }

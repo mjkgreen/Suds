@@ -20,6 +20,7 @@ import { Avatar } from "@/components/common/Avatar";
 import { ImageCarousel } from "@/components/common/ImageCarousel";
 import { DrinkIcon } from "@/components/icons/DrinkIcon";
 import { NightOutBACProfile } from "@/components/session/NightOutBACProfile";
+import { SessionRecapModal } from "@/components/share/SessionRecapModal";
 import { useAddComment, useComments, useDeleteComment } from "@/hooks/useComments";
 import { useDeleteSession, useEndSession, useLeaveSession } from "@/hooks/useSession";
 import { useRemoveDrinkFromSession } from "@/hooks/useDrinkLog";
@@ -95,6 +96,9 @@ export default function SessionDetailScreen() {
   const { mutateAsync: deleteSession, isPending: isDeleting } = useDeleteSession();
   const { mutateAsync: removeDrinkFromSession } = useRemoveDrinkFromSession();
   const [confirmAction, setConfirmAction] = useState(false);
+  const [showRecap, setShowRecap] = useState(false);
+  // When set, closing the recap modal also closes the screen (end-session flow)
+  const [closeAfterRecap, setCloseAfterRecap] = useState(false);
 
   const myMembership = useMemo(
     () => members?.find((m) => m.user_id === user?.id),
@@ -158,6 +162,11 @@ export default function SessionDetailScreen() {
     }
     if (canEnd) {
       await endSession(data.session.id);
+      setConfirmAction(false);
+      // Peak-delight share moment: offer the recap card before leaving
+      setCloseAfterRecap(true);
+      setShowRecap(true);
+      return;
     } else if (canLeave) {
       await leaveSession({ sessionId: data.session.id, userId: user.id });
     }
@@ -266,17 +275,24 @@ export default function SessionDetailScreen() {
               )}
             </Pressable>
           )}
-          {/* Delete button — hosts only, ended sessions */}
-          {isHost && !isActive && (
-            <Pressable onPress={handleDeleteSession} disabled={isDeleting} className="p-2">
-              {isDeleting ? (
-                <ActivityIndicator size="small" color="#ef4444" />
-              ) : (
-                <Ionicons name="trash-outline" size={20} color="#ef4444" />
+          {/* Ended sessions: share recap + (hosts) delete */}
+          {!isActive && myMembership && (
+            <View className="flex-row items-center">
+              <Pressable onPress={() => setShowRecap(true)} className="p-2">
+                <Ionicons name="share-outline" size={20} color="#f59e0b" />
+              </Pressable>
+              {isHost && (
+                <Pressable onPress={handleDeleteSession} disabled={isDeleting} className="p-2">
+                  {isDeleting ? (
+                    <ActivityIndicator size="small" color="#ef4444" />
+                  ) : (
+                    <Ionicons name="trash-outline" size={20} color="#ef4444" />
+                  )}
+                </Pressable>
               )}
-            </Pressable>
+            </View>
           )}
-          {!(canEnd || canLeave) && !(isHost && !isActive) && <View className="w-10" />}
+          {!(canEnd || canLeave) && !(!isActive && myMembership) && <View className="w-10" />}
         </View>
 
         <KeyboardAvoidingView
@@ -659,6 +675,20 @@ export default function SessionDetailScreen() {
           </ScrollView>
         </KeyboardAvoidingView>
       </View>
+
+      {id && (
+        <SessionRecapModal
+          visible={showRecap}
+          sessionId={id}
+          onClose={() => {
+            setShowRecap(false);
+            if (closeAfterRecap) {
+              setCloseAfterRecap(false);
+              router.back();
+            }
+          }}
+        />
+      )}
     </SafeAreaView>
   );
 }
