@@ -6,8 +6,12 @@ interface SessionState {
   setActiveSession: (session: SessionWithRole | null) => void;
   liveActivityId: string | null;
   setLiveActivityId: (id: string | null) => void;
+  /** The user's own drinks — drives BAC and pace on the Live Activity */
   liveActivityDrinkCount: number;
   setLiveActivityDrinkCount: (count: number) => void;
+  /** All drinks in the session across members */
+  liveActivityGroupDrinkCount: number;
+  setLiveActivityGroupDrinkCount: (count: number) => void;
   liveActivityLastDrinkName: string;
   setLiveActivityLastDrinkName: (name: string) => void;
   liveActivityMemberCount: number;
@@ -23,6 +27,8 @@ export const useSessionStore = create<SessionState>((set) => ({
   setLiveActivityId: (liveActivityId) => set({ liveActivityId }),
   liveActivityDrinkCount: 0,
   setLiveActivityDrinkCount: (liveActivityDrinkCount) => set({ liveActivityDrinkCount }),
+  liveActivityGroupDrinkCount: 0,
+  setLiveActivityGroupDrinkCount: (liveActivityGroupDrinkCount) => set({ liveActivityGroupDrinkCount }),
   liveActivityLastDrinkName: '',
   setLiveActivityLastDrinkName: (liveActivityLastDrinkName) => set({ liveActivityLastDrinkName }),
   liveActivityMemberCount: 1,

@@ -29,7 +29,7 @@ public enum SudsQuickLogRunner {
     else {
       await updateAll { s in
         SudsSessionAttributes.ContentState(
-          drinkCount: s.drinkCount, lastDrinkName: "⚠️ no session",
+          drinkCount: s.drinkCount, groupDrinkCount: s.groupDrinkCount, lastDrinkName: "⚠️ no session",
           memberCount: s.memberCount, memberNames: s.memberNames, isLogging: false
         )
       }
@@ -54,10 +54,11 @@ public enum SudsQuickLogRunner {
     let drinkType = rawDrinkType.isEmpty ? "beer" : rawDrinkType
     let drinkName = rawDrinkName.isEmpty ? "Beer" : rawDrinkName
 
-    // Optimistic update — count+1 and spinner appear immediately.
+    // Optimistic update — count+1 and spinner appear immediately. The +1 logs the
+    // user's own drink, so both the personal and group counts bump.
     await updateAll { s in
       SudsSessionAttributes.ContentState(
-        drinkCount: s.drinkCount + 1, lastDrinkName: drinkName,
+        drinkCount: s.drinkCount + 1, groupDrinkCount: s.groupDrinkCount + 1, lastDrinkName: drinkName,
         memberCount: s.memberCount, memberNames: s.memberNames, isLogging: true
       )
     }
@@ -77,7 +78,8 @@ public enum SudsQuickLogRunner {
         d.set(false, forKey: "intentIsLogging")
         await updateAll { s in
           SudsSessionAttributes.ContentState(
-            drinkCount: max(0, s.drinkCount - 1), lastDrinkName: s.lastDrinkName,
+            drinkCount: max(0, s.drinkCount - 1), groupDrinkCount: max(0, s.groupDrinkCount - 1),
+            lastDrinkName: s.lastDrinkName,
             memberCount: s.memberCount, memberNames: s.memberNames, isLogging: false
           )
         }
@@ -110,22 +112,23 @@ public enum SudsQuickLogRunner {
     guard let (_, response) = try? await URLSession.shared.data(for: req),
           let http = response as? HTTPURLResponse,
           (200..<300).contains(http.statusCode) else {
-      // DB write failed — roll back the optimistic count and clear the spinner.
+      // DB write failed — roll back the optimistic counts and clear the spinner.
       d.set(false, forKey: "intentIsLogging")
       await updateAll { s in
         SudsSessionAttributes.ContentState(
-          drinkCount: max(0, s.drinkCount - 1), lastDrinkName: s.lastDrinkName,
+          drinkCount: max(0, s.drinkCount - 1), groupDrinkCount: max(0, s.groupDrinkCount - 1),
+          lastDrinkName: s.lastDrinkName,
           memberCount: s.memberCount, memberNames: s.memberNames, isLogging: false
         )
       }
       return
     }
 
-    // DB write confirmed — clear the spinner, keep the optimistic count.
+    // DB write confirmed — clear the spinner, keep the optimistic counts.
     d.set(false, forKey: "intentIsLogging")
     await updateAll { s in
       SudsSessionAttributes.ContentState(
-        drinkCount: s.drinkCount, lastDrinkName: drinkName,
+        drinkCount: s.drinkCount, groupDrinkCount: s.groupDrinkCount, lastDrinkName: drinkName,
         memberCount: s.memberCount, memberNames: s.memberNames, isLogging: false
       )
     }
