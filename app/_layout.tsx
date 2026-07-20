@@ -122,6 +122,7 @@ function AuthGuard() {
         <Stack.Screen name="drink/edit/[id]" />
         <Stack.Screen name="user/[id]" />
         <Stack.Screen name="user/edit" />
+        <Stack.Screen name="user/requests" />
         <Stack.Screen name="notifications" />
         <Stack.Screen name="terms" />
         <Stack.Screen name="privacy" />

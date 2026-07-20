@@ -16,7 +16,8 @@ import { Avatar } from '@/components/common/Avatar';
 import { Button } from '@/components/common/Button';
 import { DrinkCard } from '@/components/drink/DrinkCard';
 import { SessionCard } from '@/components/session/SessionCard';
-import { useFollow, useIsFollowing } from '@/hooks/useFollow';
+import { FollowButton } from '@/components/social/FollowButton';
+import { useFollowStatus } from '@/hooks/useFollow';
 import { useBlocks, useIsBlocked } from '@/hooks/useBlocks';
 import { useReportContent } from '@/hooks/useReports';
 import { useMyFeed } from '@/hooks/useFeed';
@@ -55,6 +56,14 @@ export default function UserProfileScreen() {
     enabled: !!id,
   });
 
+  const { data: followStatus = 'none' } = useFollowStatus(currentUser?.id, id);
+
+  // Private accounts show only name/bio/avatar/counts until the viewer's
+  // request is accepted. Server-side guards return empty data regardless;
+  // this flag just skips the fetch and drives the locked UI.
+  const canViewContent =
+    isOwnProfile || (!!profile && (!profile.is_private || followStatus === 'following'));
+
   const {
     data: feedData,
     isLoading: feedLoading,
@@ -62,7 +71,7 @@ export default function UserProfileScreen() {
     hasNextPage,
     isFetchingNextPage,
     refetch: refetchFeed,
-  } = useMyFeed(id);
+  } = useMyFeed(id, canViewContent);
 
   const entries = useMemo<FeedEntry[]>(
     () => feedData?.pages.flatMap((p) => p.entries) ?? [],
@@ -80,8 +89,6 @@ export default function UserProfileScreen() {
     return <DrinkCard item={entry.item} />;
   }, []);
 
-  const { data: isFollowing } = useIsFollowing(currentUser?.id, id);
-  const { follow, unfollow } = useFollow(currentUser?.id);
   const isBlocked = useIsBlocked(currentUser?.id, id);
   const { block, unblock } = useBlocks(currentUser?.id);
   const reportContent = useReportContent(currentUser?.id);
@@ -165,19 +172,13 @@ export default function UserProfileScreen() {
                   onPress={() => unblock.mutate(profile!.id)}
                 />
               ) : (
-                <Button
-                  label={isFollowing ? 'Following' : 'Follow'}
-                  variant={isFollowing ? 'secondary' : 'primary'}
-                  size="md"
-                  loading={follow.isPending || unfollow.isPending}
-                  onPress={() => {
-                    if (isFollowing) {
-                      unfollow.mutate(profile!.id);
-                    } else {
-                      follow.mutate(profile!.id);
-                    }
-                  }}
-                />
+                currentUser?.id && (
+                  <FollowButton
+                    targetProfile={profile!}
+                    currentUserId={currentUser.id}
+                    size="md"
+                  />
+                )
               )}
               <Pressable onPress={handleMoreOptions} hitSlop={8} className="p-2">
                 <Ionicons
@@ -215,7 +216,7 @@ export default function UserProfileScreen() {
           </View>
 
           <View className="flex-row items-center gap-1.5">
-            {selectedBadges.map((b) => (
+            {canViewContent && selectedBadges.map((b) => (
               <Pressable
                 key={b.id}
                 className="w-8 h-10 items-center justify-center border-2 border-card shadow-sm -ml-2 first:ml-0"
@@ -238,7 +239,7 @@ export default function UserProfileScreen() {
     </View>
     ) : null
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  ), [profile, isOwnProfile, isFollowing, follow.isPending, unfollow.isPending, isBlocked, unblock.isPending, handleMoreOptions, selectedBadges]);
+  ), [profile, isOwnProfile, currentUser?.id, canViewContent, isBlocked, unblock.isPending, handleMoreOptions, selectedBadges]);
 
   if (isLoading) {
     return (
@@ -265,12 +266,26 @@ export default function UserProfileScreen() {
         renderItem={renderItem}
         ListHeaderComponent={listHeader}
         ListEmptyComponent={
-          <View className="py-16 items-center">
-            <Text className="text-3xl mb-2">{isBlocked ? '🚫' : '🍺'}</Text>
-            <Text className="text-muted-foreground text-base">
-              {isBlocked ? "You've blocked this user." : 'No drinks logged yet.'}
-            </Text>
-          </View>
+          !canViewContent && !isBlocked ? (
+            <View className="py-16 items-center px-8">
+              <Text className="text-3xl mb-2">🔒</Text>
+              <Text className="text-foreground text-base font-semibold">
+                This account is private
+              </Text>
+              <Text className="text-muted-foreground text-sm mt-1 text-center">
+                {followStatus === 'requested'
+                  ? 'Your follow request is pending approval.'
+                  : 'Follow this account to see their drinks and stats.'}
+              </Text>
+            </View>
+          ) : (
+            <View className="py-16 items-center">
+              <Text className="text-3xl mb-2">{isBlocked ? '🚫' : '🍺'}</Text>
+              <Text className="text-muted-foreground text-base">
+                {isBlocked ? "You've blocked this user." : 'No drinks logged yet.'}
+              </Text>
+            </View>
+          )
         }
         ListFooterComponent={
           isFetchingNextPage ? (

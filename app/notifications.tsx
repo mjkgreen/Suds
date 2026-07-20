@@ -6,8 +6,10 @@ import { ActivityIndicator, FlatList, Pressable, RefreshControl, Text, View } fr
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
 import { Avatar } from "@/components/common/Avatar";
+import { useIncomingFollowRequests } from "@/hooks/useFollow";
 import { useInAppNotifications, useMarkNotificationsRead } from "@/hooks/useInAppNotifications";
 import { supabase } from "@/lib/supabase";
+import { useAuthStore } from "@/stores/authStore";
 import { InAppNotification } from "@/types/models";
 import { relativeTime } from "@/utils/dateHelpers";
 
@@ -17,6 +19,8 @@ function notificationText(n: InAppNotification): string {
     case "like":    return `${name} liked your drink`;
     case "comment": return n.context.comment_preview ? `${name}: ${n.context.comment_preview}` : `${name} commented on your drink`;
     case "follow":  return `${name} started following you`;
+    case "follow_request": return `${name} requested to follow you`;
+    case "follow_request_accepted": return `${name} accepted your follow request`;
     case "session_invite": return `${name} invited you to join their session`;
   }
 }
@@ -66,7 +70,11 @@ const NotificationRow = React.memo(function NotificationRow({
         if (notification.context.drink_log_id) router.push(`/drink/${notification.context.drink_log_id}` as never);
         break;
       case "follow":
+      case "follow_request_accepted":
         if (notification.actor_id) router.push(`/user/${notification.actor_id}` as never);
+        break;
+      case "follow_request":
+        router.push("/user/requests" as never);
         break;
       case "session_invite":
         if (notification.context.invite_token) router.push(`/session/join/${notification.context.invite_token}` as never);
@@ -99,7 +107,9 @@ export default function NotificationsScreen() {
   const router = useRouter();
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === "dark";
+  const { user } = useAuthStore();
   const { data: notifications, isLoading, refetch, isRefetching } = useInAppNotifications();
+  const { data: followRequests } = useIncomingFollowRequests(user?.id);
   const { mutate: markRead } = useMarkNotificationsRead();
 
   useEffect(() => {
@@ -141,9 +151,28 @@ export default function NotificationsScreen() {
     );
   }
 
+  const requestCount = followRequests?.length ?? 0;
+
   return (
     <SafeAreaView className="flex-1 bg-background" edges={["top"]}>
       {header}
+      {requestCount > 0 && (
+        <Pressable
+          onPress={() => router.push("/user/requests" as never)}
+          className="flex-row items-center px-4 py-3 gap-3 border-b border-border active:bg-accent"
+        >
+          <View className="w-11 h-11 rounded-full bg-primary/15 items-center justify-center">
+            <Ionicons name="person-add" size={20} color="#f59e0b" />
+          </View>
+          <View className="flex-1">
+            <Text className="text-foreground text-sm font-semibold">Follow Requests</Text>
+            <Text className="text-muted-foreground text-xs mt-0.5">
+              {requestCount} pending {requestCount === 1 ? "request" : "requests"}
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={isDark ? "#6b7280" : "#9ca3af"} />
+        </Pressable>
+      )}
       <FlatList
         data={notifications ?? []}
         keyExtractor={(n) => n.id}

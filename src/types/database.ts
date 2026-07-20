@@ -27,6 +27,7 @@ export interface Database {
           birthdate: string | null;
           onboarded: boolean;
           subscription_tier: 'free' | 'premium';
+          is_private: boolean;
           displayed_badges: string[] | null;
           created_at: string;
           updated_at: string;
@@ -44,6 +45,7 @@ export interface Database {
           birthdate?: string | null;
           onboarded?: boolean;
           subscription_tier?: 'free' | 'premium';
+          is_private?: boolean;
           displayed_badges?: string[] | null;
           created_at?: string;
           updated_at?: string;
@@ -60,6 +62,7 @@ export interface Database {
           birthdate?: string | null;
           onboarded?: boolean;
           subscription_tier?: 'free' | 'premium';
+          is_private?: boolean;
           displayed_badges?: string[] | null;
           updated_at?: string;
         };
@@ -188,6 +191,19 @@ export interface Database {
         Insert: {
           follower_id: string;
           following_id: string;
+          created_at?: string;
+        };
+        Update: never;
+      };
+      follow_requests: {
+        Row: {
+          requester_id: string;
+          target_id: string;
+          created_at: string;
+        };
+        Insert: {
+          requester_id: string;
+          target_id: string;
           created_at?: string;
         };
         Update: never;
@@ -325,7 +341,7 @@ export interface Database {
           user_id: string;
           actor_id: string | null;
           actor_name: string | null;
-          type: 'like' | 'comment' | 'follow' | 'session_invite';
+          type: 'like' | 'comment' | 'follow' | 'session_invite' | 'follow_request' | 'follow_request_accepted';
           context: Record<string, string | undefined>;
           read: boolean;
           created_at: string;
@@ -335,7 +351,7 @@ export interface Database {
           user_id: string;
           actor_id?: string | null;
           actor_name?: string | null;
-          type: 'like' | 'comment' | 'follow' | 'session_invite';
+          type: 'like' | 'comment' | 'follow' | 'session_invite' | 'follow_request' | 'follow_request_accepted';
           context?: Record<string, string | undefined>;
           read?: boolean;
           created_at?: string;
@@ -449,6 +465,14 @@ export interface Database {
       block_user: {
         Args: { p_blocked: string };
         Returns: undefined;
+      };
+      accept_follow_request: {
+        Args: { p_requester: string };
+        Returns: undefined;
+      };
+      can_view_user: {
+        Args: { p_viewer: string; p_target: string };
+        Returns: boolean;
       };
       upsert_push_token: {
         Args: { p_token: string; p_platform: 'ios' | 'android' };

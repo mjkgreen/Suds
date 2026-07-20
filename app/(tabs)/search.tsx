@@ -5,8 +5,7 @@ import { ActivityIndicator, FlatList, Pressable, Text, TextInput, View } from "r
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
 import { Avatar } from "@/components/common/Avatar";
-import { Button } from "@/components/common/Button";
-import { useFollow, useIsFollowing } from "@/hooks/useFollow";
+import { FollowButton } from "@/components/social/FollowButton";
 import { useBlockedIds } from "@/hooks/useBlocks";
 import { supabase } from "@/lib/supabase";
 import { useAuthStore } from "@/stores/authStore";
@@ -17,9 +16,6 @@ import { useDebounce } from "@/hooks/useDebounce";
 
 const UserRow = React.memo(function UserRow({ profile, currentUserId }: { profile: Profile; currentUserId: string }) {
   const router = useRouter();
-  const { data: isFollowing } = useIsFollowing(currentUserId, profile.id);
-  const { follow, unfollow } = useFollow(currentUserId);
-  const isOwnProfile = profile.id === currentUserId;
 
   return (
     <Pressable
@@ -31,21 +27,7 @@ const UserRow = React.memo(function UserRow({ profile, currentUserId }: { profil
         <Text className="font-semibold text-foreground">{profile.display_name ?? profile.username}</Text>
         <Text className="text-muted-foreground text-sm">@{profile.username}</Text>
       </View>
-      {!isOwnProfile && (
-        <Button
-          label={isFollowing ? "Following" : "Follow"}
-          variant={isFollowing ? "secondary" : "primary"}
-          size="sm"
-          loading={follow.isPending || unfollow.isPending}
-          onPress={() => {
-            if (isFollowing) {
-              unfollow.mutate(profile.id);
-            } else {
-              follow.mutate(profile.id);
-            }
-          }}
-        />
-      )}
+      <FollowButton targetProfile={profile} currentUserId={currentUserId} size="sm" />
     </Pressable>
   );
 });

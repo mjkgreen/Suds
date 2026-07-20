@@ -37,6 +37,7 @@ export interface Profile {
   birthdate: string | null;
   onboarded: boolean;
   subscription_tier: SubscriptionTier;
+  is_private: boolean;
   displayed_badges?: string[]; // IDs like "milestone-100", "sober-7"
   created_at: string;
   updated_at: string;
@@ -73,6 +74,17 @@ export interface Follow {
   follower_id: string;
   following_id: string;
   created_at: string;
+}
+
+/** Viewer's relationship to another user's account. */
+export type FollowStatus = 'none' | 'requested' | 'following';
+
+export interface FollowRequest {
+  requester_id: string;
+  target_id: string;
+  created_at: string;
+  // Joined
+  requester?: Profile;
 }
 
 export interface DrinkTypeStats {
@@ -172,7 +184,13 @@ export interface SessionWithRole extends Session {
   my_role: SessionMemberRole;
 }
 
-export type NotificationType = 'like' | 'comment' | 'follow' | 'session_invite';
+export type NotificationType =
+  | 'like'
+  | 'comment'
+  | 'follow'
+  | 'session_invite'
+  | 'follow_request'
+  | 'follow_request_accepted';
 
 export interface InAppNotification {
   id: string;
