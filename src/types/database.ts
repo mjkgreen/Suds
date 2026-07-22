@@ -20,15 +20,9 @@ export interface Database {
           display_name: string | null;
           avatar_url: string | null;
           bio: string | null;
-          height: number | null;
-          height_unit: string | null;
-          weight: number | null;
-          weight_unit: string | null;
-          birthdate: string | null;
           onboarded: boolean;
           subscription_tier: 'free' | 'premium';
           is_private: boolean;
-          displayed_badges: string[] | null;
           created_at: string;
           updated_at: string;
         };
@@ -38,15 +32,9 @@ export interface Database {
           display_name?: string | null;
           avatar_url?: string | null;
           bio?: string | null;
-          height?: number | null;
-          height_unit?: string | null;
-          weight?: number | null;
-          weight_unit?: string | null;
-          birthdate?: string | null;
           onboarded?: boolean;
           subscription_tier?: 'free' | 'premium';
           is_private?: boolean;
-          displayed_badges?: string[] | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -55,15 +43,53 @@ export interface Database {
           display_name?: string | null;
           avatar_url?: string | null;
           bio?: string | null;
+          onboarded?: boolean;
+          subscription_tier?: 'free' | 'premium';
+          is_private?: boolean;
+          updated_at?: string;
+        };
+      };
+      user_private_metrics: {
+        Row: {
+          user_id: string;
+          height: number | null;
+          height_unit: string | null;
+          weight: number | null;
+          weight_unit: string | null;
+          birthdate: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          user_id: string;
           height?: number | null;
           height_unit?: string | null;
           weight?: number | null;
           weight_unit?: string | null;
           birthdate?: string | null;
-          onboarded?: boolean;
-          subscription_tier?: 'free' | 'premium';
-          is_private?: boolean;
-          displayed_badges?: string[] | null;
+          updated_at?: string;
+        };
+        Update: {
+          height?: number | null;
+          height_unit?: string | null;
+          weight?: number | null;
+          weight_unit?: string | null;
+          birthdate?: string | null;
+          updated_at?: string;
+        };
+      };
+      user_badges: {
+        Row: {
+          user_id: string;
+          badge_ids: string[];
+          updated_at: string;
+        };
+        Insert: {
+          user_id: string;
+          badge_ids?: string[];
+          updated_at?: string;
+        };
+        Update: {
+          badge_ids?: string[];
           updated_at?: string;
         };
       };

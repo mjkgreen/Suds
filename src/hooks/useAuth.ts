@@ -72,14 +72,28 @@ export function useAuth() {
 
   async function fetchProfile(userId: string) {
     try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single();
+      // Body metrics and badges moved to companion tables (migration 038);
+      // hydrate them back onto the own-profile object so every consumer
+      // (BAC math, live activity, edit screen, badge display) is unchanged.
+      const [profileRes, metricsRes, badgesRes] = await Promise.all([
+        (supabase.from('profiles') as any).select('*').eq('id', userId).single(),
+        (supabase.from('user_private_metrics') as any)
+          .select('height, height_unit, weight, weight_unit, birthdate')
+          .eq('user_id', userId)
+          .maybeSingle(),
+        (supabase.from('user_badges') as any).select('badge_ids').eq('user_id', userId).maybeSingle(),
+      ]);
       // PGRST116 = no rows found (expected for new OAuth users without a profile yet)
-      if (error && error.code !== 'PGRST116') throw error;
-      setProfile(data as Profile | null);
+      if (profileRes.error && profileRes.error.code !== 'PGRST116') throw profileRes.error;
+      if (!profileRes.data) {
+        setProfile(null);
+        return;
+      }
+      setProfile({
+        ...(profileRes.data as any),
+        ...((metricsRes.data as any) ?? {}),
+        displayed_badges: (badgesRes.data as any)?.badge_ids ?? [],
+      } as Profile);
     } catch (err) {
       console.error('fetchProfile failed:', err);
       setProfile(null);

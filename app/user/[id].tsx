@@ -38,19 +38,25 @@ export default function UserProfileScreen() {
   const { data: profile, isLoading: profileLoading, refetch: refetchProfile } = useQuery({
     queryKey: ['profile', id],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select(
-          `*, displayed_badges, followers_count:follows!following_id(count), following_count:follows!follower_id(count)`,
-        )
-        .eq('id', id!)
-        .single();
-      if (error) throw error;
-      const res = data as any;
+      // Badges live on user_badges (migration 038), RLS-gated by can_view_user
+      // so a private account's badges return no row for non-approved viewers.
+      const [profileRes, badgesRes] = await Promise.all([
+        supabase
+          .from('profiles')
+          .select(
+            `*, followers_count:follows!following_id(count), following_count:follows!follower_id(count)`,
+          )
+          .eq('id', id!)
+          .single(),
+        supabase.from('user_badges').select('badge_ids').eq('user_id', id!).maybeSingle(),
+      ]);
+      if (profileRes.error) throw profileRes.error;
+      const res = profileRes.data as any;
       return {
         ...res,
         followers_count: res.followers_count?.[0]?.count ?? 0,
         following_count: res.following_count?.[0]?.count ?? 0,
+        displayed_badges: (badgesRes.data as any)?.badge_ids ?? undefined,
       } as Profile;
     },
     enabled: !!id,

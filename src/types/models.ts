@@ -30,11 +30,14 @@ export interface Profile {
   display_name: string | null;
   avatar_url: string | null;
   bio: string | null;
-  height: number | null;
-  height_unit: 'cm' | 'in' | null;
-  weight: number | null;
-  weight_unit: 'kg' | 'lb' | null;
-  birthdate: string | null;
+  // Body metrics live on user_private_metrics (owner-only) and badges on
+  // user_badges (migration 038); hydrated onto this object for the viewer's
+  // own profile / approved views, absent from `profiles!fk(*)` embeds.
+  height?: number | null;
+  height_unit?: 'cm' | 'in' | null;
+  weight?: number | null;
+  weight_unit?: 'kg' | 'lb' | null;
+  birthdate?: string | null;
   onboarded: boolean;
   subscription_tier: SubscriptionTier;
   is_private: boolean;
