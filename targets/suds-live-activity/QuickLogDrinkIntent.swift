@@ -30,6 +30,7 @@ struct QuickLogDrinkIntent: LiveActivityIntent {
                 let s = activity.contentState
                 await activity.update(using: SudsSessionAttributes.ContentState(
                     drinkCount: s.drinkCount,
+                    groupDrinkCount: s.groupDrinkCount,
                     lastDrinkName: "⚠️ no session",
                     memberCount: s.memberCount,
                     memberNames: s.memberNames,
@@ -65,6 +66,7 @@ struct QuickLogDrinkIntent: LiveActivityIntent {
             let s = activity.contentState
             await activity.update(using: SudsSessionAttributes.ContentState(
                 drinkCount: s.drinkCount + 1,
+                groupDrinkCount: s.groupDrinkCount + 1,
                 lastDrinkName: drinkName,
                 memberCount: s.memberCount,
                 memberNames: s.memberNames,
@@ -92,7 +94,8 @@ struct QuickLogDrinkIntent: LiveActivityIntent {
                 for activity in Activity<SudsSessionAttributes>.activities {
                     let s = activity.contentState
                     await activity.update(using: SudsSessionAttributes.ContentState(
-                        drinkCount: s.drinkCount, lastDrinkName: s.lastDrinkName,
+                        drinkCount: s.drinkCount, groupDrinkCount: s.groupDrinkCount,
+                        lastDrinkName: s.lastDrinkName,
                         memberCount: s.memberCount, memberNames: s.memberNames, isLogging: false
                     ))
                 }
@@ -130,7 +133,8 @@ struct QuickLogDrinkIntent: LiveActivityIntent {
             for activity in Activity<SudsSessionAttributes>.activities {
                 let s = activity.contentState
                 await activity.update(using: SudsSessionAttributes.ContentState(
-                    drinkCount: max(0, s.drinkCount - 1), lastDrinkName: s.lastDrinkName,
+                    drinkCount: max(0, s.drinkCount - 1), groupDrinkCount: max(0, s.groupDrinkCount - 1),
+                    lastDrinkName: s.lastDrinkName,
                     memberCount: s.memberCount, memberNames: s.memberNames, isLogging: false
                 ))
             }
@@ -150,6 +154,7 @@ struct QuickLogDrinkIntent: LiveActivityIntent {
             let s = activity.contentState
             await activity.update(using: SudsSessionAttributes.ContentState(
                 drinkCount: s.drinkCount,
+                groupDrinkCount: s.groupDrinkCount,
                 lastDrinkName: drinkName,
                 memberCount: s.memberCount,
                 memberNames: s.memberNames,

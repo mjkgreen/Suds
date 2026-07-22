@@ -5,13 +5,11 @@ import React, { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import {
   ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
   Pressable,
-  ScrollView,
   Text,
   View,
 } from 'react-native';
+import { KeyboardAwareScrollView, KeyboardToolbar } from 'react-native-keyboard-controller';
 import { useColorScheme } from 'nativewind';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
@@ -145,10 +143,7 @@ export default function EditDrinkScreen() {
 
   return (
     <SafeAreaView className={`flex-1 bg-background ${isDark ? 'dark' : ''}`}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        className="flex-1"
-      >
+      <View className="flex-1">
         {/* Nav */}
         <View className="flex-row items-center px-4 py-3 bg-background border-b border-border">
           <Pressable onPress={() => router.back()} className="p-2 mr-2">
@@ -158,10 +153,12 @@ export default function EditDrinkScreen() {
           {isPending && <ActivityIndicator size="small" color="#f59e0b" />}
         </View>
 
-        <ScrollView
+        <KeyboardAwareScrollView
           className="flex-1"
           contentContainerStyle={{ paddingBottom: 24 }}
           keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="interactive"
+          bottomOffset={16}
         >
           <DrinkFormBody
             control={control}
@@ -172,7 +169,7 @@ export default function EditDrinkScreen() {
             onRemovePhoto={handleRemovePhoto}
             error={error}
           />
-        </ScrollView>
+        </KeyboardAwareScrollView>
 
         {/* Pinned Save Button */}
         <View className="px-6 py-4 bg-background border-t border-border">
@@ -183,7 +180,8 @@ export default function EditDrinkScreen() {
             size="lg"
           />
         </View>
-      </KeyboardAvoidingView>
+      </View>
+      <KeyboardToolbar />
     </SafeAreaView>
   );
 }

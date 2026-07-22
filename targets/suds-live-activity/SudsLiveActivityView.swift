@@ -72,6 +72,11 @@ struct SudsLiveActivityWidget: Widget {
                                 .font(.caption2.bold())
                                 .foregroundStyle(bacColor(bac))
                         }
+                        if context.state.memberCount > 1 {
+                            Text("\(context.state.groupDrinkCount) grp")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
                         Spacer()
                         PlusOneButton(lastDrinkName: context.state.lastDrinkName, isLogging: context.state.isLogging)
                     }
@@ -149,6 +154,14 @@ struct LockScreenView: View {
                         color: .orange
                     )
                     .frame(maxWidth: .infinity)
+                    if context.state.memberCount > 1 {
+                        StatCell(
+                            value: "\(context.state.groupDrinkCount)",
+                            label: "group",
+                            color: .orange
+                        )
+                        .frame(maxWidth: .infinity)
+                    }
                     StatCell(label: "elapsed", timerDate: context.attributes.sessionStartDate)
                         .frame(maxWidth: .infinity)
                     if let pace = pacePerHour(drinkCount: context.state.drinkCount, sessionStart: context.attributes.sessionStartDate) {

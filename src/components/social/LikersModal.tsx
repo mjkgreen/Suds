@@ -4,7 +4,7 @@ import React, { useCallback } from 'react';
 import { ActivityIndicator, FlatList, Modal, Pressable, Text, View } from 'react-native';
 import { Avatar } from '@/components/common/Avatar';
 import { useLikers } from '@/hooks/useLikers';
-import { useFollow, useIsFollowing } from '@/hooks/useFollow';
+import { FollowButton } from '@/components/social/FollowButton';
 import { Profile } from '@/types/models';
 import { getDisplayName, getUsername } from '@/utils/profileHelpers';
 
@@ -88,9 +88,6 @@ function LikersList({
 
 const LikerRow = React.memo(function LikerRow({ profile, currentUserId, onClose }: LikerRowProps) {
   const router = useRouter();
-  const isOwn = profile.id === currentUserId;
-  const { data: isFollowing } = useIsFollowing(currentUserId, profile.id);
-  const { follow, unfollow } = useFollow(currentUserId);
 
   function handlePress() {
     onClose();
@@ -106,22 +103,8 @@ const LikerRow = React.memo(function LikerRow({ profile, currentUserId, onClose 
         <Text className="text-foreground font-semibold text-sm">{getDisplayName(profile)}</Text>
         <Text className="text-muted-foreground text-xs">@{getUsername(profile)}</Text>
       </Pressable>
-      {!isOwn && (
-        <Pressable
-          onPress={() => isFollowing ? unfollow.mutate(profile.id) : follow.mutate(profile.id)}
-          disabled={follow.isPending || unfollow.isPending}
-          className={`px-4 py-1.5 rounded-full border ${
-            isFollowing
-              ? 'border-border bg-transparent'
-              : 'border-primary bg-primary'
-          }`}
-        >
-          <Text
-            className={`text-xs font-semibold ${isFollowing ? 'text-foreground' : 'text-primary-foreground'}`}
-          >
-            {follow.isPending || unfollow.isPending ? '…' : isFollowing ? 'Following' : 'Follow'}
-          </Text>
-        </Pressable>
+      {currentUserId && (
+        <FollowButton targetProfile={profile} currentUserId={currentUserId} size="sm" />
       )}
     </View>
   );

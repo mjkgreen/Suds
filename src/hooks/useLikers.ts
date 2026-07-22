@@ -11,7 +11,7 @@ export function useLikers(drinkLogId: string | undefined, enabled = true) {
         .select(`
           user_id,
           profile:profiles!user_id(
-            id, username, display_name, avatar_url
+            id, username, display_name, avatar_url, is_private
           )
         `)
         .eq('drink_log_id', drinkLogId!)
