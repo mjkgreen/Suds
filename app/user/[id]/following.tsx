@@ -4,7 +4,9 @@ import React, { useCallback } from 'react';
 import { ActivityIndicator, FlatList, Pressable, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Avatar } from '@/components/common/Avatar';
-import { useFollowing } from '@/hooks/useFollow';
+import { useFollowing, useFollowStatus } from '@/hooks/useFollow';
+import { useProfile } from '@/hooks/useProfile';
+import { useAuthStore } from '@/stores/authStore';
 import { useColorScheme } from 'nativewind';
 import { Profile } from '@/types/models';
 import { getDisplayName, getUsername } from '@/utils/profileHelpers';
@@ -31,7 +33,14 @@ export default function FollowingScreen() {
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
 
-  const { data: following, isLoading } = useFollowing(id);
+  const { user: currentUser } = useAuthStore();
+  const { data: targetProfile } = useProfile(id);
+  const { data: followStatus = 'none' } = useFollowStatus(currentUser?.id, id);
+  // Private accounts hide their follower/following lists from non-approved viewers.
+  const locked =
+    !!targetProfile?.is_private && id !== currentUser?.id && followStatus !== 'following';
+
+  const { data: following, isLoading } = useFollowing(locked ? undefined : id);
 
   const renderItem = useCallback(({ item }: { item: Profile }) => (
     <FollowingRow item={item} />
@@ -53,17 +62,27 @@ export default function FollowingScreen() {
         </Pressable>
         <Text className="font-bold text-foreground text-base flex-1">Following</Text>
       </View>
-      <FlatList
-        data={following as Profile[] ?? []}
-        keyExtractor={(item) => item.id}
-        renderItem={renderItem}
-        ListEmptyComponent={
-          <View className="py-16 items-center flex-1 justify-center">
-            <Text className="text-muted-foreground text-base">Not following anyone yet.</Text>
-          </View>
-        }
-        contentContainerStyle={{ paddingBottom: 32 }}
-      />
+      {locked ? (
+        <View className="py-16 items-center flex-1 px-8">
+          <Text className="text-3xl mb-2">🔒</Text>
+          <Text className="text-foreground text-base font-semibold">This account is private</Text>
+          <Text className="text-muted-foreground text-sm mt-1 text-center">
+            Follow this account to see who they follow.
+          </Text>
+        </View>
+      ) : (
+        <FlatList
+          data={following as Profile[] ?? []}
+          keyExtractor={(item) => item.id}
+          renderItem={renderItem}
+          ListEmptyComponent={
+            <View className="py-16 items-center flex-1 justify-center">
+              <Text className="text-muted-foreground text-base">Not following anyone yet.</Text>
+            </View>
+          }
+          contentContainerStyle={{ paddingBottom: 32 }}
+        />
+      )}
     </SafeAreaView>
   );
 }

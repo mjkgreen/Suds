@@ -1,11 +1,14 @@
 import { useState } from 'react';
 import * as Location from 'expo-location';
+import { NominatimReverseResult, reverseGeocode } from '@/lib/nominatim';
+import { extractGPSName, extractNominatimName } from '@/utils/locationPrivacy';
 
 interface LocationResult {
   lat: number;
   lng: number;
   name?: string;
   address?: Location.LocationGeocodedAddress;
+  nominatim?: NominatimReverseResult | null;
 }
 
 export function useLocation() {
@@ -26,13 +29,23 @@ export function useLocation() {
       });
       const { latitude: lat, longitude: lng } = location.coords;
 
-      // Reverse geocode for a human-readable name
-      const [address] = await Location.reverseGeocodeAsync({ latitude: lat, longitude: lng });
-      const name = address
-        ? [address.name, address.street, address.city].filter(Boolean).join(', ')
-        : undefined;
+      // Nominatim resolves the nearest building/POI, so a bar comes back as the
+      // bar's name; expo-location's reverse geocode (mostly address-only) is the
+      // offline/rate-limited fallback.
+      const [nominatim, address] = await Promise.all([
+        reverseGeocode(lat, lng),
+        Location.reverseGeocodeAsync({ latitude: lat, longitude: lng })
+          .then((results) => results[0] as Location.LocationGeocodedAddress | undefined)
+          .catch(() => undefined),
+      ]);
 
-      return { lat, lng, name, address };
+      const name = nominatim
+        ? extractNominatimName(nominatim.display_name, nominatim.address, nominatim.name)
+        : address
+          ? extractGPSName(address)
+          : undefined;
+
+      return { lat, lng, name, address, nominatim };
     } catch (err) {
       setError('Could not get location.');
       return null;

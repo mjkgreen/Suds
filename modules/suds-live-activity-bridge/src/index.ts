@@ -4,7 +4,10 @@ import { requireNativeModule } from 'expo-modules-core';
 export type LiveActivityInfo = {
   id: string;
   sessionTitle: string;
+  /** The user's own drinks — drives BAC and pace */
   drinkCount: number;
+  /** All drinks in the session across members */
+  groupDrinkCount: number;
   elapsedMinutes: number;
   lastDrinkName: string;
   memberCount: number;
@@ -17,6 +20,7 @@ type LiveActivityBridge = {
   startActivity(
     sessionTitle: string,
     drinkCount: number,
+    groupDrinkCount: number,
     memberCount: number,
     memberNames: string,
     sessionStartMs: number,
@@ -25,6 +29,7 @@ type LiveActivityBridge = {
   updateActivity(
     activityId: string,
     drinkCount: number,
+    groupDrinkCount: number,
     lastDrinkName: string,
     memberCount: number,
     memberNames: string,
@@ -75,22 +80,24 @@ export async function getActivities(): Promise<LiveActivityInfo[]> {
 export async function startActivity(
   sessionTitle: string,
   drinkCount: number,
+  groupDrinkCount: number,
   memberCount: number,
   memberNames: string,
   sessionStartMs: number,
   weightLbs: number,
 ): Promise<string | null> {
-  return Bridge?.startActivity(sessionTitle, drinkCount, memberCount, memberNames, sessionStartMs, weightLbs) ?? null;
+  return Bridge?.startActivity(sessionTitle, drinkCount, groupDrinkCount, memberCount, memberNames, sessionStartMs, weightLbs) ?? null;
 }
 
 export async function updateActivity(
   activityId: string,
   drinkCount: number,
+  groupDrinkCount: number,
   lastDrinkName: string,
   memberCount: number,
   memberNames: string,
 ): Promise<void> {
-  await Bridge?.updateActivity(activityId, drinkCount, lastDrinkName, memberCount, memberNames);
+  await Bridge?.updateActivity(activityId, drinkCount, groupDrinkCount, lastDrinkName, memberCount, memberNames);
 }
 
 export async function endActivity(activityId: string): Promise<void> {

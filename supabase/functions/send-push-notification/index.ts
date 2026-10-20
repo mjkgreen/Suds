@@ -6,7 +6,7 @@ interface PushPayload {
   actor_id: string;
   actor_name: string;
   recipient_id: string;
-  type: "like" | "comment" | "follow" | "session_invite";
+  type: "like" | "comment" | "follow" | "session_invite" | "follow_request" | "follow_request_accepted";
   context: {
     drink_log_id?: string;
     comment_preview?: string;
@@ -60,6 +60,10 @@ function buildNotification(
       };
     case "follow":
       return { title: "New Follower", body: `${actorName} started following you` };
+    case "follow_request":
+      return { title: "Follow Request", body: `${actorName} requested to follow you` };
+    case "follow_request_accepted":
+      return { title: "Request Accepted", body: `${actorName} accepted your follow request` };
     case "session_invite":
       return { title: "Session Invite", body: `${actorName} invited you to join their session` };
   }
@@ -111,6 +115,8 @@ serve(async (req) => {
       like: "notify_likes",
       comment: "notify_comments",
       follow: "notify_follows",
+      follow_request: "notify_follows",
+      follow_request_accepted: "notify_follows",
       session_invite: "notify_session_invites",
     };
 

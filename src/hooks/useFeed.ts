@@ -42,6 +42,7 @@ return {
       birthdate: null,
       onboarded: true,
       subscription_tier: 'free' as const,
+      is_private: false,
       displayed_badges: row.displayed_badges,
       created_at: '',
       updated_at: '',
@@ -120,7 +121,7 @@ export function useFeed(userId: string | undefined) {
  * Fetches ALL of the current user's own drink/session history as feed cards.
  * Uses a direct table query for efficiency instead of filtering the global feed.
  */
-export function useMyFeed(userId: string | undefined) {
+export function useMyFeed(userId: string | undefined, enabled = true) {
   const PAGE_SIZE = 100;
 
   return useInfiniteQuery({
@@ -145,6 +146,6 @@ export function useMyFeed(userId: string | undefined) {
     getNextPageParam: (lastPage: any, allPages: any) =>
       lastPage.rawCount === PAGE_SIZE ? allPages.length * PAGE_SIZE : undefined,
     initialPageParam: 0,
-    enabled: !!userId,
+    enabled: !!userId && enabled,
   });
 }

@@ -30,13 +30,17 @@ export interface Profile {
   display_name: string | null;
   avatar_url: string | null;
   bio: string | null;
-  height: number | null;
-  height_unit: 'cm' | 'in' | null;
-  weight: number | null;
-  weight_unit: 'kg' | 'lb' | null;
-  birthdate: string | null;
+  // Body metrics live on user_private_metrics (owner-only) and badges on
+  // user_badges (migration 038); hydrated onto this object for the viewer's
+  // own profile / approved views, absent from `profiles!fk(*)` embeds.
+  height?: number | null;
+  height_unit?: 'cm' | 'in' | null;
+  weight?: number | null;
+  weight_unit?: 'kg' | 'lb' | null;
+  birthdate?: string | null;
   onboarded: boolean;
   subscription_tier: SubscriptionTier;
+  is_private: boolean;
   displayed_badges?: string[]; // IDs like "milestone-100", "sober-7"
   created_at: string;
   updated_at: string;
@@ -73,6 +77,17 @@ export interface Follow {
   follower_id: string;
   following_id: string;
   created_at: string;
+}
+
+/** Viewer's relationship to another user's account. */
+export type FollowStatus = 'none' | 'requested' | 'following';
+
+export interface FollowRequest {
+  requester_id: string;
+  target_id: string;
+  created_at: string;
+  // Joined
+  requester?: Profile;
 }
 
 export interface DrinkTypeStats {
@@ -172,7 +187,13 @@ export interface SessionWithRole extends Session {
   my_role: SessionMemberRole;
 }
 
-export type NotificationType = 'like' | 'comment' | 'follow' | 'session_invite';
+export type NotificationType =
+  | 'like'
+  | 'comment'
+  | 'follow'
+  | 'session_invite'
+  | 'follow_request'
+  | 'follow_request_accepted';
 
 export interface InAppNotification {
   id: string;

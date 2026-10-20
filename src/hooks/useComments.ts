@@ -15,7 +15,7 @@ export function useComments(drinkLogId: string | undefined) {
           content,
           created_at,
           profile:profiles!user_id(
-            id, username, display_name, avatar_url, displayed_badges
+            id, username, display_name, avatar_url
           )
         `)
         .eq('drink_log_id', drinkLogId!)

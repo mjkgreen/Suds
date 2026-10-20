@@ -38,7 +38,7 @@ export interface SanitizedLocation {
  */
 function isResidentialNominatim(address: NominatimAddress): boolean {
   const poiKeys = [
-    'amenity', 'shop', 'tourism', 'leisure', 'historic', 
+    'amenity', 'shop', 'tourism', 'leisure', 'historic',
     'office', 'craft', 'man_made', 'club', 'healthcare'
   ];
   const isNamedPOI = poiKeys.some((key) => !!(address as any)[key]);
@@ -46,6 +46,30 @@ function isResidentialNominatim(address: NominatimAddress): boolean {
 
   // No known POI? Default to private for anything with a house_number or road.
   return !!(address.house_number || address.road);
+}
+
+/**
+ * Human-readable name for a Nominatim result, regardless of privacy settings.
+ * - Named venue/POI: the venue name (canonical `name` when available, otherwise
+ *   the first display_name part, skipping a leading house number).
+ * - Anything else: the first two display_name parts (street-level address).
+ */
+export function extractNominatimName(
+  displayName: string,
+  address?: NominatimAddress,
+  poiName?: string
+): string {
+  const parts = displayName.split(', ');
+  const isPOI = address ? !isResidentialNominatim(address) : false;
+
+  if (isPOI) {
+    if (poiName) return poiName;
+    return (address?.house_number && parts[0] === address.house_number)
+      ? parts.slice(1, 3).join(', ')
+      : parts[0];
+  }
+
+  return parts.slice(0, 2).join(', ');
 }
 
 /**
@@ -57,21 +81,17 @@ export function sanitizeNominatimResult(
   displayName: string,
   lat: number,
   lng: number,
-  address?: NominatimAddress
+  address?: NominatimAddress,
+  poiName?: string
 ): SanitizedLocation {
   const isResidential = address ? isResidentialNominatim(address) : true;
-  const parts = displayName.split(', ');
 
   if (!isResidential) {
-    // It's a POI. Keep coords, but sanitize name to first part (the POI name) 
-    // unless the first part IS a house number.
-    const name = (address?.house_number && parts[0] === address.house_number)
-      ? parts.slice(1, 3).join(', ')
-      : parts[0];
-    return { name, lat, lng };
+    return { name: extractNominatimName(displayName, address, poiName), lat, lng };
   }
 
   // It's a specific address or unknown area. Strip coords.
+  const parts = displayName.split(', ');
   const partsToKeep = address
     ? [address.road, address.neighbourhood || address.suburb, address.city || address.town].filter(Boolean)
     : parts.slice(1, 3);
@@ -91,8 +111,20 @@ function isResidentialGPS(address: Location.LocationGeocodedAddress): boolean {
   const startsWithNumber = /^\d+/.test(address.name.trim());
   // If name matches the street name exactly, it's just a street result.
   const nameIsStreet = address.name === address.street;
-  
+
   return startsWithNumber || nameIsStreet;
+}
+
+/**
+ * Human-readable name for an expo-location reverse-geocode result, regardless
+ * of privacy settings. Venues get "Name, City"; addresses get the street form.
+ */
+export function extractGPSName(address: Location.LocationGeocodedAddress): string {
+  if (!isResidentialGPS(address)) {
+    return [address.name, address.city].filter(Boolean).join(', ');
+  }
+  const street = address.name === address.street ? undefined : address.street;
+  return [address.name, street, address.city].filter(Boolean).join(', ');
 }
 
 /**
@@ -109,8 +141,7 @@ export function sanitizeGPSResult(
 
   if (!isResidential && address) {
     // Recognized POI or venue. Keep name + coords.
-    const name = [address.name, address.city].filter(Boolean).join(', ');
-    return { name, lat, lng };
+    return { name: extractGPSName(address), lat, lng };
   }
 
   // Residential or unknown area. Strip coords.
@@ -119,4 +150,42 @@ export function sanitizeGPSResult(
     : `${lat.toFixed(3)}, ${lng.toFixed(3)}`;
 
   return { name, lat: undefined, lng: undefined };
+}
+
+interface GPSResolveInput {
+  lat: number;
+  lng: number;
+  name?: string;
+  address?: Location.LocationGeocodedAddress;
+  nominatim?: {
+    display_name: string;
+    name?: string;
+    address?: NominatimAddress;
+  } | null;
+}
+
+/**
+ * Single entry point for turning a GPS capture into the stored location.
+ * The name is always venue-aware; coords are only stripped for residential
+ * results when the hide-addresses privacy preference is on.
+ */
+export function resolveLocationName(result: GPSResolveInput, hideAddresses: boolean): SanitizedLocation {
+  if (hideAddresses) {
+    if (result.nominatim) {
+      return sanitizeNominatimResult(
+        result.nominatim.display_name,
+        result.lat,
+        result.lng,
+        result.nominatim.address,
+        result.nominatim.name
+      );
+    }
+    return sanitizeGPSResult(result.lat, result.lng, result.address);
+  }
+
+  return {
+    name: result.name ?? `${result.lat.toFixed(4)}, ${result.lng.toFixed(4)}`,
+    lat: result.lat,
+    lng: result.lng,
+  };
 }

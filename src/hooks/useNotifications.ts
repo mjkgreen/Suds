@@ -54,7 +54,11 @@ export function useNotifications({ userId }: { userId: string | undefined }): vo
           if (data.drink_log_id) router.push(`/drink/${data.drink_log_id}` as never);
           break;
         case 'follow':
+        case 'follow_request_accepted':
           if (data.actor_id) router.push(`/user/${data.actor_id}` as never);
+          break;
+        case 'follow_request':
+          router.push('/user/requests' as never);
           break;
         case 'session_invite':
           if (data.invite_token) {

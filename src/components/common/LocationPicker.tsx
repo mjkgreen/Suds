@@ -10,8 +10,13 @@ import {
 } from 'react-native';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useLocation } from '@/hooks/useLocation';
+import { NominatimSearchResult, searchPlaces } from '@/lib/nominatim';
 import { usePrefsStore } from '@/stores/prefsStore';
-import { NominatimAddress, sanitizeGPSResult, sanitizeNominatimResult } from '@/utils/locationPrivacy';
+import {
+  extractNominatimName,
+  resolveLocationName,
+  sanitizeNominatimResult,
+} from '@/utils/locationPrivacy';
 
 interface LocationPickerProps {
   value: string;
@@ -19,24 +24,9 @@ interface LocationPickerProps {
   onClear?: () => void;
 }
 
-interface NominatimResult {
-  place_id: number;
-  display_name: string;
-  lat: string;
-  lon: string;
-  address?: NominatimAddress;
-}
-
-async function searchPlaces(query: string): Promise<NominatimResult[]> {
-  const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=5&addressdetails=1`;
-  const res = await fetch(url, { headers: { 'Accept-Language': 'en' } });
-  if (!res.ok) return [];
-  return res.json();
-}
-
 export function LocationPicker({ value, onChange, onClear }: LocationPickerProps) {
   const [query, setQuery] = useState(value);
-  const [suggestions, setSuggestions] = useState<NominatimResult[]>([]);
+  const [suggestions, setSuggestions] = useState<NominatimSearchResult[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [searching, setSearching] = useState(false);
   const debouncedQuery = useDebounce(query, 400);
@@ -70,13 +60,17 @@ export function LocationPicker({ value, onChange, onClear }: LocationPickerProps
       .finally(() => setSearching(false));
   }, [debouncedQuery]);
 
-  function handleSelect(result: NominatimResult) {
+  function handleSelect(result: NominatimSearchResult) {
     const rawLat = parseFloat(result.lat);
     const rawLng = parseFloat(result.lon);
 
     const { name, lat, lng } = hideAddresses
-      ? sanitizeNominatimResult(result.display_name, rawLat, rawLng, result.address)
-      : { name: result.display_name.split(', ').slice(0, 2).join(', '), lat: rawLat, lng: rawLng };
+      ? sanitizeNominatimResult(result.display_name, rawLat, rawLng, result.address, result.name)
+      : {
+          name: extractNominatimName(result.display_name, result.address, result.name),
+          lat: rawLat,
+          lng: rawLng,
+        };
 
     suppressSearch.current = true;
     setQuery(name);
@@ -88,13 +82,7 @@ export function LocationPicker({ value, onChange, onClear }: LocationPickerProps
     const result = await getCurrentLocation();
     if (!result) return;
 
-    const { name, lat, lng } = hideAddresses
-      ? sanitizeGPSResult(result.lat, result.lng, result.address)
-      : {
-          name: result.name ?? `${result.lat.toFixed(4)}, ${result.lng.toFixed(4)}`,
-          lat: result.lat,
-          lng: result.lng,
-        };
+    const { name, lat, lng } = resolveLocationName(result, hideAddresses);
 
     suppressSearch.current = true;
     setQuery(name);
@@ -103,7 +91,7 @@ export function LocationPicker({ value, onChange, onClear }: LocationPickerProps
   }
 
   // For the suggestion list display: show privacy indicator if the result will be sanitized
-  function willSanitize(result: NominatimResult): boolean {
+  function willSanitize(result: NominatimSearchResult): boolean {
     if (!hideAddresses || !result.address) return false;
     const { lat: sanitizedLat } = sanitizeNominatimResult(
       result.display_name,
@@ -172,9 +160,12 @@ export function LocationPicker({ value, onChange, onClear }: LocationPickerProps
         >
           <ScrollView keyboardShouldPersistTaps="handled" nestedScrollEnabled>
             {suggestions.map((r) => {
-              const parts = r.display_name.split(', ');
-              const primary = parts.slice(0, 2).join(', ');
-              const secondary = parts.slice(2, 4).join(', ');
+              const primary = extractNominatimName(r.display_name, r.address, r.name);
+              const secondary = r.display_name
+                .split(', ')
+                .filter((p) => !primary.includes(p))
+                .slice(0, 2)
+                .join(', ');
               const sanitized = willSanitize(r);
               return (
                 <Pressable

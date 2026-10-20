@@ -3,17 +3,14 @@ import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-nati
 import { useRouter } from "expo-router";
 import { useColorScheme } from "nativewind";
 import { Avatar } from "@/components/common/Avatar";
-import { Button } from "@/components/common/Button";
+import { FollowButton } from "@/components/social/FollowButton";
 import { useAuthStore } from "@/stores/authStore";
-import { useFollow, useIsFollowing } from "@/hooks/useFollow";
 import { useSuggestedUsers } from "@/hooks/useSuggestedUsers";
 import { Profile } from "@/types/models";
 import { getDisplayName, getUsername } from "@/utils/profileHelpers";
 
 function SuggestedUserRow({ profile, currentUserId }: { profile: Profile; currentUserId: string }) {
   const router = useRouter();
-  const { data: isFollowing } = useIsFollowing(currentUserId, profile.id);
-  const { follow, unfollow } = useFollow(currentUserId);
 
   return (
     <Pressable
@@ -33,20 +30,7 @@ function SuggestedUserRow({ profile, currentUserId }: { profile: Profile; curren
           @{getUsername(profile)}
         </Text>
       </View>
-      <Button
-        label={isFollowing ? "Following" : "Follow"}
-        variant={isFollowing ? "secondary" : "primary"}
-        size="sm"
-        loading={follow.isPending || unfollow.isPending}
-        onPress={(e) => {
-          (e as any)?.stopPropagation?.();
-          if (isFollowing) {
-            unfollow.mutate(profile.id);
-          } else {
-            follow.mutate(profile.id);
-          }
-        }}
-      />
+      <FollowButton targetProfile={profile} currentUserId={currentUserId} size="sm" />
     </Pressable>
   );
 }

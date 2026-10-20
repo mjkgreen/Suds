@@ -5,6 +5,7 @@ import { useEffect, useRef } from 'react';
 import { ActivityIndicator, View, useColorScheme as useReactNativeColorScheme } from 'react-native';
 import * as Linking from 'expo-linking';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { queryClient } from '@/lib/queryClient';
 import { useAuth } from '@/hooks/useAuth';
@@ -121,6 +122,7 @@ function AuthGuard() {
         <Stack.Screen name="drink/edit/[id]" />
         <Stack.Screen name="user/[id]" />
         <Stack.Screen name="user/edit" />
+        <Stack.Screen name="user/requests" />
         <Stack.Screen name="notifications" />
         <Stack.Screen name="terms" />
         <Stack.Screen name="privacy" />
@@ -133,12 +135,14 @@ function AuthGuard() {
 export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <SafeAreaProvider>
-        <QueryClientProvider client={queryClient}>
-          <ThemeSync />
-          <AuthGuard />
-        </QueryClientProvider>
-      </SafeAreaProvider>
+      <KeyboardProvider>
+        <SafeAreaProvider>
+          <QueryClientProvider client={queryClient}>
+            <ThemeSync />
+            <AuthGuard />
+          </QueryClientProvider>
+        </SafeAreaProvider>
+      </KeyboardProvider>
     </GestureHandlerRootView>
   );
 }

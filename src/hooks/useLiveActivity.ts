@@ -33,12 +33,19 @@ async function _refresh(): Promise<void> {
     if (!liveActivityId || !_sessionStartMs) return;
 
     let drinkCount = useSessionStore.getState().liveActivityDrinkCount;
+    let groupDrinkCount = useSessionStore.getState().liveActivityGroupDrinkCount;
     let memberCount = 1;
     let memberNames = useSessionStore.getState().liveActivityMemberNames;
 
     if (activeSession?.id) {
       const currentUserId = useAuthStore.getState().session?.user?.id;
-      const [drinkRes, membersRes] = await Promise.all([
+      // Personal count (drives BAC and pace) counts only this user's drinks;
+      // the group count spans everyone in the session.
+      const [myDrinkRes, groupDrinkRes, membersRes] = await Promise.all([
+        currentUserId
+          ? supabase.from('drink_logs').select('*', { count: 'exact', head: true })
+              .eq('session_id', activeSession.id).eq('user_id', currentUserId)
+          : Promise.resolve({ count: null }),
         supabase.from('drink_logs').select('*', { count: 'exact', head: true }).eq('session_id', activeSession.id),
         (supabase.rpc as any)('get_session_members_with_profiles', { p_session_id: activeSession.id }),
       ]);
@@ -46,9 +53,13 @@ async function _refresh(): Promise<void> {
       // Re-check after await — endActivity may have run while we were waiting
       if (!useSessionStore.getState().liveActivityId) return;
 
-      if (drinkRes.count !== null) {
-        drinkCount = drinkRes.count;
+      if (myDrinkRes.count !== null && myDrinkRes.count !== undefined) {
+        drinkCount = myDrinkRes.count;
         useSessionStore.getState().setLiveActivityDrinkCount(drinkCount);
+      }
+      if (groupDrinkRes.count !== null) {
+        groupDrinkCount = groupDrinkRes.count;
+        useSessionStore.getState().setLiveActivityGroupDrinkCount(groupDrinkCount);
       }
       const coMembers = ((membersRes.data ?? []) as SessionMember[])
         .filter((m) => m.user_id !== currentUserId);
@@ -61,6 +72,7 @@ async function _refresh(): Promise<void> {
     await LiveActivityBridge.updateActivity(
       liveActivityId,
       drinkCount,
+      groupDrinkCount,
       liveActivityLastDrinkName,
       memberCount,
       memberNames,
@@ -221,8 +233,8 @@ export function resumeActivity(session: SessionWithRole): void {
 }
 
 export function useLiveActivity() {
-  const { setLiveActivityId, setLiveActivityDrinkCount, setLiveActivityLastDrinkName,
-          setLiveActivityMemberCount, setLiveActivityMemberNames } = useSessionStore();
+  const { setLiveActivityId, setLiveActivityDrinkCount, setLiveActivityGroupDrinkCount,
+          setLiveActivityLastDrinkName, setLiveActivityMemberCount, setLiveActivityMemberNames } = useSessionStore();
 
   async function startActivity(state: SessionActivityState): Promise<void> {
     if (Platform.OS !== 'ios') return;
@@ -263,7 +275,7 @@ export function useLiveActivity() {
 
     let id: string | null = null;
     try {
-      id = await LiveActivityBridge.startActivity(state.sessionTitle, state.drinkCount, 1, '', _sessionStartMs, weightLbs);
+      id = await LiveActivityBridge.startActivity(state.sessionTitle, state.drinkCount, state.drinkCount, 1, '', _sessionStartMs, weightLbs);
     } catch (e) {
       console.warn('[LiveActivity] startActivity threw:', e);
       return;
@@ -272,6 +284,7 @@ export function useLiveActivity() {
 
     setLiveActivityId(id);
     setLiveActivityDrinkCount(state.drinkCount);
+    setLiveActivityGroupDrinkCount(state.drinkCount);
     setLiveActivityLastDrinkName('');
     setLiveActivityMemberCount(1);
     setLiveActivityMemberNames('');
@@ -282,14 +295,15 @@ export function useLiveActivity() {
 
   async function updateActivity(state: Partial<SessionActivityState>): Promise<void> {
     if (Platform.OS !== 'ios') return;
-    const { liveActivityId, liveActivityDrinkCount, liveActivityLastDrinkName,
-            liveActivityMemberCount, liveActivityMemberNames } = useSessionStore.getState();
+    const { liveActivityId, liveActivityDrinkCount, liveActivityGroupDrinkCount,
+            liveActivityLastDrinkName, liveActivityMemberCount, liveActivityMemberNames } = useSessionStore.getState();
     if (!liveActivityId) return;
     const count = state.drinkCount ?? liveActivityDrinkCount;
     setLiveActivityDrinkCount(count);
     await LiveActivityBridge.updateActivity(
       liveActivityId,
       count,
+      liveActivityGroupDrinkCount,
       liveActivityLastDrinkName,
       liveActivityMemberCount,
       liveActivityMemberNames,
@@ -312,6 +326,7 @@ export function useLiveActivity() {
 
     setLiveActivityId(null);
     setLiveActivityDrinkCount(0);
+    setLiveActivityGroupDrinkCount(0);
     setLiveActivityLastDrinkName('');
     setLiveActivityMemberCount(1);
     setLiveActivityMemberNames('');

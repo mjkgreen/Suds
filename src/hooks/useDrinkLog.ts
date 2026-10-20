@@ -14,19 +14,24 @@ function updateLiveActivity(sessionId: string | null | undefined, drinkType: str
   const {
     liveActivityId,
     liveActivityDrinkCount,
+    liveActivityGroupDrinkCount,
     liveActivityMemberCount,
     liveActivityMemberNames,
     setLiveActivityDrinkCount,
+    setLiveActivityGroupDrinkCount,
     setLiveActivityLastDrinkName,
   } = useSessionStore.getState();
   if (!liveActivityId) return;
 
+  // The user just logged their own drink — bump both the personal and group counts.
   const newCount = liveActivityDrinkCount + 1;
+  const newGroupCount = liveActivityGroupDrinkCount + 1;
 
   setLiveActivityDrinkCount(newCount);
+  setLiveActivityGroupDrinkCount(newGroupCount);
   setLiveActivityLastDrinkName(drinkName);
   LiveActivityBridge.updateSharedLastDrink(drinkType, drinkName);
-  LiveActivityBridge.updateActivity(liveActivityId, newCount, drinkName, liveActivityMemberCount, liveActivityMemberNames).catch(
+  LiveActivityBridge.updateActivity(liveActivityId, newCount, newGroupCount, drinkName, liveActivityMemberCount, liveActivityMemberNames).catch(
     (e) => { console.warn('[LiveActivity] updateActivity failed:', e); },
   );
 }

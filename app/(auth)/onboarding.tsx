@@ -110,27 +110,35 @@ export default function OnboardingScreen() {
         throw new Error("Please enter valid numbers for height and weight.");
       }
 
-      const updates = {
-        username: username.trim(),
-        display_name: name.trim(),
-        height: finalHeight,
-        height_unit: heightUnit,
-        weight: finalWeight,
-        weight_unit: weightUnit,
-        birthdate,
-        onboarded: true,
-        updated_at: new Date().toISOString(),
-      };
-
+      // Body metrics live on user_private_metrics (migration 038); write them
+      // separately from the public profiles columns.
       const { data, error } = await (supabase as any)
         .from("profiles")
-        .update(updates)
+        .update({
+          username: username.trim(),
+          display_name: name.trim(),
+          onboarded: true,
+          updated_at: new Date().toISOString(),
+        })
         .eq("id", profile.id)
         .select()
         .single();
 
       if (error) throw error;
-      setProfile(data as any);
+
+      const metrics = {
+        height: finalHeight,
+        height_unit: heightUnit,
+        weight: finalWeight,
+        weight_unit: weightUnit,
+        birthdate,
+      };
+      const { error: metricsError } = await (supabase as any)
+        .from("user_private_metrics")
+        .upsert({ user_id: profile.id, ...metrics, updated_at: new Date().toISOString() }, { onConflict: "user_id" });
+      if (metricsError) throw metricsError;
+
+      setProfile({ ...(data as any), ...metrics });
       // @ts-ignore
       router.replace("/(tabs)/feed");
     } catch (err: any) {

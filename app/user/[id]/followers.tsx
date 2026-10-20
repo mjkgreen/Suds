@@ -4,7 +4,9 @@ import React, { useCallback } from 'react';
 import { ActivityIndicator, FlatList, Pressable, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Avatar } from '@/components/common/Avatar';
-import { useFollowers } from '@/hooks/useFollow';
+import { useFollowers, useFollowStatus } from '@/hooks/useFollow';
+import { useProfile } from '@/hooks/useProfile';
+import { useAuthStore } from '@/stores/authStore';
 import { useColorScheme } from 'nativewind';
 import { Profile } from '@/types/models';
 import { getDisplayName, getUsername } from '@/utils/profileHelpers';
@@ -31,7 +33,14 @@ export default function FollowersScreen() {
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
 
-  const { data: followers, isLoading } = useFollowers(id);
+  const { user: currentUser } = useAuthStore();
+  const { data: targetProfile } = useProfile(id);
+  const { data: followStatus = 'none' } = useFollowStatus(currentUser?.id, id);
+  // Private accounts hide their follower/following lists from non-approved viewers.
+  const locked =
+    !!targetProfile?.is_private && id !== currentUser?.id && followStatus !== 'following';
+
+  const { data: followers, isLoading } = useFollowers(locked ? undefined : id);
 
   const renderItem = useCallback(({ item }: { item: Profile }) => (
     <FollowerRow item={item} />
@@ -53,17 +62,27 @@ export default function FollowersScreen() {
         </Pressable>
         <Text className="font-bold text-foreground text-base flex-1">Followers</Text>
       </View>
-      <FlatList
-        data={followers as Profile[] ?? []}
-        keyExtractor={(item) => item.id}
-        renderItem={renderItem}
-        ListEmptyComponent={
-          <View className="py-16 items-center flex-1 justify-center">
-            <Text className="text-muted-foreground text-base">No followers yet.</Text>
-          </View>
-        }
-        contentContainerStyle={{ paddingBottom: 32 }}
-      />
+      {locked ? (
+        <View className="py-16 items-center flex-1 px-8">
+          <Text className="text-3xl mb-2">🔒</Text>
+          <Text className="text-foreground text-base font-semibold">This account is private</Text>
+          <Text className="text-muted-foreground text-sm mt-1 text-center">
+            Follow this account to see their followers.
+          </Text>
+        </View>
+      ) : (
+        <FlatList
+          data={followers as Profile[] ?? []}
+          keyExtractor={(item) => item.id}
+          renderItem={renderItem}
+          ListEmptyComponent={
+            <View className="py-16 items-center flex-1 justify-center">
+              <Text className="text-muted-foreground text-base">No followers yet.</Text>
+            </View>
+          }
+          contentContainerStyle={{ paddingBottom: 32 }}
+        />
+      )}
     </SafeAreaView>
   );
 }

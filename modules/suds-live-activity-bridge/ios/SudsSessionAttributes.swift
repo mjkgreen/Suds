@@ -9,14 +9,16 @@ struct SudsSessionAttributes: ActivityAttributes {
     let weightLbs: Double
 
     struct ContentState: Codable, Hashable {
-        var drinkCount: Int
+        var drinkCount: Int       // the user's OWN drinks — drives BAC and pace
+        var groupDrinkCount: Int  // all drinks in the session across members
         var lastDrinkName: String
         var memberCount: Int
         var memberNames: String
         var isLogging: Bool
 
-        init(drinkCount: Int, lastDrinkName: String, memberCount: Int, memberNames: String, isLogging: Bool = false) {
+        init(drinkCount: Int, groupDrinkCount: Int, lastDrinkName: String, memberCount: Int, memberNames: String, isLogging: Bool = false) {
             self.drinkCount = drinkCount
+            self.groupDrinkCount = groupDrinkCount
             self.lastDrinkName = lastDrinkName
             self.memberCount = memberCount
             self.memberNames = memberNames
@@ -30,6 +32,8 @@ struct SudsSessionAttributes: ActivityAttributes {
             memberCount = try c.decode(Int.self, forKey: .memberCount)
             memberNames = try c.decode(String.self, forKey: .memberNames)
             isLogging = (try? c.decodeIfPresent(Bool.self, forKey: .isLogging)) ?? false
+            // Activities started before this field existed decode without it.
+            groupDrinkCount = (try? c.decodeIfPresent(Int.self, forKey: .groupDrinkCount)) ?? drinkCount
         }
     }
 }

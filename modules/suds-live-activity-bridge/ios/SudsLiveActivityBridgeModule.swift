@@ -62,6 +62,7 @@ public class SudsLiveActivityBridgeModule: Module {
           "id": activity.id,
           "sessionTitle": activity.attributes.sessionTitle,
           "drinkCount": activity.contentState.drinkCount,
+          "groupDrinkCount": activity.contentState.groupDrinkCount,
           "elapsedMinutes": elapsedMinutes,
           "lastDrinkName": activity.contentState.lastDrinkName,
           "memberCount": activity.contentState.memberCount,
@@ -70,7 +71,7 @@ public class SudsLiveActivityBridgeModule: Module {
       }
     }
 
-    AsyncFunction("startActivity") { (sessionTitle: String, drinkCount: Int, memberCount: Int, memberNames: String, sessionStartMs: Double, weightLbs: Double) throws -> String? in
+    AsyncFunction("startActivity") { (sessionTitle: String, drinkCount: Int, groupDrinkCount: Int, memberCount: Int, memberNames: String, sessionStartMs: Double, weightLbs: Double) throws -> String? in
       guard #available(iOS 16.1, *) else { return nil }
       let sessionStartDate = Date(timeIntervalSince1970: sessionStartMs / 1000.0)
       let attrs = SudsSessionAttributes(
@@ -80,6 +81,7 @@ public class SudsLiveActivityBridgeModule: Module {
       )
       let state = SudsSessionAttributes.ContentState(
         drinkCount: drinkCount,
+        groupDrinkCount: groupDrinkCount,
         lastDrinkName: "",
         memberCount: memberCount,
         memberNames: memberNames
@@ -97,7 +99,7 @@ public class SudsLiveActivityBridgeModule: Module {
     // widget intent is in flight it sets intentIsLogging = true, so every _refresh() call from
     // the main app (triggered by realtime, Darwin, or the 60s timer) preserves the spinner
     // instead of killing it.
-    AsyncFunction("updateActivity") { (activityId: String, drinkCount: Int,
+    AsyncFunction("updateActivity") { (activityId: String, drinkCount: Int, groupDrinkCount: Int,
                                         lastDrinkName: String, memberCount: Int,
                                         memberNames: String) async in
       guard #available(iOS 16.1, *) else { return }
@@ -109,6 +111,7 @@ public class SudsLiveActivityBridgeModule: Module {
       let isLogging = flag && (Date().timeIntervalSince1970 - setAt) < 30
       let state = SudsSessionAttributes.ContentState(
         drinkCount: drinkCount,
+        groupDrinkCount: groupDrinkCount,
         lastDrinkName: lastDrinkName,
         memberCount: memberCount,
         memberNames: memberNames,
