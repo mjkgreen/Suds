@@ -1,9 +1,10 @@
 import { Image } from 'expo-image';
 import React, { useState } from 'react';
 import { LayoutChangeEvent, NativeSyntheticEvent, NativeScrollEvent, Platform, ScrollView, StyleProp, View, ViewStyle } from 'react-native';
-import { DrinkMedia, mediaAspect } from '@/lib/media';
+import { VideoTile } from '@/components/media/VideoTile';
+import { DrinkMedia, MEDIA_ASPECT, mediaAspect, orientationOf } from '@/lib/media';
 
-interface ImageCarouselProps {
+interface MediaCarouselProps {
   media: DrinkMedia[];
   /** Tallest the frame may get; wider-than-allowed frames shrink and center. */
   maxHeight?: number;
@@ -13,21 +14,25 @@ interface ImageCarouselProps {
 
 const FRAME_BG = '#0b0b0b';
 
-/** Cropped items fill their frame exactly; anything else is letterboxed, never cropped. */
+/** Items matching the frame fill it exactly; anything else is letterboxed, never cropped. */
 function fitFor(item: DrinkMedia, frameAspect: number): 'cover' | 'contain' {
   if (!item.width || !item.height) return 'cover'; // legacy photo with unknown size
   return Math.abs(mediaAspect(item) - frameAspect) < 0.02 ? 'cover' : 'contain';
 }
 
-export function ImageCarousel({ media, maxHeight = 520, borderRadius = 12, style }: ImageCarouselProps) {
+/** The first item picks the frame (landscape or portrait), like Instagram. */
+function frameAspectFor(first: DrinkMedia): number {
+  if (!first.width || !first.height) return MEDIA_ASPECT.landscape;
+  return MEDIA_ASPECT[orientationOf(first.width, first.height)];
+}
+
+export function MediaCarousel({ media, maxHeight = 520, borderRadius = 12, style }: MediaCarouselProps) {
   const [containerWidth, setContainerWidth] = useState(0);
 
-  // Video playback isn't supported yet; only images are rendered.
-  const items = media.filter((m) => m.url && m.type === 'image');
+  const items = media.filter((m) => m.url);
   if (items.length === 0) return null;
 
-  // The first item sets the frame, like Instagram.
-  const aspect = mediaAspect(items[0]);
+  const aspect = frameAspectFor(items[0]);
   const frameWidth = Math.min(containerWidth, maxHeight * aspect);
   const frameHeight = frameWidth / aspect;
 
@@ -40,7 +45,7 @@ export function ImageCarousel({ media, maxHeight = 520, borderRadius = 12, style
       {containerWidth > 0 && (
         <View style={{ width: frameWidth, alignSelf: 'center' }}>
           {items.length === 1 ? (
-            <SingleImage item={items[0]} width={frameWidth} height={frameHeight} fit={fitFor(items[0], aspect)} borderRadius={borderRadius} />
+            <MediaItem item={items[0]} width={frameWidth} height={frameHeight} fit={fitFor(items[0], aspect)} borderRadius={borderRadius} />
           ) : (
             <MultiCarousel items={items} width={frameWidth} height={frameHeight} aspect={aspect} borderRadius={borderRadius} />
           )}
@@ -50,27 +55,44 @@ export function ImageCarousel({ media, maxHeight = 520, borderRadius = 12, style
   );
 }
 
-function SingleImage({
+function MediaItem({
   item,
   width,
   height,
   fit,
   borderRadius,
+  active = true,
 }: {
   item: DrinkMedia;
   width: number;
   height: number;
   fit: 'cover' | 'contain';
   borderRadius: number;
+  active?: boolean;
 }) {
   const [failed, setFailed] = useState(false);
+
+  if (item.type === 'video') {
+    return (
+      <VideoTile
+        item={item}
+        width={width}
+        height={height}
+        fit={fit}
+        borderRadius={borderRadius}
+        backgroundColor={FRAME_BG}
+        active={active}
+      />
+    );
+  }
+
   if (failed) return null;
 
   if (Platform.OS === 'web') {
     return (
       <img
         src={item.url}
-        style={{ width, height, borderRadius, objectFit: fit, display: 'block', backgroundColor: FRAME_BG } as React.CSSProperties}
+        style={{ width, height, borderRadius, objectFit: fit, display: 'block', flexShrink: 0, backgroundColor: FRAME_BG } as React.CSSProperties}
         alt=""
         onError={() => setFailed(true)}
       />
@@ -123,6 +145,19 @@ function MultiCarousel({
     </View>
   );
 
+  const slides = items.map((item, i) => (
+    <View key={i} style={Platform.OS === 'web' ? ({ scrollSnapAlign: 'start', flexShrink: 0 } as any) : undefined}>
+      <MediaItem
+        item={item}
+        width={width}
+        height={height}
+        fit={fitFor(item, aspect)}
+        borderRadius={borderRadius}
+        active={i === activeIndex}
+      />
+    </View>
+  ));
+
   if (Platform.OS === 'web') {
     return (
       <View>
@@ -141,23 +176,7 @@ function MultiCarousel({
             setActiveIndex(Math.round(el.scrollLeft / el.offsetWidth));
           }}
         >
-          {items.map((item, i) => (
-            <img
-              key={i}
-              src={item.url}
-              style={{
-                minWidth: '100%',
-                height,
-                objectFit: fitFor(item, aspect),
-                backgroundColor: FRAME_BG,
-                borderRadius,
-                scrollSnapAlign: 'start',
-                flexShrink: 0,
-                display: 'block',
-              } as React.CSSProperties}
-              alt=""
-            />
-          ))}
+          {slides}
         </div>
         {dots}
       </View>
@@ -173,14 +192,7 @@ function MultiCarousel({
         onMomentumScrollEnd={handleScroll}
         style={{ borderRadius, width }}
       >
-        {items.map((item, i) => (
-          <Image
-            key={i}
-            source={{ uri: item.url }}
-            style={{ width, height, borderRadius, backgroundColor: FRAME_BG }}
-            contentFit={fitFor(item, aspect)}
-          />
-        ))}
+        {slides}
       </ScrollView>
       {dots}
     </View>

@@ -17,7 +17,7 @@ import {
 import { useColorScheme } from "nativewind";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Avatar } from "@/components/common/Avatar";
-import { ImageCarousel } from "@/components/common/ImageCarousel";
+import { MediaCarousel } from "@/components/common/MediaCarousel";
 import { getDrinkMedia } from "@/lib/media";
 import { DrinkIcon } from "@/components/icons/DrinkIcon";
 import { NightOutBACProfile } from "@/components/session/NightOutBACProfile";
@@ -287,7 +287,7 @@ export default function SessionDetailScreen() {
           <ScrollView contentContainerStyle={{ padding: 24 }}>
             {/* Photos carousel */}
             {media.length > 0 && (
-              <ImageCarousel media={media} borderRadius={16} />
+              <MediaCarousel media={media} borderRadius={16} />
             )}
 
             {/* Title + time */}

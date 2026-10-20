@@ -5,7 +5,7 @@ import React, { useState, useEffect } from "react";
 import { ActivityIndicator, Platform, Pressable, Text, View } from "react-native";
 import { Avatar } from "@/components/common/Avatar";
 import { PressableCard } from "@/components/common/Card";
-import { ImageCarousel } from "@/components/common/ImageCarousel";
+import { MediaCarousel } from "@/components/common/MediaCarousel";
 import { FEED_MEDIA_MAX_HEIGHT, getDrinkMedia } from "@/lib/media";
 import { DrinkIcon } from "@/components/icons/DrinkIcon";
 import { useLike } from "@/hooks/useLikes";
@@ -244,7 +244,7 @@ export const SessionCard = React.memo(function SessionCard({ group, currentUserI
       )}
 
       {/* Photos from drinks */}
-      {media.length > 0 && <ImageCarousel media={media} maxHeight={FEED_MEDIA_MAX_HEIGHT} borderRadius={10} style={{ marginTop: 8 }} />}
+      {media.length > 0 && <MediaCarousel media={media} maxHeight={FEED_MEDIA_MAX_HEIGHT} borderRadius={10} style={{ marginTop: 8 }} />}
 
       {/* Expanded drink-by-drink list — active sessions only */}
       {isActive && (

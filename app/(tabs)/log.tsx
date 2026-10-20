@@ -10,7 +10,7 @@ import { DrinkFormBody } from "@/components/drink/DrinkFormBody";
 import { useForm } from "react-hook-form";
 import { useLogDrink } from "@/hooks/useDrinkLog";
 import { useLocation } from "@/hooks/useLocation";
-import { usePhotoPicker } from "@/hooks/usePhotoPicker";
+import { useMediaPicker } from "@/hooks/useMediaPicker";
 import { useActiveSession, useEndSession } from "@/hooks/useSession";
 import { useAuthStore } from "@/stores/authStore";
 import { usePrefsStore } from "@/stores/prefsStore";
@@ -45,7 +45,9 @@ export default function LogScreen() {
   const [locationClearedByUser, setLocationClearedByUser] = useState(false);
 
   const insets = useSafeAreaInsets();
-  const { pickPhoto, cropper } = usePhotoPicker((media) => setPhotos((prev) => [...prev, media]));
+  const { pickFromLibrary, takePhoto, recordVideo, processing, cropper } = useMediaPicker((media) =>
+    setPhotos((prev) => [...prev, media]),
+  );
 
   const params = useLocalSearchParams<{ lat?: string; lng?: string; name?: string }>();
 
@@ -85,10 +87,13 @@ export default function LogScreen() {
   );
 
   async function handleAddPhoto() {
-    if (photos.length >= MAX_MEDIA) return;
-    Alert.alert("Add Photo", undefined, [
-      { text: "Take Photo", onPress: () => pickPhoto(true) },
-      { text: "Choose from Library", onPress: () => pickPhoto(false) },
+    if (photos.length >= MAX_MEDIA || processing) return;
+    // Alert buttons don't render on web, so go straight to the file picker there.
+    if (Platform.OS === "web") return pickFromLibrary();
+    Alert.alert("Add Photo or Video", undefined, [
+      { text: "Take Photo", onPress: takePhoto },
+      { text: "Record Video", onPress: recordVideo },
+      { text: "Choose from Library", onPress: pickFromLibrary },
       { text: "Cancel", style: "cancel" },
     ]);
   }
@@ -175,6 +180,7 @@ export default function LogScreen() {
               previews={photos}
               onAddPhoto={handleAddPhoto}
               onRemovePhoto={handleRemovePhoto}
+              addingMedia={processing}
               onClearLocation={() => setLocationClearedByUser(true)}
               error={error}
               isInSession={!!activeSession}
@@ -186,7 +192,7 @@ export default function LogScreen() {
             style={{ paddingBottom: Math.max(insets.bottom, 15), paddingTop: 0 }}
           >
             <Button
-              label={photos.length > 0 && submitting ? "Uploading photos…" : "Log It"}
+              label={photos.length > 0 && submitting ? "Uploading media…" : "Log It"}
               onPress={handleSubmit(onSubmit)}
               loading={submitting}
               size="lg"

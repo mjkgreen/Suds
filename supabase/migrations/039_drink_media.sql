@@ -2,15 +2,16 @@
 -- DRINK MEDIA
 --
 -- Photos are now cropped by the user into a fixed landscape
--- (4:3) or portrait (4:5) frame before upload, and the upload
--- path is ready for video. Each attachment is described in a new
+-- (4:3) or portrait (4:5) frame before upload, and drinks can
+-- carry short videos. Each attachment is described in a new
 -- `media` jsonb array so the UI can render it at its real frame:
 --
 --   [{ "url": text, "type": "image" | "video",
---      "width": int, "height": int }]
+--      "width": int, "height": int,
+--      "poster_url": text, "duration": number }]   -- last two: video only
 --
--- photo_url / photo_urls are still written (image URLs only) so
--- older app builds and anything reading them keep working.
+-- photo_url / photo_urls are still written (image URLs, or a
+-- video's poster) so older app builds keep working.
 -- ============================================================
 
 -- ── 1. media column + backfill ───────────────────────────────
@@ -32,7 +33,7 @@ UPDATE storage.buckets
   SET file_size_limit = 52428800,
       allowed_mime_types = ARRAY[
         'image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif',
-        'video/mp4', 'video/quicktime'
+        'video/mp4', 'video/quicktime', 'video/webm'
       ]
   WHERE id = 'drink-photos';
 

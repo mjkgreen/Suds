@@ -13,6 +13,7 @@ const MIME_BY_EXT: Record<string, string> = {
   heif: 'image/heif',
   mp4: 'video/mp4',
   mov: 'video/quicktime',
+  webm: 'video/webm',
 };
 
 const EXT_BY_MIME: Record<string, string> = Object.fromEntries(
@@ -77,10 +78,15 @@ async function uploadFile(
 }
 
 /**
- * Deletes a drink photo/video from storage given its public URL.
- * Silently succeeds if the URL is not from our bucket.
+ * Deletes a stored drink photo/video (and a video's poster) from storage.
+ * Silently succeeds for URLs that aren't from our bucket.
  */
-export async function deleteDrinkMedia(publicUrl: string): Promise<void> {
+export async function deleteDrinkMedia(media: Pick<DrinkMedia, 'url' | 'poster_url'>): Promise<void> {
+  await deleteStoredFile(media.url);
+  if (media.poster_url) await deleteStoredFile(media.poster_url);
+}
+
+async function deleteStoredFile(publicUrl: string): Promise<void> {
   try {
     const marker = `/${DRINK_MEDIA_BUCKET}/`;
     const idx = publicUrl.indexOf(marker);
@@ -98,16 +104,29 @@ export async function deleteDrinkMedia(publicUrl: string): Promise<void> {
 export async function uploadDrinkMedia(userId: string, media: LocalMedia): Promise<DrinkMedia> {
   const { ext, mimeType } = resolveFileType(media.uri, media.mimeType, media.type);
   const suffix = Math.random().toString(36).slice(2, 8);
-  const path = `${userId}/${Date.now()}-${suffix}.${ext}`;
+  const base = `${userId}/${Date.now()}-${suffix}`;
+  const path = `${base}.${ext}`;
 
   await uploadFile(DRINK_MEDIA_BUCKET, path, media.uri, mimeType, false);
-
   const { data } = supabase.storage.from(DRINK_MEDIA_BUCKET).getPublicUrl(path);
+
+  let posterUrl: string | null = null;
+  if (media.type === 'video' && media.posterUri) {
+    const posterPath = `${base}-poster.jpg`;
+    try {
+      await uploadFile(DRINK_MEDIA_BUCKET, posterPath, media.posterUri, 'image/jpeg', false);
+      posterUrl = supabase.storage.from(DRINK_MEDIA_BUCKET).getPublicUrl(posterPath).data.publicUrl;
+    } catch {
+      // The video still plays without a poster.
+    }
+  }
+
   return {
     url: data.publicUrl,
     type: media.type,
     width: media.width,
     height: media.height,
+    ...(media.type === 'video' ? { poster_url: posterUrl, duration: media.duration ?? null } : {}),
   };
 }
 

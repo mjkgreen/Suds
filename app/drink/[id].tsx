@@ -6,7 +6,7 @@ import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Pressable, Sc
 import { useColorScheme } from "nativewind";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Avatar } from "@/components/common/Avatar";
-import { ImageCarousel } from "@/components/common/ImageCarousel";
+import { MediaCarousel } from "@/components/common/MediaCarousel";
 import { getDrinkMedia } from "@/lib/media";
 import { DrinkBadge } from "@/components/drink/DrinkBadge";
 import { DrinkIcon } from "@/components/icons/DrinkIcon";
@@ -182,7 +182,7 @@ export default function DrinkDetailScreen() {
           const media = getDrinkMedia(data);
           return media.length > 0 ? (
             <View style={{ marginBottom: 20 }}>
-              <ImageCarousel media={media} borderRadius={16} />
+              <MediaCarousel media={media} borderRadius={16} />
             </View>
           ) : null;
         })()}

@@ -15,7 +15,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/common/Button';
 import { DrinkFormBody } from '@/components/drink/DrinkFormBody';
 import { useUpdateDrinkLog } from '@/hooks/useDrinkLog';
-import { usePhotoPicker } from '@/hooks/usePhotoPicker';
+import { useMediaPicker } from '@/hooks/useMediaPicker';
 import { DrinkMedia, getDrinkMedia, LocalMedia, MAX_MEDIA } from '@/lib/media';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/stores/authStore';
@@ -30,10 +30,10 @@ export default function EditDrinkScreen() {
   const isDark = colorScheme === 'dark';
 
   const [keptMedia, setKeptMedia] = useState<DrinkMedia[]>([]);
-  const [removedMediaUrls, setRemovedMediaUrls] = useState<string[]>([]);
+  const [removedMedia, setRemovedMedia] = useState<DrinkMedia[]>([]);
   const [newMedia, setNewMedia] = useState<LocalMedia[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const { pickPhoto, cropper } = usePhotoPicker((media) => setNewMedia((prev) => [...prev, media]));
+  const { pickFromLibrary, processing, cropper } = useMediaPicker((media) => setNewMedia((prev) => [...prev, media]));
 
   const { data: drink, isLoading } = useQuery({
     queryKey: ['drinkDetail', id],
@@ -86,14 +86,14 @@ export default function EditDrinkScreen() {
   const totalPhotos = keptMedia.length + newMedia.length;
 
   async function handleAddPhoto() {
-    if (totalPhotos >= MAX_MEDIA) return;
-    await pickPhoto(false);
+    if (totalPhotos >= MAX_MEDIA || processing) return;
+    await pickFromLibrary();
   }
 
   function handleRemovePhoto(index: number) {
     if (index < keptMedia.length) {
-      const { url } = keptMedia[index];
-      setRemovedMediaUrls((prev) => [...prev, url]);
+      const removed = keptMedia[index];
+      setRemovedMedia((prev) => [...prev, removed]);
       setKeptMedia((prev) => prev.filter((_, i) => i !== index));
     } else {
       const newIndex = index - keptMedia.length;
@@ -110,7 +110,7 @@ export default function EditDrinkScreen() {
         userId: user.id,
         formData: data,
         keptMedia,
-        removedMediaUrls,
+        removedMedia,
         newMedia,
       });
       router.replace(`/drink/${id}`);
@@ -119,7 +119,7 @@ export default function EditDrinkScreen() {
     }
   }
 
-  const previews = [...keptMedia.map((m) => ({ ...m, uri: m.url })), ...newMedia];
+  const previews = [...keptMedia.map((m) => ({ ...m, uri: m.url, posterUri: m.poster_url })), ...newMedia];
 
   if (isLoading) {
     return (
@@ -155,6 +155,7 @@ export default function EditDrinkScreen() {
             previews={previews}
             onAddPhoto={handleAddPhoto}
             onRemovePhoto={handleRemovePhoto}
+            addingMedia={processing}
             error={error}
           />
         </KeyboardAwareScrollView>
@@ -162,7 +163,7 @@ export default function EditDrinkScreen() {
         {/* Pinned Save Button */}
         <View className="px-6 py-4 bg-background border-t border-border">
           <Button
-            label={newMedia.length > 0 && isPending ? 'Uploading photos…' : 'Save Changes'}
+            label={newMedia.length > 0 && isPending ? 'Uploading media…' : 'Save Changes'}
             onPress={handleSubmit(onSubmit)}
             loading={isPending}
             size="lg"

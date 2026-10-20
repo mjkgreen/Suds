@@ -67,9 +67,9 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "Suds uses your photo library to add photos to drink logs.",
-          "cameraPermission": "Suds uses your camera to add photos to drink logs.",
-          "microphonePermission": false
+          "photosPermission": "Suds uses your photo library to add photos and videos to drink logs.",
+          "cameraPermission": "Suds uses your camera to add photos and videos to drink logs.",
+          "microphonePermission": "Suds uses your microphone to record sound with drink videos."
         }
       ],
       "expo-font",
@@ -80,7 +80,8 @@
         }
       ],
       "@bacons/apple-targets",
-      "./plugins/withLiveActivityBridge"
+      "./plugins/withLiveActivityBridge",
+      "expo-video"
     ],
     "experiments": {
       "typedRoutes": true

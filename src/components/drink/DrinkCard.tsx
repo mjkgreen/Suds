@@ -5,7 +5,7 @@ import React, { useState } from "react";
 import { ActivityIndicator, Platform, Pressable, Text, View } from "react-native";
 import { Avatar } from "@/components/common/Avatar";
 import { PressableCard } from "@/components/common/Card";
-import { ImageCarousel } from "@/components/common/ImageCarousel";
+import { MediaCarousel } from "@/components/common/MediaCarousel";
 import { FEED_MEDIA_MAX_HEIGHT, getDrinkMedia } from "@/lib/media";
 import { DrinkBadge } from "@/components/drink/DrinkBadge";
 import { DrinkIcon } from "@/components/icons/DrinkIcon";
@@ -169,7 +169,7 @@ export const DrinkCard = React.memo(function DrinkCard({ item, currentUserId, on
       </View>
 
       {/* Photo */}
-      {firstMedia ? <ImageCarousel media={[firstMedia]} maxHeight={FEED_MEDIA_MAX_HEIGHT} borderRadius={12} /> : null}
+      {firstMedia ? <MediaCarousel media={[firstMedia]} maxHeight={FEED_MEDIA_MAX_HEIGHT} borderRadius={12} /> : null}
       <View className="flex-row items-center mt-2">
         {item.location_name && (
           <View className="flex-row items-center gap-1">

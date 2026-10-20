@@ -37,6 +37,16 @@ function updateLiveActivity(sessionId: string | null | undefined, drinkType: str
   );
 }
 
+/**
+ * Values for the legacy photo_url / photo_urls columns. Videos contribute their
+ * poster so older app builds still show something.
+ */
+function legacyPhotoUrls(media: DrinkMedia[]): string[] {
+  return media
+    .map((m) => (m.type === 'image' ? m.url : m.poster_url))
+    .filter((url): url is string => !!url);
+}
+
 export function useMyDrinkLogs(userId: string | undefined) {
   return useQuery({
     queryKey: ['drinkLogs', userId],
@@ -72,7 +82,7 @@ export function useLogDrink() {
       for (const item of (media ?? []).slice(0, MAX_MEDIA)) {
         uploaded.push(await uploadDrinkMedia(userId, item));
       }
-      const photoUrls = uploaded.filter((m) => m.type === 'image').map((m) => m.url);
+      const photoUrls = legacyPhotoUrls(uploaded);
 
       const { data, error } = await supabase.from('drink_logs')
         .insert({
@@ -118,7 +128,7 @@ export function useUpdateDrinkLog() {
       userId,
       formData,
       keptMedia,
-      removedMediaUrls,
+      removedMedia,
       newMedia,
     }: {
       id: string;
@@ -126,14 +136,14 @@ export function useUpdateDrinkLog() {
       formData: LogDrinkFormData;
       /** Existing stored media to keep */
       keptMedia: DrinkMedia[];
-      /** Existing remote URLs to delete from storage */
-      removedMediaUrls: string[];
+      /** Existing stored media to delete from storage */
+      removedMedia: DrinkMedia[];
       /** New local files to upload */
       newMedia: LocalMedia[];
     }) => {
       // Delete removed media from storage
-      for (const url of removedMediaUrls) {
-        await deleteDrinkMedia(url);
+      for (const item of removedMedia) {
+        await deleteDrinkMedia(item);
       }
 
       // Upload new media
@@ -143,7 +153,7 @@ export function useUpdateDrinkLog() {
       }
 
       const finalMedia = [...keptMedia, ...uploaded].slice(0, MAX_MEDIA);
-      const finalPhotoUrls = finalMedia.filter((m) => m.type === 'image').map((m) => m.url);
+      const finalPhotoUrls = legacyPhotoUrls(finalMedia);
 
       const { data, error } = await supabase.from('drink_logs')
         .update({

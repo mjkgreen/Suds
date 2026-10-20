@@ -18,6 +18,12 @@ export const MAX_IMAGE_EDGE = 1440;
 
 export const MAX_MEDIA = 3;
 
+/** Longest video we accept, in seconds. */
+export const MAX_VIDEO_SECONDS = 30;
+
+/** Matches the drink-photos bucket's file_size_limit. */
+export const MAX_UPLOAD_BYTES = 50 * 1024 * 1024;
+
 /** Cap for media frames in feed cards so portrait shots don't dominate. */
 export const FEED_MEDIA_MAX_HEIGHT = 420;
 
@@ -28,6 +34,10 @@ export interface DrinkMedia {
   /** Missing on photos uploaded before cropping existed. */
   width?: number | null;
   height?: number | null;
+  /** Videos only: still frame shown before playback. */
+  poster_url?: string | null;
+  /** Videos only: length in seconds. */
+  duration?: number | null;
 }
 
 /** A local file picked/cropped on this device, not yet uploaded. */
@@ -37,6 +47,10 @@ export interface LocalMedia {
   width: number;
   height: number;
   mimeType?: string | null;
+  /** Videos only: local still frame, uploaded alongside the video. */
+  posterUri?: string | null;
+  /** Videos only: length in seconds. */
+  duration?: number | null;
 }
 
 export function orientationOf(width: number, height: number): MediaOrientation {
@@ -61,4 +75,9 @@ export function getDrinkMedia(drink: {
   if (drink.media?.length) return drink.media;
   const urls = drink.photo_urls?.length ? drink.photo_urls : drink.photo_url ? [drink.photo_url] : [];
   return urls.map((url) => ({ url, type: 'image' as const }));
+}
+
+export function formatClipLength(seconds: number): string {
+  const total = Math.round(seconds);
+  return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
 }
