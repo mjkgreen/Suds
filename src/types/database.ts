@@ -129,6 +129,7 @@ export interface Database {
           notes: string | null;
           photo_url: string | null;
           photo_urls: string[];
+          media: Json;
           rating: number | null;
           event_name: string | null;
           session_id: string | null;
@@ -149,6 +150,7 @@ export interface Database {
           notes?: string | null;
           photo_url?: string | null;
           photo_urls?: string[];
+          media?: Json;
           rating?: number | null;
           event_name?: string | null;
           session_id?: string | null;
@@ -167,6 +169,7 @@ export interface Database {
           notes?: string | null;
           photo_url?: string | null;
           photo_urls?: string[];
+          media?: Json;
           rating?: number | null;
           event_name?: string | null;
           session_id?: string | null;

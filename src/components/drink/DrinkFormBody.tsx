@@ -9,10 +9,12 @@ import { SimpleDateTimePicker } from "@/components/common/SimpleDateTimePicker";
 import { AutocompleteTextInput } from "@/components/drink/AutocompleteTextInput";
 import { DrinkTypePicker } from "@/components/drink/DrinkTypePicker";
 import { getTypesForBrand, getTypesForName, searchBrands, searchDrinkNames } from "@/lib/drinkSearch";
+import { MAX_MEDIA, mediaAspect } from "@/lib/media";
 import { DrinkType } from "@/types/models";
 import { LogDrinkFormData } from "@/types/models";
 
-const MAX_PHOTOS = 3;
+const MAX_PHOTOS = MAX_MEDIA;
+const THUMB_HEIGHT = 90;
 
 const RATING_OPTIONS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 const QUANTITY_OPTIONS = [0.5, 1, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10, 12, 15, 20];
@@ -22,7 +24,7 @@ interface DrinkFormBodyProps {
   watch: UseFormWatch<LogDrinkFormData>;
   setValue: UseFormSetValue<LogDrinkFormData>;
   /** All photos to display (local URIs or remote URLs), max 3 */
-  previewUris: string[];
+  previews: { uri: string; width?: number | null; height?: number | null }[];
   onAddPhoto: () => void;
   onRemovePhoto: (index: number) => void;
   onClearLocation?: () => void;
@@ -35,7 +37,7 @@ export function DrinkFormBody({
   control,
   watch,
   setValue,
-  previewUris,
+  previews,
   onAddPhoto,
   onRemovePhoto,
   onClearLocation,
@@ -230,9 +232,9 @@ export function DrinkFormBody({
         <View>
           <View className="flex-row items-center justify-between mb-2">
             <Text className="text-foreground font-semibold">Photos (optional)</Text>
-            <Text className="text-muted-foreground text-xs">{previewUris.length}/{MAX_PHOTOS}</Text>
+            <Text className="text-muted-foreground text-xs">{previews.length}/{MAX_PHOTOS}</Text>
           </View>
-          {previewUris.length === 0 ? (
+          {previews.length === 0 ? (
             <Pressable
               className="bg-card border-2 border-dashed border-border rounded-xl py-6 items-center active:bg-accent"
               onPress={onAddPhoto}
@@ -241,26 +243,29 @@ export function DrinkFormBody({
               <Text className="text-muted-foreground text-xs mt-1">Add up to 3 photos</Text>
             </Pressable>
           ) : (
-            <View className="flex-row gap-2">
-              {previewUris.map((uri, index) => (
-                <View key={index} style={{ width: 100, height: 90 }} className="relative">
-                  <Image
-                    source={{ uri }}
-                    style={{ width: 100, height: 90, borderRadius: 10 }}
-                    contentFit="cover"
-                  />
-                  <Pressable
-                    className="absolute top-1 right-1 bg-black/60 rounded-full p-0.5"
-                    onPress={() => onRemovePhoto(index)}
-                    hitSlop={8}
-                  >
-                    <Ionicons name="close" size={14} color="#fff" />
-                  </Pressable>
-                </View>
-              ))}
-              {previewUris.length < MAX_PHOTOS && (
+            <View className="flex-row flex-wrap gap-2">
+              {previews.map((preview, index) => {
+                const thumbWidth = Math.round(THUMB_HEIGHT * mediaAspect(preview));
+                return (
+                  <View key={index} style={{ width: thumbWidth, height: THUMB_HEIGHT }} className="relative">
+                    <Image
+                      source={{ uri: preview.uri }}
+                      style={{ width: thumbWidth, height: THUMB_HEIGHT, borderRadius: 10 }}
+                      contentFit="cover"
+                    />
+                    <Pressable
+                      className="absolute top-1 right-1 bg-black/60 rounded-full p-0.5"
+                      onPress={() => onRemovePhoto(index)}
+                      hitSlop={8}
+                    >
+                      <Ionicons name="close" size={14} color="#fff" />
+                    </Pressable>
+                  </View>
+                );
+              })}
+              {previews.length < MAX_PHOTOS && (
                 <Pressable
-                  style={{ width: 100, height: 90 }}
+                  style={{ width: THUMB_HEIGHT, height: THUMB_HEIGHT }}
                   className="bg-card border-2 border-dashed border-border rounded-xl items-center justify-center active:bg-accent"
                   onPress={onAddPhoto}
                 >

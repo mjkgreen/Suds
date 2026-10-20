@@ -2,10 +2,11 @@ import * as Haptics from "expo-haptics";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useState, useEffect } from "react";
-import { ActivityIndicator, Platform, Pressable, Text, View, useWindowDimensions } from "react-native";
+import { ActivityIndicator, Platform, Pressable, Text, View } from "react-native";
 import { Avatar } from "@/components/common/Avatar";
 import { PressableCard } from "@/components/common/Card";
 import { ImageCarousel } from "@/components/common/ImageCarousel";
+import { FEED_MEDIA_MAX_HEIGHT, getDrinkMedia } from "@/lib/media";
 import { DrinkIcon } from "@/components/icons/DrinkIcon";
 import { useLike } from "@/hooks/useLikes";
 import { useLikers } from "@/hooks/useLikers";
@@ -29,8 +30,6 @@ interface SessionCardProps {
 
 export const SessionCard = React.memo(function SessionCard({ group, currentUserId, isActive, onEnd, isEnding, onQuickLog }: SessionCardProps) {
   const router = useRouter();
-  const { width } = useWindowDimensions();
-  const imageHeight = Platform.OS === "web" && width >= 1024 ? 280 : 180;
   const [loggingId, setLoggingId] = useState<string | null>(null);
   const [loggedId, setLoggedId] = useState<string | null>(null);
   // Use the oldest drink log as the representative for social interactions —
@@ -111,7 +110,7 @@ export const SessionCard = React.memo(function SessionCard({ group, currentUserI
     (1000 * 60 * 60);
   const drinksPerHour = hoursElapsed >= 0.25 && totalQuantity > 0 ? (totalQuantity / hoursElapsed).toFixed(1) : "—";
 
-  const photos = group.items.map((i) => i.photo_url).filter(Boolean) as string[];
+  const media = group.items.flatMap((i) => getDrinkMedia(i).slice(0, 1));
 
   return (
     <PressableCard
@@ -245,7 +244,7 @@ export const SessionCard = React.memo(function SessionCard({ group, currentUserI
       )}
 
       {/* Photos from drinks */}
-      {photos.length > 0 && <ImageCarousel images={photos} height={imageHeight} borderRadius={10} style={{ marginTop: 8 }} />}
+      {media.length > 0 && <ImageCarousel media={media} maxHeight={FEED_MEDIA_MAX_HEIGHT} borderRadius={10} style={{ marginTop: 8 }} />}
 
       {/* Expanded drink-by-drink list — active sessions only */}
       {isActive && (

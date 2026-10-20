@@ -1,68 +1,115 @@
 import { Image } from 'expo-image';
-import React, { useRef, useState } from 'react';
-import { NativeSyntheticEvent, NativeScrollEvent, Platform, ScrollView, StyleProp, View, ViewStyle } from 'react-native';
+import React, { useState } from 'react';
+import { LayoutChangeEvent, NativeSyntheticEvent, NativeScrollEvent, Platform, ScrollView, StyleProp, View, ViewStyle } from 'react-native';
+import { DrinkMedia, mediaAspect } from '@/lib/media';
 
 interface ImageCarouselProps {
-  images: string[];
-  height?: number;
+  media: DrinkMedia[];
+  /** Tallest the frame may get; wider-than-allowed frames shrink and center. */
+  maxHeight?: number;
   borderRadius?: number;
   style?: StyleProp<ViewStyle>;
 }
 
-export function ImageCarousel({ images, height = 200, borderRadius = 12, style }: ImageCarouselProps) {
-  const validImages = images.filter(Boolean);
-  if (validImages.length === 0) return null;
+const FRAME_BG = '#0b0b0b';
 
-  if (validImages.length === 1) {
-    return <SingleImage uri={validImages[0]} height={height} borderRadius={borderRadius} style={style} />;
-  }
-
-  return <MultiCarousel images={validImages} height={height} borderRadius={borderRadius} style={style} />;
+/** Cropped items fill their frame exactly; anything else is letterboxed, never cropped. */
+function fitFor(item: DrinkMedia, frameAspect: number): 'cover' | 'contain' {
+  if (!item.width || !item.height) return 'cover'; // legacy photo with unknown size
+  return Math.abs(mediaAspect(item) - frameAspect) < 0.02 ? 'cover' : 'contain';
 }
 
-function SingleImage({ uri, height, borderRadius, style }: { uri: string; height: number; borderRadius: number; style?: StyleProp<ViewStyle> }) {
+export function ImageCarousel({ media, maxHeight = 520, borderRadius = 12, style }: ImageCarouselProps) {
+  const [containerWidth, setContainerWidth] = useState(0);
+
+  // Video playback isn't supported yet; only images are rendered.
+  const items = media.filter((m) => m.url && m.type === 'image');
+  if (items.length === 0) return null;
+
+  // The first item sets the frame, like Instagram.
+  const aspect = mediaAspect(items[0]);
+  const frameWidth = Math.min(containerWidth, maxHeight * aspect);
+  const frameHeight = frameWidth / aspect;
+
+  function handleLayout(e: LayoutChangeEvent) {
+    setContainerWidth(e.nativeEvent.layout.width);
+  }
+
+  return (
+    <View style={[{ marginTop: 10 }, style]} onLayout={handleLayout}>
+      {containerWidth > 0 && (
+        <View style={{ width: frameWidth, alignSelf: 'center' }}>
+          {items.length === 1 ? (
+            <SingleImage item={items[0]} width={frameWidth} height={frameHeight} fit={fitFor(items[0], aspect)} borderRadius={borderRadius} />
+          ) : (
+            <MultiCarousel items={items} width={frameWidth} height={frameHeight} aspect={aspect} borderRadius={borderRadius} />
+          )}
+        </View>
+      )}
+    </View>
+  );
+}
+
+function SingleImage({
+  item,
+  width,
+  height,
+  fit,
+  borderRadius,
+}: {
+  item: DrinkMedia;
+  width: number;
+  height: number;
+  fit: 'cover' | 'contain';
+  borderRadius: number;
+}) {
   const [failed, setFailed] = useState(false);
   if (failed) return null;
 
   if (Platform.OS === 'web') {
     return (
-      <View style={[{ marginTop: 10 }, style]}>
-        <img
-          src={uri}
-          style={{ width: '100%', height, borderRadius, objectFit: 'cover', display: 'block' } as React.CSSProperties}
-          alt=""
-          onError={() => setFailed(true)}
-        />
-      </View>
+      <img
+        src={item.url}
+        style={{ width, height, borderRadius, objectFit: fit, display: 'block', backgroundColor: FRAME_BG } as React.CSSProperties}
+        alt=""
+        onError={() => setFailed(true)}
+      />
     );
   }
 
   return (
-    <View style={[{ marginTop: 10 }, style]}>
-      <Image
-        source={{ uri }}
-        style={{ width: '100%', height, borderRadius }}
-        contentFit="cover"
-        onError={() => setFailed(true)}
-      />
-    </View>
+    <Image
+      source={{ uri: item.url }}
+      style={{ width, height, borderRadius, backgroundColor: FRAME_BG }}
+      contentFit={fit}
+      onError={() => setFailed(true)}
+    />
   );
 }
 
-function MultiCarousel({ images, height, borderRadius, style }: { images: string[]; height: number; borderRadius: number; style?: StyleProp<ViewStyle> }) {
-  const [containerWidth, setContainerWidth] = useState(0);
+function MultiCarousel({
+  items,
+  width,
+  height,
+  aspect,
+  borderRadius,
+}: {
+  items: DrinkMedia[];
+  width: number;
+  height: number;
+  aspect: number;
+  borderRadius: number;
+}) {
   const [activeIndex, setActiveIndex] = useState(0);
-  const scrollRef = useRef<ScrollView>(null);
 
   function handleScroll(e: NativeSyntheticEvent<NativeScrollEvent>) {
-    if (containerWidth === 0) return;
     const x = e.nativeEvent.contentOffset.x;
-    setActiveIndex(Math.round(x / containerWidth));
+    setActiveIndex(Math.round(x / width));
   }
 
   const dots = (
     <View style={{ flexDirection: 'row', justifyContent: 'center', marginTop: 6, gap: 4 }}>
-      {images.map((_, i) => (
+      {items.map((_, i) => (
         <View
           key={i}
           style={{
@@ -78,7 +125,7 @@ function MultiCarousel({ images, height, borderRadius, style }: { images: string
 
   if (Platform.OS === 'web') {
     return (
-      <View style={[{ marginTop: 10 }, style]}>
+      <View>
         <div
           style={{
             display: 'flex',
@@ -87,20 +134,22 @@ function MultiCarousel({ images, height, borderRadius, style }: { images: string
             borderRadius,
             gap: 0,
             scrollbarWidth: 'none',
+            width,
           } as React.CSSProperties}
           onScroll={(e: React.UIEvent<HTMLDivElement>) => {
             const el = e.currentTarget;
             setActiveIndex(Math.round(el.scrollLeft / el.offsetWidth));
           }}
         >
-          {images.map((uri, i) => (
+          {items.map((item, i) => (
             <img
               key={i}
-              src={uri}
+              src={item.url}
               style={{
                 minWidth: '100%',
                 height,
-                objectFit: 'cover',
+                objectFit: fitFor(item, aspect),
+                backgroundColor: FRAME_BG,
                 borderRadius,
                 scrollSnapAlign: 'start',
                 flexShrink: 0,
@@ -116,29 +165,23 @@ function MultiCarousel({ images, height, borderRadius, style }: { images: string
   }
 
   return (
-    <View
-      style={[{ marginTop: 10 }, style]}
-      onLayout={(e) => setContainerWidth(e.nativeEvent.layout.width)}
-    >
-      {containerWidth > 0 && (
-        <ScrollView
-          ref={scrollRef}
-          horizontal
-          pagingEnabled
-          showsHorizontalScrollIndicator={false}
-          onMomentumScrollEnd={handleScroll}
-          style={{ borderRadius }}
-        >
-          {images.map((uri, i) => (
-            <Image
-              key={i}
-              source={{ uri }}
-              style={{ width: containerWidth, height, borderRadius }}
-              contentFit="cover"
-            />
-          ))}
-        </ScrollView>
-      )}
+    <View>
+      <ScrollView
+        horizontal
+        pagingEnabled
+        showsHorizontalScrollIndicator={false}
+        onMomentumScrollEnd={handleScroll}
+        style={{ borderRadius, width }}
+      >
+        {items.map((item, i) => (
+          <Image
+            key={i}
+            source={{ uri: item.url }}
+            style={{ width, height, borderRadius, backgroundColor: FRAME_BG }}
+            contentFit={fitFor(item, aspect)}
+          />
+        ))}
+      </ScrollView>
       {dots}
     </View>
   );

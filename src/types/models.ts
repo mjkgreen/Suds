@@ -1,3 +1,5 @@
+import type { DrinkMedia } from '@/lib/media';
+
 export type DrinkType =
   | 'beer'
   | 'wine'
@@ -63,6 +65,7 @@ export interface DrinkLog {
   notes: string | null;
   photo_url: string | null;
   photo_urls: string[];
+  media: DrinkMedia[];
   rating: number | null;
   event_name: string | null;
   session_id: string | null;

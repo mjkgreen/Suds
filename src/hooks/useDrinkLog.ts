@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { deleteDrinkPhoto, uploadDrinkPhoto } from '@/lib/storage';
+import { DrinkMedia, LocalMedia, MAX_MEDIA } from '@/lib/media';
+import { deleteDrinkMedia, uploadDrinkMedia } from '@/lib/storage';
 import { supabase } from '@/lib/supabase';
 import { DrinkLog, LogDrinkFormData } from '@/types/models';
 import { useSessionStore } from '@/stores/sessionStore';
@@ -52,8 +53,6 @@ export function useMyDrinkLogs(userId: string | undefined) {
   });
 }
 
-const MAX_PHOTOS = 3;
-
 export function useLogDrink() {
   const queryClient = useQueryClient();
 
@@ -62,22 +61,18 @@ export function useLogDrink() {
       userId,
       formData,
       sessionId,
-      photoUris,
-      photoBase64s,
+      media,
     }: {
       userId: string;
       formData: LogDrinkFormData;
       sessionId?: string | null;
-      photoUris?: string[];
-      photoBase64s?: (string | null)[];
+      media?: LocalMedia[];
     }) => {
-      // Upload all photos (max 3)
-      const photoUrls: string[] = [];
-      const uris = (photoUris ?? []).slice(0, MAX_PHOTOS);
-      for (let i = 0; i < uris.length; i++) {
-        const url = await uploadDrinkPhoto(userId, uris[i], photoBase64s?.[i] ?? null);
-        photoUrls.push(url);
+      const uploaded: DrinkMedia[] = [];
+      for (const item of (media ?? []).slice(0, MAX_MEDIA)) {
+        uploaded.push(await uploadDrinkMedia(userId, item));
       }
+      const photoUrls = uploaded.filter((m) => m.type === 'image').map((m) => m.url);
 
       const { data, error } = await supabase.from('drink_logs')
         .insert({
@@ -92,6 +87,7 @@ export function useLogDrink() {
           notes: formData.notes || null,
           photo_url: photoUrls[0] ?? null,
           photo_urls: photoUrls,
+          media: uploaded as any,
           rating: formData.rating || null,
           event_name: formData.event_name?.trim() || null,
           logged_at: formData.logged_at ?? new Date().toISOString(),
@@ -121,36 +117,33 @@ export function useUpdateDrinkLog() {
       id,
       userId,
       formData,
-      keptPhotoUrls,
-      removedPhotoUrls,
-      newPhotoUris,
-      newPhotoBase64s,
+      keptMedia,
+      removedMediaUrls,
+      newMedia,
     }: {
       id: string;
       userId: string;
       formData: LogDrinkFormData;
-      /** Existing remote URLs to keep */
-      keptPhotoUrls: string[];
+      /** Existing stored media to keep */
+      keptMedia: DrinkMedia[];
       /** Existing remote URLs to delete from storage */
-      removedPhotoUrls: string[];
-      /** New local URIs to upload */
-      newPhotoUris: string[];
-      newPhotoBase64s: (string | null)[];
+      removedMediaUrls: string[];
+      /** New local files to upload */
+      newMedia: LocalMedia[];
     }) => {
-      // Delete removed photos from storage
-      for (const url of removedPhotoUrls) {
-        await deleteDrinkPhoto(url);
+      // Delete removed media from storage
+      for (const url of removedMediaUrls) {
+        await deleteDrinkMedia(url);
       }
 
-      // Upload new photos
-      const uploadedUrls: string[] = [];
-      const uris = newPhotoUris.slice(0, MAX_PHOTOS - keptPhotoUrls.length);
-      for (let i = 0; i < uris.length; i++) {
-        const url = await uploadDrinkPhoto(userId, uris[i], newPhotoBase64s[i] ?? null);
-        uploadedUrls.push(url);
+      // Upload new media
+      const uploaded: DrinkMedia[] = [];
+      for (const item of newMedia.slice(0, MAX_MEDIA - keptMedia.length)) {
+        uploaded.push(await uploadDrinkMedia(userId, item));
       }
 
-      const finalPhotoUrls = [...keptPhotoUrls, ...uploadedUrls].slice(0, MAX_PHOTOS);
+      const finalMedia = [...keptMedia, ...uploaded].slice(0, MAX_MEDIA);
+      const finalPhotoUrls = finalMedia.filter((m) => m.type === 'image').map((m) => m.url);
 
       const { data, error } = await supabase.from('drink_logs')
         .update({
@@ -164,6 +157,7 @@ export function useUpdateDrinkLog() {
           notes: formData.notes || null,
           photo_url: finalPhotoUrls[0] ?? null,
           photo_urls: finalPhotoUrls,
+          media: finalMedia as any,
           rating: formData.rating || null,
           event_name: formData.event_name?.trim() || null,
           logged_at: formData.logged_at ?? new Date().toISOString(),

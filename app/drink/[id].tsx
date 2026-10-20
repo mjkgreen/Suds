@@ -7,6 +7,7 @@ import { useColorScheme } from "nativewind";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Avatar } from "@/components/common/Avatar";
 import { ImageCarousel } from "@/components/common/ImageCarousel";
+import { getDrinkMedia } from "@/lib/media";
 import { DrinkBadge } from "@/components/drink/DrinkBadge";
 import { DrinkIcon } from "@/components/icons/DrinkIcon";
 import { useDeleteDrinkLog } from "@/hooks/useDrinkLog";
@@ -178,10 +179,10 @@ export default function DrinkDetailScreen() {
       <ScrollView contentContainerStyle={{ padding: 24 }}>
         {/* Photos */}
         {(() => {
-          const photos = data.photo_urls?.length ? data.photo_urls : data.photo_url ? [data.photo_url] : [];
-          return photos.length > 0 ? (
+          const media = getDrinkMedia(data);
+          return media.length > 0 ? (
             <View style={{ marginBottom: 20 }}>
-              <ImageCarousel images={photos} height={220} borderRadius={16} />
+              <ImageCarousel media={media} borderRadius={16} />
             </View>
           ) : null;
         })()}

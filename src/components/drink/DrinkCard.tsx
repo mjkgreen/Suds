@@ -2,10 +2,11 @@ import * as Haptics from "expo-haptics";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
-import { ActivityIndicator, Platform, Pressable, Text, View, useWindowDimensions } from "react-native";
+import { ActivityIndicator, Platform, Pressable, Text, View } from "react-native";
 import { Avatar } from "@/components/common/Avatar";
 import { PressableCard } from "@/components/common/Card";
 import { ImageCarousel } from "@/components/common/ImageCarousel";
+import { FEED_MEDIA_MAX_HEIGHT, getDrinkMedia } from "@/lib/media";
 import { DrinkBadge } from "@/components/drink/DrinkBadge";
 import { DrinkIcon } from "@/components/icons/DrinkIcon";
 import { useLike } from "@/hooks/useLikes";
@@ -26,10 +27,9 @@ interface DrinkCardProps {
 
 export const DrinkCard = React.memo(function DrinkCard({ item, currentUserId, onQuickLog }: DrinkCardProps) {
   const router = useRouter();
-  const { width } = useWindowDimensions();
   const drinkInfo = DRINK_TYPE_MAP[item.drink_type] ?? DRINK_TYPE_MAP["other"];
+  const firstMedia = getDrinkMedia(item)[0];
   const [isLogging, setIsLogging] = useState(false);
-  const imageHeight = Platform.OS === "web" && width >= 1024 ? 280 : 180;
   const [didLog, setDidLog] = useState(false);
   // Optimistic like state
   const [optimisticLiked, setOptimisticLiked] = useState<boolean | null>(null);
@@ -169,7 +169,7 @@ export const DrinkCard = React.memo(function DrinkCard({ item, currentUserId, on
       </View>
 
       {/* Photo */}
-      {item.photo_url ? <ImageCarousel images={[item.photo_url]} height={imageHeight} borderRadius={12} /> : null}
+      {firstMedia ? <ImageCarousel media={[firstMedia]} maxHeight={FEED_MEDIA_MAX_HEIGHT} borderRadius={12} /> : null}
       <View className="flex-row items-center mt-2">
         {item.location_name && (
           <View className="flex-row items-center gap-1">

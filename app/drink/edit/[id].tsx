@@ -1,5 +1,4 @@
 import { Ionicons } from '@expo/vector-icons';
-import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
@@ -16,6 +15,8 @@ import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/common/Button';
 import { DrinkFormBody } from '@/components/drink/DrinkFormBody';
 import { useUpdateDrinkLog } from '@/hooks/useDrinkLog';
+import { usePhotoPicker } from '@/hooks/usePhotoPicker';
+import { DrinkMedia, getDrinkMedia, LocalMedia, MAX_MEDIA } from '@/lib/media';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/stores/authStore';
 import { DrinkLog, DrinkType, LogDrinkFormData } from '@/types/models';
@@ -28,11 +29,11 @@ export default function EditDrinkScreen() {
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
 
-  const [keptPhotoUrls, setKeptPhotoUrls] = useState<string[]>([]);
-  const [removedPhotoUrls, setRemovedPhotoUrls] = useState<string[]>([]);
-  const [newPhotoUris, setNewPhotoUris] = useState<string[]>([]);
-  const [newPhotoBase64s, setNewPhotoBase64s] = useState<(string | null)[]>([]);
+  const [keptMedia, setKeptMedia] = useState<DrinkMedia[]>([]);
+  const [removedMediaUrls, setRemovedMediaUrls] = useState<string[]>([]);
+  const [newMedia, setNewMedia] = useState<LocalMedia[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const { pickPhoto, cropper } = usePhotoPicker((media) => setNewMedia((prev) => [...prev, media]));
 
   const { data: drink, isLoading } = useQuery({
     queryKey: ['drinkDetail', id],
@@ -79,36 +80,24 @@ export default function EditDrinkScreen() {
       ended_at: drink.ended_at ?? undefined,
     });
     // Initialise photo state from existing data
-    const existing = drink.photo_urls?.length ? drink.photo_urls : drink.photo_url ? [drink.photo_url] : [];
-    setKeptPhotoUrls(existing);
+    setKeptMedia(getDrinkMedia(drink));
   }, [drink]);
 
-  const totalPhotos = keptPhotoUrls.length + newPhotoUris.length;
+  const totalPhotos = keptMedia.length + newMedia.length;
 
   async function handleAddPhoto() {
-    if (totalPhotos >= 3) return;
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      allowsEditing: true,
-      aspect: [4, 3],
-      quality: 0.8,
-      base64: true,
-    });
-    if (!result.canceled) {
-      setNewPhotoUris((prev) => [...prev, result.assets[0].uri]);
-      setNewPhotoBase64s((prev) => [...prev, result.assets[0].base64 ?? null]);
-    }
+    if (totalPhotos >= MAX_MEDIA) return;
+    await pickPhoto(false);
   }
 
   function handleRemovePhoto(index: number) {
-    if (index < keptPhotoUrls.length) {
-      const url = keptPhotoUrls[index];
-      setRemovedPhotoUrls((prev) => [...prev, url]);
-      setKeptPhotoUrls((prev) => prev.filter((_, i) => i !== index));
+    if (index < keptMedia.length) {
+      const { url } = keptMedia[index];
+      setRemovedMediaUrls((prev) => [...prev, url]);
+      setKeptMedia((prev) => prev.filter((_, i) => i !== index));
     } else {
-      const newIndex = index - keptPhotoUrls.length;
-      setNewPhotoUris((prev) => prev.filter((_, i) => i !== newIndex));
-      setNewPhotoBase64s((prev) => prev.filter((_, i) => i !== newIndex));
+      const newIndex = index - keptMedia.length;
+      setNewMedia((prev) => prev.filter((_, i) => i !== newIndex));
     }
   }
 
@@ -120,10 +109,9 @@ export default function EditDrinkScreen() {
         id: drink.id,
         userId: user.id,
         formData: data,
-        keptPhotoUrls,
-        removedPhotoUrls,
-        newPhotoUris,
-        newPhotoBase64s,
+        keptMedia,
+        removedMediaUrls,
+        newMedia,
       });
       router.replace(`/drink/${id}`);
     } catch (err: any) {
@@ -131,7 +119,7 @@ export default function EditDrinkScreen() {
     }
   }
 
-  const previewUris = [...keptPhotoUrls, ...newPhotoUris];
+  const previews = [...keptMedia.map((m) => ({ ...m, uri: m.url })), ...newMedia];
 
   if (isLoading) {
     return (
@@ -164,7 +152,7 @@ export default function EditDrinkScreen() {
             control={control}
             watch={watch}
             setValue={setValue}
-            previewUris={previewUris}
+            previews={previews}
             onAddPhoto={handleAddPhoto}
             onRemovePhoto={handleRemovePhoto}
             error={error}
@@ -174,7 +162,7 @@ export default function EditDrinkScreen() {
         {/* Pinned Save Button */}
         <View className="px-6 py-4 bg-background border-t border-border">
           <Button
-            label={newPhotoUris.length > 0 && isPending ? 'Uploading photos…' : 'Save Changes'}
+            label={newMedia.length > 0 && isPending ? 'Uploading photos…' : 'Save Changes'}
             onPress={handleSubmit(onSubmit)}
             loading={isPending}
             size="lg"
@@ -182,6 +170,7 @@ export default function EditDrinkScreen() {
         </View>
       </View>
       <KeyboardToolbar />
+      {cropper}
     </SafeAreaView>
   );
 }

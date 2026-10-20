@@ -18,6 +18,7 @@ import { useColorScheme } from "nativewind";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Avatar } from "@/components/common/Avatar";
 import { ImageCarousel } from "@/components/common/ImageCarousel";
+import { getDrinkMedia } from "@/lib/media";
 import { DrinkIcon } from "@/components/icons/DrinkIcon";
 import { NightOutBACProfile } from "@/components/session/NightOutBACProfile";
 import { useAddComment, useComments, useDeleteComment } from "@/hooks/useComments";
@@ -211,7 +212,7 @@ export default function SessionDetailScreen() {
     ...new Set(drinks.map((d) => d.location_name).filter(Boolean)),
   ] as string[];
   const drinkTypes = [...new Set(drinks.map((d) => d.drink_type))];
-  const photos = drinks.map((d) => d.photo_url).filter(Boolean) as string[];
+  const media = drinks.flatMap((d) => getDrinkMedia(d).slice(0, 1));
   const duration = formatDuration(session.started_at, session.ended_at ?? currentTime.toISOString());
   const hoursElapsed =
     ((session.ended_at ? new Date(session.ended_at) : currentTime).getTime() -
@@ -285,8 +286,8 @@ export default function SessionDetailScreen() {
         >
           <ScrollView contentContainerStyle={{ padding: 24 }}>
             {/* Photos carousel */}
-            {photos.length > 0 && (
-              <ImageCarousel images={photos} height={220} borderRadius={16} />
+            {media.length > 0 && (
+              <ImageCarousel media={media} borderRadius={16} />
             )}
 
             {/* Title + time */}
