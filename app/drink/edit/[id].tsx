@@ -30,7 +30,6 @@ export default function EditDrinkScreen() {
   const isDark = colorScheme === 'dark';
 
   const [keptMedia, setKeptMedia] = useState<DrinkMedia[]>([]);
-  const [removedMedia, setRemovedMedia] = useState<DrinkMedia[]>([]);
   const [newMedia, setNewMedia] = useState<LocalMedia[]>([]);
   const [error, setError] = useState<string | null>(null);
   const { pickFromLibrary, processing, cropper } = useMediaPicker((media) => setNewMedia((prev) => [...prev, media]));
@@ -92,8 +91,6 @@ export default function EditDrinkScreen() {
 
   function handleRemovePhoto(index: number) {
     if (index < keptMedia.length) {
-      const removed = keptMedia[index];
-      setRemovedMedia((prev) => [...prev, removed]);
       setKeptMedia((prev) => prev.filter((_, i) => i !== index));
     } else {
       const newIndex = index - keptMedia.length;
@@ -110,7 +107,6 @@ export default function EditDrinkScreen() {
         userId: user.id,
         formData: data,
         keptMedia,
-        removedMedia,
         newMedia,
       });
       router.replace(`/drink/${id}`);

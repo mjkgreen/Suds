@@ -1,6 +1,7 @@
 import { Image } from 'expo-image';
 import React, { useState } from 'react';
 import { LayoutChangeEvent, NativeSyntheticEvent, NativeScrollEvent, Platform, ScrollView, StyleProp, View, ViewStyle } from 'react-native';
+import { useIsItemVisible } from '@/components/media/VisibleItems';
 import { VideoTile } from '@/components/media/VideoTile';
 import { DrinkMedia, MEDIA_ASPECT, mediaAspect, orientationOf } from '@/lib/media';
 
@@ -10,6 +11,8 @@ interface MediaCarouselProps {
   maxHeight?: number;
   borderRadius?: number;
   style?: StyleProp<ViewStyle>;
+  /** Key of the list row this carousel sits in; videos only autoplay while it's on screen. */
+  visibilityKey?: string;
 }
 
 const FRAME_BG = '#0b0b0b';
@@ -26,8 +29,9 @@ function frameAspectFor(first: DrinkMedia): number {
   return MEDIA_ASPECT[orientationOf(first.width, first.height)];
 }
 
-export function MediaCarousel({ media, maxHeight = 520, borderRadius = 12, style }: MediaCarouselProps) {
+export function MediaCarousel({ media, maxHeight = 520, borderRadius = 12, style, visibilityKey }: MediaCarouselProps) {
   const [containerWidth, setContainerWidth] = useState(0);
+  const rowVisible = useIsItemVisible(visibilityKey);
 
   const items = media.filter((m) => m.url);
   if (items.length === 0) return null;
@@ -45,9 +49,9 @@ export function MediaCarousel({ media, maxHeight = 520, borderRadius = 12, style
       {containerWidth > 0 && (
         <View style={{ width: frameWidth, alignSelf: 'center' }}>
           {items.length === 1 ? (
-            <MediaItem item={items[0]} width={frameWidth} height={frameHeight} fit={fitFor(items[0], aspect)} borderRadius={borderRadius} />
+            <MediaItem item={items[0]} width={frameWidth} height={frameHeight} fit={fitFor(items[0], aspect)} borderRadius={borderRadius} visible={rowVisible} />
           ) : (
-            <MultiCarousel items={items} width={frameWidth} height={frameHeight} aspect={aspect} borderRadius={borderRadius} />
+            <MultiCarousel items={items} width={frameWidth} height={frameHeight} aspect={aspect} borderRadius={borderRadius} visible={rowVisible} />
           )}
         </View>
       )}
@@ -61,14 +65,14 @@ function MediaItem({
   height,
   fit,
   borderRadius,
-  active = true,
+  visible = true,
 }: {
   item: DrinkMedia;
   width: number;
   height: number;
   fit: 'cover' | 'contain';
   borderRadius: number;
-  active?: boolean;
+  visible?: boolean;
 }) {
   const [failed, setFailed] = useState(false);
 
@@ -81,7 +85,7 @@ function MediaItem({
         fit={fit}
         borderRadius={borderRadius}
         backgroundColor={FRAME_BG}
-        active={active}
+        visible={visible}
       />
     );
   }
@@ -115,12 +119,14 @@ function MultiCarousel({
   height,
   aspect,
   borderRadius,
+  visible,
 }: {
   items: DrinkMedia[];
   width: number;
   height: number;
   aspect: number;
   borderRadius: number;
+  visible: boolean;
 }) {
   const [activeIndex, setActiveIndex] = useState(0);
 
@@ -153,7 +159,7 @@ function MultiCarousel({
         height={height}
         fit={fitFor(item, aspect)}
         borderRadius={borderRadius}
-        active={i === activeIndex}
+        visible={visible && i === activeIndex}
       />
     </View>
   ));

@@ -78,27 +78,6 @@ async function uploadFile(
 }
 
 /**
- * Deletes a stored drink photo/video (and a video's poster) from storage.
- * Silently succeeds for URLs that aren't from our bucket.
- */
-export async function deleteDrinkMedia(media: Pick<DrinkMedia, 'url' | 'poster_url'>): Promise<void> {
-  await deleteStoredFile(media.url);
-  if (media.poster_url) await deleteStoredFile(media.poster_url);
-}
-
-async function deleteStoredFile(publicUrl: string): Promise<void> {
-  try {
-    const marker = `/${DRINK_MEDIA_BUCKET}/`;
-    const idx = publicUrl.indexOf(marker);
-    if (idx === -1) return;
-    const path = publicUrl.slice(idx + marker.length).split('?')[0];
-    await supabase.storage.from(DRINK_MEDIA_BUCKET).remove([path]);
-  } catch {
-    // Best-effort — don't block the update if delete fails
-  }
-}
-
-/**
  * Uploads a picked/cropped photo or video and returns its stored description.
  */
 export async function uploadDrinkMedia(userId: string, media: LocalMedia): Promise<DrinkMedia> {

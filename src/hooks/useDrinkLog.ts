@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { DrinkMedia, LocalMedia, MAX_MEDIA } from '@/lib/media';
-import { deleteDrinkMedia, uploadDrinkMedia } from '@/lib/storage';
+import { uploadDrinkMedia } from '@/lib/storage';
 import { supabase } from '@/lib/supabase';
 import { DrinkLog, LogDrinkFormData } from '@/types/models';
 import { useSessionStore } from '@/stores/sessionStore';
@@ -128,24 +128,17 @@ export function useUpdateDrinkLog() {
       userId,
       formData,
       keptMedia,
-      removedMedia,
       newMedia,
     }: {
       id: string;
       userId: string;
       formData: LogDrinkFormData;
-      /** Existing stored media to keep */
+      /** Existing stored media to keep. Files dropped from the drink are
+       *  removed from storage by a database trigger once the update lands. */
       keptMedia: DrinkMedia[];
-      /** Existing stored media to delete from storage */
-      removedMedia: DrinkMedia[];
       /** New local files to upload */
       newMedia: LocalMedia[];
     }) => {
-      // Delete removed media from storage
-      for (const item of removedMedia) {
-        await deleteDrinkMedia(item);
-      }
-
       // Upload new media
       const uploaded: DrinkMedia[] = [];
       for (const item of newMedia.slice(0, MAX_MEDIA - keptMedia.length)) {

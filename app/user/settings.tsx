@@ -34,6 +34,8 @@ export default function SettingsScreen() {
     setLocationEnabled,
     hideAddresses,
     setHideAddresses,
+    autoplayVideos,
+    setAutoplayVideos,
     sex,
     setSex,
   } = usePrefsStore();
@@ -214,6 +216,23 @@ export default function SettingsScreen() {
             onValueChange={setHideAddresses}
             trackColor={{ false: "#767577", true: "#f59e0b" }}
             thumbColor={Platform.OS === "ios" ? "#fff" : hideAddresses ? "#fff" : "#f4f3f4"}
+          />
+        </View>
+        <View className="flex-row items-center justify-between px-4 py-4 border-b border-border">
+          <View className="flex-row items-center gap-3 flex-1">
+            <View className="w-8 h-8 rounded-lg bg-accent items-center justify-center">
+              <Ionicons name="play-circle" size={18} color="#f59e0b" />
+            </View>
+            <View className="flex-1">
+              <Text className="text-foreground font-medium">Autoplay Videos</Text>
+              <Text className="text-muted-foreground text-xs">Play videos muted as you scroll</Text>
+            </View>
+          </View>
+          <Switch
+            value={autoplayVideos}
+            onValueChange={setAutoplayVideos}
+            trackColor={{ false: "#767577", true: "#f59e0b" }}
+            thumbColor={Platform.OS === "ios" ? "#fff" : autoplayVideos ? "#fff" : "#f4f3f4"}
           />
         </View>
         <View className="flex-row items-center justify-between px-4 py-4">

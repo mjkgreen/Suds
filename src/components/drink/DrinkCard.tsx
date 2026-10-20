@@ -169,7 +169,7 @@ export const DrinkCard = React.memo(function DrinkCard({ item, currentUserId, on
       </View>
 
       {/* Photo */}
-      {firstMedia ? <MediaCarousel media={[firstMedia]} maxHeight={FEED_MEDIA_MAX_HEIGHT} borderRadius={12} /> : null}
+      {firstMedia ? <MediaCarousel media={[firstMedia]} maxHeight={FEED_MEDIA_MAX_HEIGHT} borderRadius={12} visibilityKey={`drink-${item.id}`} /> : null}
       <View className="flex-row items-center mt-2">
         {item.location_name && (
           <View className="flex-row items-center gap-1">

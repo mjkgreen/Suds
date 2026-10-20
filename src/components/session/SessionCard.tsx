@@ -244,7 +244,15 @@ export const SessionCard = React.memo(function SessionCard({ group, currentUserI
       )}
 
       {/* Photos from drinks */}
-      {media.length > 0 && <MediaCarousel media={media} maxHeight={FEED_MEDIA_MAX_HEIGHT} borderRadius={10} style={{ marginTop: 8 }} />}
+      {media.length > 0 && (
+        <MediaCarousel
+          media={media}
+          maxHeight={FEED_MEDIA_MAX_HEIGHT}
+          borderRadius={10}
+          style={{ marginTop: 8 }}
+          visibilityKey={`session-${group.session_id}`}
+        />
+      )}
 
       {/* Expanded drink-by-drink list — active sessions only */}
       {isActive && (
