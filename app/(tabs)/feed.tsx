@@ -18,6 +18,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Button } from "@/components/common/Button";
 import { EmptyState } from "@/components/common/EmptyState";
 import { DrinkCard } from "@/components/drink/DrinkCard";
+import { useVisibleItems, VisibleItemsProvider } from "@/components/media/VisibleItems";
 import { SessionCard } from "@/components/session/SessionCard";
 import { useFeed } from "@/hooks/useFeed";
 import { useQuickLogDrink } from "@/hooks/useDrinkLog";
@@ -99,6 +100,8 @@ export default function FeedScreen() {
     if (hasNextPage && !isFetchingNextPage) fetchNextPage();
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
+  const { visibleKeys, viewabilityProps } = useVisibleItems();
+
   const renderItem = useCallback(({ item: entry }: { item: FeedEntry }) => {
     if (entry.type === "session") {
       return (
@@ -150,78 +153,81 @@ export default function FeedScreen() {
         <title>Feed | Suds</title>
       </Head>
       <SafeAreaView className="flex-1 bg-background" edges={topEdges}>
-        <FlatList
-          data={entries}
-          keyExtractor={(entry) =>
-            entry.type === "session" ? `session-${entry.session_id}` : `drink-${entry.item.id}`
-          }
-          renderItem={renderItem}
-          ListHeaderComponent={
-            <View className="px-4 pt-0 mt-0 pb-3 gap-3">
-              {!isDesktop && (
-                <View>
-                  <View className="flex-row items-center justify-between">
-                    <Text className="text-2xl font-bold text-foreground"> Suds</Text>
-                    <Pressable onPress={() => router.push("/notifications" as never)} hitSlop={8}>
-                      <View>
-                        <Ionicons name="notifications-outline" size={24} color={unreadCount > 0 ? "#f59e0b" : "#9ca3af"} />
-                        {unreadCount > 0 && (
-                          <View className="absolute -top-1 -right-1 bg-primary rounded-full w-4 h-4 items-center justify-center">
-                            <Text className="text-white text-[9px] font-bold">
-                              {unreadCount > 9 ? "9+" : unreadCount}
-                            </Text>
-                          </View>
-                        )}
-                      </View>
-                    </Pressable>
-                  </View>
-                  <Text className="text-muted-foreground text-sm">What your crew is drinking</Text>
-                </View>
-              )}
-
-              {/* Night out CTA */}
-              {!activeSession && (
-                <Pressable
-                  className="bg-primary rounded-2xl px-4 py-3 flex-row items-center justify-between"
-                  onPress={() => setShowStartModal(true)}
-                >
+        <VisibleItemsProvider value={visibleKeys}>
+          <FlatList
+            data={entries}
+            keyExtractor={(entry) =>
+              entry.type === "session" ? `session-${entry.session_id}` : `drink-${entry.item.id}`
+            }
+            renderItem={renderItem}
+            ListHeaderComponent={
+              <View className="px-4 pt-0 mt-0 pb-3 gap-3">
+                {!isDesktop && (
                   <View>
-                    <Text className="text-primary-foreground font-bold text-sm">Start a Night Out</Text>
-                    <Text className="text-primary-foreground/70 text-xs">Track all your drinks as one session</Text>
+                    <View className="flex-row items-center justify-between">
+                      <Text className="text-2xl font-bold text-foreground"> Suds</Text>
+                      <Pressable onPress={() => router.push("/notifications" as never)} hitSlop={8}>
+                        <View>
+                          <Ionicons name="notifications-outline" size={24} color={unreadCount > 0 ? "#f59e0b" : "#9ca3af"} />
+                          {unreadCount > 0 && (
+                            <View className="absolute -top-1 -right-1 bg-primary rounded-full w-4 h-4 items-center justify-center">
+                              <Text className="text-white text-[9px] font-bold">
+                                {unreadCount > 9 ? "9+" : unreadCount}
+                              </Text>
+                            </View>
+                          )}
+                        </View>
+                      </Pressable>
+                    </View>
+                    <Text className="text-muted-foreground text-sm">What your crew is drinking</Text>
                   </View>
-                  <Ionicons name="moon" size={24} color="#f59e0b" />
-                </Pressable>
-              )}
-            </View>
-          }
-          ListEmptyComponent={
-            <EmptyState
-              emoji="👀"
-              title="Your feed is empty"
-              subtitle="Follow some friends or log your first drink."
-              action={
-                <View className="gap-3">
-                  <Button label="Log a Drink" onPress={() => router.push("/(tabs)/log")} />
-                  <Button label="Find Friends" onPress={() => router.push("/(tabs)/search")} variant="secondary" />
-                </View>
-              }
-            />
-          }
-          ListFooterComponent={
-            isFetchingNextPage ? (
-              <View className="py-4 items-center">
-                <ActivityIndicator color="#f59e0b" />
+                )}
+
+                {/* Night out CTA */}
+                {!activeSession && (
+                  <Pressable
+                    className="bg-primary rounded-2xl px-4 py-3 flex-row items-center justify-between"
+                    onPress={() => setShowStartModal(true)}
+                  >
+                    <View>
+                      <Text className="text-primary-foreground font-bold text-sm">Start a Night Out</Text>
+                      <Text className="text-primary-foreground/70 text-xs">Track all your drinks as one session</Text>
+                    </View>
+                    <Ionicons name="moon" size={24} color="#f59e0b" />
+                  </Pressable>
+                )}
               </View>
-            ) : null
-          }
-          onEndReached={handleEndReached}
-          onEndReachedThreshold={0.4}
-          refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor="#f59e0b" />}
-          initialNumToRender={6}
-          maxToRenderPerBatch={4}
-          windowSize={7}
-          removeClippedSubviews={Platform.OS !== "web"}
-        />
+            }
+            ListEmptyComponent={
+              <EmptyState
+                emoji="👀"
+                title="Your feed is empty"
+                subtitle="Follow some friends or log your first drink."
+                action={
+                  <View className="gap-3">
+                    <Button label="Log a Drink" onPress={() => router.push("/(tabs)/log")} />
+                    <Button label="Find Friends" onPress={() => router.push("/(tabs)/search")} variant="secondary" />
+                  </View>
+                }
+              />
+            }
+            ListFooterComponent={
+              isFetchingNextPage ? (
+                <View className="py-4 items-center">
+                  <ActivityIndicator color="#f59e0b" />
+                </View>
+              ) : null
+            }
+            onEndReached={handleEndReached}
+            onEndReachedThreshold={0.4}
+            refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor="#f59e0b" />}
+            initialNumToRender={6}
+            maxToRenderPerBatch={4}
+            windowSize={7}
+            removeClippedSubviews={Platform.OS !== "web"}
+            {...viewabilityProps}
+          />
+        </VisibleItemsProvider>
 
         {/* Start session modal */}
         <Modal visible={showStartModal} transparent animationType="fade">

@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import React, { useState } from "react";
 import { Control, Controller, UseFormSetValue, UseFormWatch } from "react-hook-form";
-import { Pressable, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Pressable, Text, TextInput, View } from "react-native";
 import { Image } from "expo-image";
 import { LocationPicker } from "@/components/common/LocationPicker";
 import { ScrollPicker } from "@/components/common/ScrollPicker";
@@ -9,22 +9,37 @@ import { SimpleDateTimePicker } from "@/components/common/SimpleDateTimePicker";
 import { AutocompleteTextInput } from "@/components/drink/AutocompleteTextInput";
 import { DrinkTypePicker } from "@/components/drink/DrinkTypePicker";
 import { getTypesForBrand, getTypesForName, searchBrands, searchDrinkNames } from "@/lib/drinkSearch";
+import { formatClipLength, MAX_MEDIA, mediaAspect, MediaType } from "@/lib/media";
 import { DrinkType } from "@/types/models";
 import { LogDrinkFormData } from "@/types/models";
 
-const MAX_PHOTOS = 3;
+const MAX_PHOTOS = MAX_MEDIA;
+const THUMB_HEIGHT = 90;
 
 const RATING_OPTIONS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 const QUANTITY_OPTIONS = [0.5, 1, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10, 12, 15, 20];
+
+export interface MediaPreview {
+  uri: string;
+  type?: MediaType;
+  width?: number | null;
+  height?: number | null;
+  /** Videos: still frame to show as the thumbnail */
+  posterUri?: string | null;
+  /** Videos: length in seconds */
+  duration?: number | null;
+}
 
 interface DrinkFormBodyProps {
   control: Control<LogDrinkFormData>;
   watch: UseFormWatch<LogDrinkFormData>;
   setValue: UseFormSetValue<LogDrinkFormData>;
-  /** All photos to display (local URIs or remote URLs), max 3 */
-  previewUris: string[];
+  /** All photos/videos to display (local URIs or remote URLs), max 3 */
+  previews: MediaPreview[];
   onAddPhoto: () => void;
   onRemovePhoto: (index: number) => void;
+  /** Shows a spinner tile while a picked video is being prepared */
+  addingMedia?: boolean;
   onClearLocation?: () => void;
   error?: string | null;
   /** When true, the event name field is hidden (already in an active session) */
@@ -35,9 +50,10 @@ export function DrinkFormBody({
   control,
   watch,
   setValue,
-  previewUris,
+  previews,
   onAddPhoto,
   onRemovePhoto,
+  addingMedia = false,
   onClearLocation,
   error,
   isInSession = false,
@@ -229,38 +245,68 @@ export function DrinkFormBody({
         {/* Photos */}
         <View>
           <View className="flex-row items-center justify-between mb-2">
-            <Text className="text-foreground font-semibold">Photos (optional)</Text>
-            <Text className="text-muted-foreground text-xs">{previewUris.length}/{MAX_PHOTOS}</Text>
+            <Text className="text-foreground font-semibold">Photos & Videos (optional)</Text>
+            <Text className="text-muted-foreground text-xs">{previews.length}/{MAX_PHOTOS}</Text>
           </View>
-          {previewUris.length === 0 ? (
+          {previews.length === 0 && !addingMedia ? (
             <Pressable
               className="bg-card border-2 border-dashed border-border rounded-xl py-6 items-center active:bg-accent"
               onPress={onAddPhoto}
             >
               <Ionicons name="camera-outline" size={24} color="hsl(var(--muted-foreground))" />
-              <Text className="text-muted-foreground text-xs mt-1">Add up to 3 photos</Text>
+              <Text className="text-muted-foreground text-xs mt-1">Add up to 3 photos or videos</Text>
             </Pressable>
           ) : (
-            <View className="flex-row gap-2">
-              {previewUris.map((uri, index) => (
-                <View key={index} style={{ width: 100, height: 90 }} className="relative">
-                  <Image
-                    source={{ uri }}
-                    style={{ width: 100, height: 90, borderRadius: 10 }}
-                    contentFit="cover"
-                  />
-                  <Pressable
-                    className="absolute top-1 right-1 bg-black/60 rounded-full p-0.5"
-                    onPress={() => onRemovePhoto(index)}
-                    hitSlop={8}
-                  >
-                    <Ionicons name="close" size={14} color="#fff" />
-                  </Pressable>
+            <View className="flex-row flex-wrap gap-2">
+              {previews.map((preview, index) => {
+                const thumbWidth = Math.round(THUMB_HEIGHT * mediaAspect(preview));
+                const isVideo = preview.type === "video";
+                const thumbUri = isVideo ? preview.posterUri : preview.uri;
+                return (
+                  <View key={index} style={{ width: thumbWidth, height: THUMB_HEIGHT }} className="relative">
+                    {thumbUri ? (
+                      <Image
+                        source={{ uri: thumbUri }}
+                        style={{ width: thumbWidth, height: THUMB_HEIGHT, borderRadius: 10 }}
+                        contentFit="cover"
+                      />
+                    ) : (
+                      <View
+                        style={{ width: thumbWidth, height: THUMB_HEIGHT, borderRadius: 10 }}
+                        className="bg-black items-center justify-center"
+                      >
+                        <Ionicons name="videocam" size={22} color="#fff" />
+                      </View>
+                    )}
+                    {isVideo && (
+                      <View className="absolute bottom-1 left-1 flex-row items-center bg-black/60 rounded-full px-1.5 py-0.5">
+                        <Ionicons name="play" size={10} color="#fff" />
+                        {preview.duration ? (
+                          <Text className="text-white text-[10px] ml-0.5">{formatClipLength(preview.duration)}</Text>
+                        ) : null}
+                      </View>
+                    )}
+                    <Pressable
+                      className="absolute top-1 right-1 bg-black/60 rounded-full p-0.5"
+                      onPress={() => onRemovePhoto(index)}
+                      hitSlop={8}
+                    >
+                      <Ionicons name="close" size={14} color="#fff" />
+                    </Pressable>
+                  </View>
+                );
+              })}
+              {addingMedia && (
+                <View
+                  style={{ width: THUMB_HEIGHT, height: THUMB_HEIGHT }}
+                  className="bg-card border border-border rounded-xl items-center justify-center"
+                >
+                  <ActivityIndicator size="small" color="#f59e0b" />
                 </View>
-              ))}
-              {previewUris.length < MAX_PHOTOS && (
+              )}
+              {!addingMedia && previews.length < MAX_PHOTOS && (
                 <Pressable
-                  style={{ width: 100, height: 90 }}
+                  style={{ width: THUMB_HEIGHT, height: THUMB_HEIGHT }}
                   className="bg-card border-2 border-dashed border-border rounded-xl items-center justify-center active:bg-accent"
                   onPress={onAddPhoto}
                 >

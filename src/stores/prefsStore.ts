@@ -7,6 +7,9 @@ export interface PrefsState {
   setLocationEnabled: (enabled: boolean) => void;
   hideAddresses: boolean;
   setHideAddresses: (hide: boolean) => void;
+  /** Play videos muted as they scroll into view */
+  autoplayVideos: boolean;
+  setAutoplayVideos: (enabled: boolean) => void;
   // BAC preferences
   sex: 'male' | 'female';
   setSex: (sex: 'male' | 'female') => void;
@@ -23,6 +26,8 @@ export const usePrefsStore = create<PrefsState>()(
       setLocationEnabled: (enabled) => set({ locationEnabled: enabled }),
       hideAddresses: false,
       setHideAddresses: (hide) => set({ hideAddresses: hide }),
+      autoplayVideos: true,
+      setAutoplayVideos: (enabled) => set({ autoplayVideos: enabled }),
       // BAC preferences
       sex: 'male',
       setSex: (sex) => set({ sex }),

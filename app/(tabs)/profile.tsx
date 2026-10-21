@@ -26,6 +26,7 @@ import { getDisplayName, getUsername } from "@/utils/profileHelpers";
 import { getEarnedBadges, findBadgeById, UserBadge, TIER_COLORS } from "@/utils/badgeHelpers";
 import { BadgeInfoModal } from "@/components/profile/BadgeInfoModal";
 import { DrinkCard } from "@/components/drink/DrinkCard";
+import { useVisibleItems, VisibleItemsProvider } from "@/components/media/VisibleItems";
 import { SessionCard } from "@/components/session/SessionCard";
 import { DrinkIcon } from "@/components/icons/DrinkIcon";
 import { TrendLine } from "@/components/profile/TrendLine";
@@ -120,6 +121,8 @@ export default function ProfileScreen() {
   const handleEndReached = useCallback(() => {
     if (hasNextPage && !isFetchingNextPage) fetchNextPage();
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+  const { visibleKeys, viewabilityProps } = useVisibleItems();
 
   const renderActivityItem = useCallback(({ item: entry }: { item: FeedEntry }) => {
     if (entry.type === "session") {
@@ -347,35 +350,38 @@ export default function ProfileScreen() {
           <View style={{ flex: 1, flexDirection: "row", maxWidth: 1400, width: "100%", alignSelf: "center", paddingHorizontal: 24 }}>
             {/* Left: Activities feed */}
             <View style={{ flex: 3 }}>
-              <FlatList
-                data={myEntries}
-                keyExtractor={(entry) =>
-                  entry.type === "session" ? `session-${entry.session_id}` : `drink-${entry.item.id}`
-                }
-                renderItem={renderActivityItem}
-                refreshControl={<RefreshControl refreshing={false} onRefresh={onRefresh} tintColor="#f59e0b" />}
-                ListHeaderComponent={
-                  <View className="px-4 pt-4 pb-2">
-                    <Text className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Activities</Text>
-                  </View>
-                }
-                ListEmptyComponent={
-                  <View className="px-6 py-10 items-center">
-                    <Text className="text-3xl mb-2">🍺</Text>
-                    <Text className="text-muted-foreground text-center">No drinks logged yet. Crack one open!</Text>
-                  </View>
-                }
-                ListFooterComponent={
-                  isFetchingNextPage ? (
-                    <View className="py-4 items-center">
-                      <ActivityIndicator color="#f59e0b" />
+              <VisibleItemsProvider value={visibleKeys}>
+                <FlatList
+                  data={myEntries}
+                  keyExtractor={(entry) =>
+                    entry.type === "session" ? `session-${entry.session_id}` : `drink-${entry.item.id}`
+                  }
+                  renderItem={renderActivityItem}
+                  refreshControl={<RefreshControl refreshing={false} onRefresh={onRefresh} tintColor="#f59e0b" />}
+                  ListHeaderComponent={
+                    <View className="px-4 pt-4 pb-2">
+                      <Text className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Activities</Text>
                     </View>
-                  ) : null
-                }
-                onEndReached={handleEndReached}
-                onEndReachedThreshold={0.4}
-                contentContainerStyle={{ paddingBottom: 24 }}
-              />
+                  }
+                  ListEmptyComponent={
+                    <View className="px-6 py-10 items-center">
+                      <Text className="text-3xl mb-2">🍺</Text>
+                      <Text className="text-muted-foreground text-center">No drinks logged yet. Crack one open!</Text>
+                    </View>
+                  }
+                  ListFooterComponent={
+                    isFetchingNextPage ? (
+                      <View className="py-4 items-center">
+                        <ActivityIndicator color="#f59e0b" />
+                      </View>
+                    ) : null
+                  }
+                  onEndReached={handleEndReached}
+                  onEndReachedThreshold={0.4}
+                  contentContainerStyle={{ paddingBottom: 24 }}
+                  {...viewabilityProps}
+                />
+              </VisibleItemsProvider>
             </View>
 
             {/* Right: Progress stats */}
@@ -576,30 +582,33 @@ export default function ProfileScreen() {
         {profileHeader}
         {badgePicker}
         <TabBar active={activeTab} onChange={setActiveTab} />
-        <FlatList
-          data={myEntries}
-          keyExtractor={(entry) =>
-            entry.type === "session" ? `session-${entry.session_id}` : `drink-${entry.item.id}`
-          }
-          renderItem={renderActivityItem}
-          refreshControl={<RefreshControl refreshing={false} onRefresh={onRefresh} tintColor="#f59e0b" />}
-          ListEmptyComponent={
-            <View className="px-6 py-10 items-center">
-              <Text className="text-3xl mb-2">🍺</Text>
-              <Text className="text-muted-foreground text-center">No drinks logged yet. Crack one open!</Text>
-            </View>
-          }
-          ListFooterComponent={
-            isFetchingNextPage ? (
-              <View className="py-4 items-center">
-                <ActivityIndicator color="#f59e0b" />
+        <VisibleItemsProvider value={visibleKeys}>
+          <FlatList
+            data={myEntries}
+            keyExtractor={(entry) =>
+              entry.type === "session" ? `session-${entry.session_id}` : `drink-${entry.item.id}`
+            }
+            renderItem={renderActivityItem}
+            refreshControl={<RefreshControl refreshing={false} onRefresh={onRefresh} tintColor="#f59e0b" />}
+            ListEmptyComponent={
+              <View className="px-6 py-10 items-center">
+                <Text className="text-3xl mb-2">🍺</Text>
+                <Text className="text-muted-foreground text-center">No drinks logged yet. Crack one open!</Text>
               </View>
-            ) : null
-          }
-          onEndReached={handleEndReached}
-          onEndReachedThreshold={0.4}
-          contentContainerStyle={{ paddingBottom: 24 }}
-        />
+            }
+            ListFooterComponent={
+              isFetchingNextPage ? (
+                <View className="py-4 items-center">
+                  <ActivityIndicator color="#f59e0b" />
+                </View>
+              ) : null
+            }
+            onEndReached={handleEndReached}
+            onEndReachedThreshold={0.4}
+            contentContainerStyle={{ paddingBottom: 24 }}
+            {...viewabilityProps}
+          />
+        </VisibleItemsProvider>
       </SafeAreaView>
     </>
   );

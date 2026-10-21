@@ -58,7 +58,7 @@ export default function EditProfileScreen() {
   const [isDatePickerVisible, setIsDatePickerVisible] = useState(false);
 
   const [avatarUri, setAvatarUri] = useState<string | null>(null);
-  const [avatarBase64, setAvatarBase64] = useState<string | null>(null);
+  const [avatarMimeType, setAvatarMimeType] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
 
@@ -87,7 +87,6 @@ export default function EditProfileScreen() {
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.8,
-      base64: true,
     };
     if (useCamera) {
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
@@ -98,7 +97,7 @@ export default function EditProfileScreen() {
       : await ImagePicker.launchImageLibraryAsync(options);
     if (!result.canceled) {
       setAvatarUri(result.assets[0].uri);
-      setAvatarBase64(result.assets[0].base64 ?? null);
+      setAvatarMimeType(result.assets[0].mimeType ?? null);
     }
   }
 
@@ -139,7 +138,7 @@ export default function EditProfileScreen() {
 
       let newAvatarUrl: string | null = profile?.avatar_url ?? null;
       if (avatarUri) {
-        newAvatarUrl = await uploadAvatarPhoto(user.id, avatarUri, avatarBase64);
+        newAvatarUrl = await uploadAvatarPhoto(user.id, avatarUri, avatarMimeType);
       }
 
       const updated = await updateProfile({

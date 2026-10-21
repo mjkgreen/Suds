@@ -15,6 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Avatar } from '@/components/common/Avatar';
 import { Button } from '@/components/common/Button';
 import { DrinkCard } from '@/components/drink/DrinkCard';
+import { useVisibleItems, VisibleItemsProvider } from '@/components/media/VisibleItems';
 import { SessionCard } from '@/components/session/SessionCard';
 import { FollowButton } from '@/components/social/FollowButton';
 import { useFollowStatus } from '@/hooks/useFollow';
@@ -87,6 +88,8 @@ export default function UserProfileScreen() {
   const handleEndReached = useCallback(() => {
     if (hasNextPage && !isFetchingNextPage) fetchNextPage();
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+  const { visibleKeys, viewabilityProps } = useVisibleItems();
 
   const renderItem = useCallback(({ item: entry }: { item: FeedEntry }) => {
     if (entry.type === 'session') {
@@ -264,53 +267,56 @@ export default function UserProfileScreen() {
         isVisible={badgeInfoVisible}
         onClose={() => setBadgeInfoVisible(false)}
       />
-      <FlatList
-        data={entries}
-        keyExtractor={(entry) =>
-          entry.type === 'session' ? `session-${entry.session_id}` : `drink-${entry.item.id}`
-        }
-        renderItem={renderItem}
-        ListHeaderComponent={listHeader}
-        ListEmptyComponent={
-          !canViewContent && !isBlocked ? (
-            <View className="py-16 items-center px-8">
-              <Text className="text-3xl mb-2">🔒</Text>
-              <Text className="text-foreground text-base font-semibold">
-                This account is private
-              </Text>
-              <Text className="text-muted-foreground text-sm mt-1 text-center">
-                {followStatus === 'requested'
-                  ? 'Your follow request is pending approval.'
-                  : 'Follow this account to see their drinks and stats.'}
-              </Text>
-            </View>
-          ) : (
-            <View className="py-16 items-center">
-              <Text className="text-3xl mb-2">{isBlocked ? '🚫' : '🍺'}</Text>
-              <Text className="text-muted-foreground text-base">
-                {isBlocked ? "You've blocked this user." : 'No drinks logged yet.'}
-              </Text>
-            </View>
-          )
-        }
-        ListFooterComponent={
-          isFetchingNextPage ? (
-            <View className="py-4 items-center">
-              <ActivityIndicator color="#f59e0b" />
-            </View>
-          ) : null
-        }
-        onEndReached={handleEndReached}
-        onEndReachedThreshold={0.4}
-        refreshControl={
-          <RefreshControl
-            refreshing={false}
-            onRefresh={() => { refetchProfile(); refetchFeed(); }}
-            tintColor="#f59e0b"
-          />
-        }
-        contentContainerStyle={{ paddingBottom: 32 }}
-      />
+      <VisibleItemsProvider value={visibleKeys}>
+        <FlatList
+          data={entries}
+          keyExtractor={(entry) =>
+            entry.type === 'session' ? `session-${entry.session_id}` : `drink-${entry.item.id}`
+          }
+          renderItem={renderItem}
+          ListHeaderComponent={listHeader}
+          ListEmptyComponent={
+            !canViewContent && !isBlocked ? (
+              <View className="py-16 items-center px-8">
+                <Text className="text-3xl mb-2">🔒</Text>
+                <Text className="text-foreground text-base font-semibold">
+                  This account is private
+                </Text>
+                <Text className="text-muted-foreground text-sm mt-1 text-center">
+                  {followStatus === 'requested'
+                    ? 'Your follow request is pending approval.'
+                    : 'Follow this account to see their drinks and stats.'}
+                </Text>
+              </View>
+            ) : (
+              <View className="py-16 items-center">
+                <Text className="text-3xl mb-2">{isBlocked ? '🚫' : '🍺'}</Text>
+                <Text className="text-muted-foreground text-base">
+                  {isBlocked ? "You've blocked this user." : 'No drinks logged yet.'}
+                </Text>
+              </View>
+            )
+          }
+          ListFooterComponent={
+            isFetchingNextPage ? (
+              <View className="py-4 items-center">
+                <ActivityIndicator color="#f59e0b" />
+              </View>
+            ) : null
+          }
+          onEndReached={handleEndReached}
+          onEndReachedThreshold={0.4}
+          refreshControl={
+            <RefreshControl
+              refreshing={false}
+              onRefresh={() => { refetchProfile(); refetchFeed(); }}
+              tintColor="#f59e0b"
+            />
+          }
+          contentContainerStyle={{ paddingBottom: 32 }}
+          {...viewabilityProps}
+        />
+      </VisibleItemsProvider>
     </SafeAreaView>
   );
 }
