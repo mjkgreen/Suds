@@ -20,6 +20,7 @@ return {
     photo_url: row.photo_url,
     photo_urls: row.photo_urls ?? [],
     media: row.media ?? [],
+    tagged_users: row.tagged_users ?? [],
     rating: row.rating ?? null,
     event_name: row.event_name ?? null,
     logged_at: row.logged_at,

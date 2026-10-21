@@ -15,11 +15,12 @@ import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/common/Button';
 import { DrinkFormBody } from '@/components/drink/DrinkFormBody';
 import { useUpdateDrinkLog } from '@/hooks/useDrinkLog';
+import { useDrinkTags } from '@/hooks/useDrinkTags';
 import { useMediaPicker } from '@/hooks/useMediaPicker';
 import { DrinkMedia, getDrinkMedia, LocalMedia, MAX_MEDIA } from '@/lib/media';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/stores/authStore';
-import { DrinkLog, DrinkType, LogDrinkFormData } from '@/types/models';
+import { DrinkLog, DrinkType, LogDrinkFormData, TaggedUser } from '@/types/models';
 
 export default function EditDrinkScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -31,6 +32,12 @@ export default function EditDrinkScreen() {
 
   const [keptMedia, setKeptMedia] = useState<DrinkMedia[]>([]);
   const [newMedia, setNewMedia] = useState<LocalMedia[]>([]);
+  const [taggedUsers, setTaggedUsers] = useState<TaggedUser[]>([]);
+  const { data: existingTags } = useDrinkTags(id);
+
+  useEffect(() => {
+    if (existingTags) setTaggedUsers(existingTags);
+  }, [existingTags]);
   const [error, setError] = useState<string | null>(null);
   const { pickFromLibrary, processing, cropper } = useMediaPicker((media) => setNewMedia((prev) => [...prev, media]));
 
@@ -108,6 +115,7 @@ export default function EditDrinkScreen() {
         formData: data,
         keptMedia,
         newMedia,
+        taggedUserIds: taggedUsers.map((u) => u.id),
       });
       router.replace(`/drink/${id}`);
     } catch (err: any) {
@@ -152,6 +160,8 @@ export default function EditDrinkScreen() {
             onAddPhoto={handleAddPhoto}
             onRemovePhoto={handleRemovePhoto}
             addingMedia={processing}
+            taggedUsers={taggedUsers}
+            onChangeTaggedUsers={setTaggedUsers}
             error={error}
           />
         </KeyboardAwareScrollView>

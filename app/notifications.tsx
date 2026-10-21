@@ -22,6 +22,11 @@ function notificationText(n: InAppNotification): string {
     case "follow_request": return `${name} requested to follow you`;
     case "follow_request_accepted": return `${name} accepted your follow request`;
     case "session_invite": return `${name} invited you to join their session`;
+    case "mention":
+      return n.context.source === "comment"
+        ? `${name} mentioned you in a comment: ${n.context.comment_preview ?? ""}`
+        : `${name} mentioned you in a drink`;
+    case "tag": return `${name} tagged you in a drink`;
   }
 }
 
@@ -67,6 +72,8 @@ const NotificationRow = React.memo(function NotificationRow({
     switch (notification.type) {
       case "like":
       case "comment":
+      case "mention":
+      case "tag":
         if (notification.context.drink_log_id) router.push(`/drink/${notification.context.drink_log_id}` as never);
         break;
       case "follow":

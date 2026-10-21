@@ -66,6 +66,8 @@ export interface DrinkLog {
   photo_url: string | null;
   photo_urls: string[];
   media: DrinkMedia[];
+  /** People tagged in the drink (from get_feed / useDrinkTags) */
+  tagged_users?: TaggedUser[];
   rating: number | null;
   event_name: string | null;
   session_id: string | null;
@@ -196,7 +198,17 @@ export type NotificationType =
   | 'follow'
   | 'session_invite'
   | 'follow_request'
-  | 'follow_request_accepted';
+  | 'follow_request_accepted'
+  | 'mention'
+  | 'tag';
+
+/** A user tagged in a drink. */
+export interface TaggedUser {
+  id: string;
+  username: string;
+  display_name: string | null;
+  avatar_url?: string | null;
+}
 
 export interface InAppNotification {
   id: string;
@@ -209,6 +221,8 @@ export interface InAppNotification {
     comment_preview?: string;
     session_id?: string;
     invite_token?: string;
+    /** mention: whether it was in a drink's notes or a comment */
+    source?: 'drink' | 'comment';
   };
   read: boolean;
   created_at: string;

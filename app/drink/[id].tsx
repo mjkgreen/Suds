@@ -17,6 +17,11 @@ import { useReportContent } from "@/hooks/useReports";
 import { useLikers } from "@/hooks/useLikers";
 import { AvatarStack } from "@/components/social/AvatarStack";
 import { LikersModal } from "@/components/social/LikersModal";
+import { MentionInput } from "@/components/social/MentionInput";
+import { MentionText } from "@/components/social/MentionText";
+import { TaggedUsersLine } from "@/components/social/TaggedUsersLine";
+import { useDrinkTags, useRemoveMyTag } from "@/hooks/useDrinkTags";
+import { shareLink } from "@/lib/share";
 import { supabase } from "@/lib/supabase";
 import { DRINK_TYPE_MAP } from "@/lib/constants";
 import { useAuthStore } from "@/stores/authStore";
@@ -39,6 +44,9 @@ export default function DrinkDetailScreen() {
 
   const { data: comments, isLoading: commentsLoading } = useComments(id);
   const { data: likers } = useLikers(id);
+  const { data: taggedUsers = [] } = useDrinkTags(id);
+  const removeMyTag = useRemoveMyTag();
+  const isTagged = !!user && taggedUsers.some((u) => u.id === user.id);
   const addComment = useAddComment(user?.id);
   const deleteComment = useDeleteComment(user?.id);
   const { block } = useBlocks(user?.id);
@@ -105,6 +113,9 @@ export default function DrinkDetailScreen() {
   function handleMoreOptions() {
     Alert.alert("Options", undefined, [
       { text: "Cancel", style: "cancel" },
+      ...(isTagged
+        ? [{ text: "Remove Me from Tags", onPress: () => removeMyTag.mutate({ drinkLogId: id!, userId: user!.id }) }]
+        : []),
       { text: "Report Post", onPress: handleReportPost },
       { text: "Block User", style: "destructive", onPress: handleBlockAuthor },
     ]);
@@ -159,20 +170,31 @@ export default function DrinkDetailScreen() {
           <Ionicons name="close" size={24} color="orange" />
         </Pressable>
         <Text className="font-bold text-foreground text-base">Drink</Text>
+        <View className="flex-row gap-1">
+          <Pressable
+            onPress={() =>
+              shareLink(`/drink/${data.id}`, `Check out ${getDisplayName(data.profile)}'s ${data.drink_name || info.label} on Suds`)
+            }
+            className="p-2"
+            accessibilityLabel="Share"
+          >
+            <Ionicons name="paper-plane-outline" size={22} color="orange" />
+          </Pressable>
         {isOwner ? (
-          <View className="flex-row gap-1">
+          <>
             <Pressable onPress={() => router.push(`/drink/edit/${data?.id}`)} className="p-2">
               <Ionicons name="pencil-outline" size={22} color="orange" />
             </Pressable>
             <Pressable onPress={handleDelete} className="p-2">
               <Ionicons name="trash-outline" size={22} color="#ef4444" />
             </Pressable>
-          </View>
+          </>
         ) : (
           <Pressable onPress={handleMoreOptions} className="p-2">
             <Ionicons name="ellipsis-horizontal" size={22} color="hsl(var(--muted-foreground))" />
           </Pressable>
         )}
+        </View>
       </View>
 
       <KeyboardAvoidingView className="flex-1" behavior={Platform.OS === "ios" ? "padding" : "height"}>
@@ -236,7 +258,23 @@ export default function DrinkDetailScreen() {
         {data.notes && (
           <View className="mb-4">
             <Text className="text-muted-foreground text-xs font-semibold uppercase tracking-wide mb-1">Notes</Text>
-            <Text className="text-foreground text-base">{data.notes}</Text>
+            <MentionText className="text-foreground text-base">{data.notes}</MentionText>
+          </View>
+        )}
+
+        {/* Tagged people */}
+        {taggedUsers.length > 0 && (
+          <View className="mb-4 flex-row items-center flex-wrap gap-2">
+            <TaggedUsersLine users={taggedUsers} className="text-base" />
+            {isTagged && (
+              <Pressable
+                onPress={() => removeMyTag.mutate({ drinkLogId: id!, userId: user!.id })}
+                disabled={removeMyTag.isPending}
+                hitSlop={6}
+              >
+                <Text className="text-muted-foreground text-xs underline">Remove me</Text>
+              </Pressable>
+            )}
           </View>
         )}
 
@@ -311,15 +349,17 @@ export default function DrinkDetailScreen() {
           {/* Input */}
           {user && (
             <View className="flex-row items-end gap-2 mt-4">
-              <TextInput
+              <MentionInput
                 ref={inputRef}
                 value={commentText}
                 onChangeText={setCommentText}
-                placeholder="Add a comment…"
+                suggestionsPosition="above"
+                containerClassName="flex-1"
+                placeholder="Add a comment… @mention someone"
                 placeholderTextColor="gray"
                 multiline
                 maxLength={500}
-                className="flex-1 bg-card border border-border rounded-2xl px-4 py-2.5 text-foreground text-sm max-h-24"
+                className="bg-card border border-border rounded-2xl px-4 py-2.5 text-foreground text-sm max-h-24"
                 style={{ lineHeight: 20 }}
               />
               <Pressable
@@ -367,7 +407,7 @@ function CommentRow({ comment, isOwn, onDelete, isDeleting, onReport, onNavigate
           <Text className="text-muted-foreground text-xs">@{getUsername(profile)}</Text>
           <Text className="text-muted-foreground text-xs">· {relativeTime(comment.created_at)}</Text>
         </View>
-        <Text className="text-foreground text-sm mt-0.5 leading-5">{comment.content}</Text>
+        <MentionText className="text-foreground text-sm mt-0.5 leading-5">{comment.content}</MentionText>
       </View>
       {isOwn ? (
         <Pressable onPress={onDelete} disabled={isDeleting} hitSlop={8} className="pt-0.5">

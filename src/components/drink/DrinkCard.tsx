@@ -13,6 +13,9 @@ import { useLike } from "@/hooks/useLikes";
 import { useLikers } from "@/hooks/useLikers";
 import { AvatarStack } from "@/components/social/AvatarStack";
 import { LikersModal } from "@/components/social/LikersModal";
+import { MentionText } from "@/components/social/MentionText";
+import { TaggedUsersLine } from "@/components/social/TaggedUsersLine";
+import { shareLink } from "@/lib/share";
 import { DRINK_TYPE_MAP } from "@/lib/constants";
 import { FeedItem } from "@/types/models";
 import { relativeTime, formatTime } from "@/utils/dateHelpers";
@@ -143,7 +146,8 @@ export const DrinkCard = React.memo(function DrinkCard({ item, currentUserId, on
           {item.drink_name ? <Text className="text-foreground font-medium text-sm mb-1">{item.drink_name}</Text> : null}
           {item.brand && <Text className="text-muted-foreground font-bold text-base mb-2">{item.brand}</Text>}
           {/* Notes */}
-          {item.notes ? <Text className="text-muted-foreground text-sm mt-1 mb-2">{item.notes}</Text> : null}
+          {item.notes ? <MentionText className="text-muted-foreground text-sm mt-1 mb-2">{item.notes}</MentionText> : null}
+          {item.tagged_users?.length ? <TaggedUsersLine users={item.tagged_users} className="mb-2" /> : null}
 
           <View className="flex-row gap-4">
             {item.quantity > 1 && (
@@ -204,6 +208,16 @@ export const DrinkCard = React.memo(function DrinkCard({ item, currentUserId, on
         >
           <Ionicons name="chatbubble-outline" size={30} color="gray" />
           {(item.comment_count ?? 0) > 0 && <Text className="text-muted-foreground text-xs">{item.comment_count}</Text>}
+        </Pressable>
+        <Pressable
+          onPress={(e) => {
+            e.stopPropagation();
+            shareLink(`/drink/${item.id}`, `Check out ${getDisplayName(item.profile)}'s ${item.drink_name || drinkInfo.label} on Suds`);
+          }}
+          hitSlop={8}
+          accessibilityLabel="Share"
+        >
+          <Ionicons name="paper-plane-outline" size={28} color="gray" />
         </Pressable>
       </View>
       <View className="flex-1">
