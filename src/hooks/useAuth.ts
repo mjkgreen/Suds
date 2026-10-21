@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { Platform } from 'react-native';
 import { supabase } from '@/lib/supabase';
+import { unregisterPushToken } from '@/hooks/useNotifications';
 import { useAuthStore } from '@/stores/authStore';
 import { Profile } from '@/types/models';
 import { sendSignupEmail } from '@/lib/email';
@@ -129,6 +130,7 @@ export function useAuth() {
   }
 
   async function handleSignOut() {
+    await unregisterPushToken();
     await supabase.auth.signOut();
     signOut();
   }
