@@ -16,7 +16,7 @@ import { useAuthStore } from "@/stores/authStore";
 import { usePrefsStore } from "@/stores/prefsStore";
 import { resolveLocationName } from "@/utils/locationPrivacy";
 import { LocalMedia, MAX_MEDIA } from "@/lib/media";
-import { LogDrinkFormData } from "@/types/models";
+import { LogDrinkFormData, TaggedUser } from "@/types/models";
 
 const DEFAULT_VALUES: LogDrinkFormData = {
   drink_type: "beer",
@@ -40,6 +40,7 @@ export default function LogScreen() {
   const { locationEnabled, hideAddresses } = usePrefsStore();
 
   const [photos, setPhotos] = useState<LocalMedia[]>([]);
+  const [taggedUsers, setTaggedUsers] = useState<TaggedUser[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [locationClearedByUser, setLocationClearedByUser] = useState(false);
@@ -112,12 +113,14 @@ export default function LogScreen() {
         formData: data,
         sessionId: activeSession?.id ?? null,
         media: photos,
+        taggedUserIds: taggedUsers.map((u) => u.id),
       });
       if (Platform.OS !== "web") {
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       }
       reset({ ...DEFAULT_VALUES, logged_at: new Date().toISOString() });
       setPhotos([]);
+      setTaggedUsers([]);
       setLocationClearedByUser(false);
       router.replace("/(tabs)/feed");
     } catch (err: any) {
@@ -181,6 +184,8 @@ export default function LogScreen() {
               onAddPhoto={handleAddPhoto}
               onRemovePhoto={handleRemovePhoto}
               addingMedia={processing}
+              taggedUsers={taggedUsers}
+              onChangeTaggedUsers={setTaggedUsers}
               onClearLocation={() => setLocationClearedByUser(true)}
               error={error}
               isInSession={!!activeSession}

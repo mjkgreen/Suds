@@ -319,6 +319,24 @@ export default function SettingsScreen() {
             disabled={updateNotifPref.isPending}
           />
         </View>
+        <View className="flex-row items-center justify-between px-4 py-4 border-b border-border">
+          <View className="flex-row items-center gap-3 flex-1">
+            <View className="w-8 h-8 rounded-lg bg-accent items-center justify-center">
+              <Ionicons name="at" size={18} color="#f59e0b" />
+            </View>
+            <View className="flex-1">
+              <Text className="text-foreground font-medium">Mentions & Tags</Text>
+              <Text className="text-muted-foreground text-xs">When someone @mentions or tags you</Text>
+            </View>
+          </View>
+          <Switch
+            value={notifPrefs?.notify_mentions ?? true}
+            onValueChange={(val) => updateNotifPref.mutate({ notify_mentions: val })}
+            trackColor={{ false: "#767577", true: "#f59e0b" }}
+            thumbColor={Platform.OS === "ios" ? "#fff" : (notifPrefs?.notify_mentions ?? true) ? "#fff" : "#f4f3f4"}
+            disabled={updateNotifPref.isPending}
+          />
+        </View>
         <View className="flex-row items-center justify-between px-4 py-4">
           <View className="flex-row items-center gap-3 flex-1">
             <View className="w-8 h-8 rounded-lg bg-accent items-center justify-center">

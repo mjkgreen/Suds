@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { DrinkMedia, LocalMedia, MAX_MEDIA } from '@/lib/media';
+import { syncDrinkTags } from '@/hooks/useDrinkTags';
 import { uploadDrinkMedia } from '@/lib/storage';
 import { supabase } from '@/lib/supabase';
 import { DrinkLog, LogDrinkFormData } from '@/types/models';
@@ -72,11 +73,13 @@ export function useLogDrink() {
       formData,
       sessionId,
       media,
+      taggedUserIds,
     }: {
       userId: string;
       formData: LogDrinkFormData;
       sessionId?: string | null;
       media?: LocalMedia[];
+      taggedUserIds?: string[];
     }) => {
       const uploaded: DrinkMedia[] = [];
       for (const item of (media ?? []).slice(0, MAX_MEDIA)) {
@@ -107,6 +110,7 @@ export function useLogDrink() {
         .select()
         .single();
       if (error) throw error;
+      if (taggedUserIds?.length) await syncDrinkTags((data as DrinkLog).id, taggedUserIds);
       return data;
     },
     onSuccess: (_data, { userId, sessionId, formData }) => {
@@ -129,6 +133,7 @@ export function useUpdateDrinkLog() {
       formData,
       keptMedia,
       newMedia,
+      taggedUserIds,
     }: {
       id: string;
       userId: string;
@@ -138,6 +143,8 @@ export function useUpdateDrinkLog() {
       keptMedia: DrinkMedia[];
       /** New local files to upload */
       newMedia: LocalMedia[];
+      /** Everyone who should be tagged after the save */
+      taggedUserIds: string[];
     }) => {
       // Upload new media
       const uploaded: DrinkMedia[] = [];
@@ -170,12 +177,14 @@ export function useUpdateDrinkLog() {
         .select()
         .single();
       if (error) throw error;
+      await syncDrinkTags(id, taggedUserIds);
       return data;
     },
     onSuccess: (_data, { userId, id }) => {
       queryClient.invalidateQueries({ queryKey: ['drinkLogs', userId] });
       queryClient.invalidateQueries({ queryKey: ['mapLogs', userId] });
       queryClient.invalidateQueries({ queryKey: ['drinkDetail', id] });
+      queryClient.invalidateQueries({ queryKey: ['drinkTags', id] });
       queryClient.invalidateQueries({ queryKey: ['feed', userId] });
       queryClient.invalidateQueries({ queryKey: ['userStats', userId] });
     },

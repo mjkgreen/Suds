@@ -14,6 +14,7 @@ import { useSessionMembers } from "@/hooks/useSessionMembers";
 import { AvatarStack } from "@/components/social/AvatarStack";
 import { LikersModal } from "@/components/social/LikersModal";
 import { DRINK_TYPE_MAP } from "@/lib/constants";
+import { shareLink } from "@/lib/share";
 import { DrinkType, FeedItem, SessionFeedGroup } from "@/types/models";
 import { formatDateTime, formatDuration } from "@/utils/dateHelpers";
 import { formatMemberNames, getDisplayName, getUsername } from "@/utils/profileHelpers";
@@ -366,6 +367,19 @@ export const SessionCard = React.memo(function SessionCard({ group, currentUserI
             >
               <Ionicons name="chatbubble-outline" size={30} color="gray" />
               {commentCount > 0 && <Text className="text-muted-foreground text-xs">{commentCount}</Text>}
+            </Pressable>
+            <Pressable
+              onPress={(e) => {
+                e.stopPropagation();
+                shareLink(
+                  `/session/${group.session_id}`,
+                  `Check out ${getDisplayName(group.profile)}'s ${group.session_title ?? "night out"} on Suds`,
+                );
+              }}
+              hitSlop={8}
+              accessibilityLabel="Share"
+            >
+              <Ionicons name="paper-plane-outline" size={28} color="gray" />
             </Pressable>
           </View>
           <LikersModal

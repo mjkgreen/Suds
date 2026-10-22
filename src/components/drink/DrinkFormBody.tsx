@@ -8,9 +8,11 @@ import { ScrollPicker } from "@/components/common/ScrollPicker";
 import { SimpleDateTimePicker } from "@/components/common/SimpleDateTimePicker";
 import { AutocompleteTextInput } from "@/components/drink/AutocompleteTextInput";
 import { DrinkTypePicker } from "@/components/drink/DrinkTypePicker";
+import { MentionInput } from "@/components/social/MentionInput";
+import { TagPeopleField } from "@/components/social/TagPeopleField";
 import { getTypesForBrand, getTypesForName, searchBrands, searchDrinkNames } from "@/lib/drinkSearch";
 import { formatClipLength, MAX_MEDIA, mediaAspect, MediaType } from "@/lib/media";
-import { DrinkType } from "@/types/models";
+import { DrinkType, TaggedUser } from "@/types/models";
 import { LogDrinkFormData } from "@/types/models";
 
 const MAX_PHOTOS = MAX_MEDIA;
@@ -40,6 +42,8 @@ interface DrinkFormBodyProps {
   onRemovePhoto: (index: number) => void;
   /** Shows a spinner tile while a picked video is being prepared */
   addingMedia?: boolean;
+  taggedUsers: TaggedUser[];
+  onChangeTaggedUsers: (users: TaggedUser[]) => void;
   onClearLocation?: () => void;
   error?: string | null;
   /** When true, the event name field is hidden (already in an active session) */
@@ -54,6 +58,8 @@ export function DrinkFormBody({
   onAddPhoto,
   onRemovePhoto,
   addingMedia = false,
+  taggedUsers,
+  onChangeTaggedUsers,
   onClearLocation,
   error,
   isInSession = false,
@@ -325,11 +331,11 @@ export function DrinkFormBody({
             control={control}
             name="notes"
             render={({ field: { value, onChange, onBlur } }) => (
-              <TextInput
+              <MentionInput
                 className="bg-card border border-border rounded-xl px-4 py-3 text-base text-foreground"
-                placeholder="How was it? Any thoughts?"
+                placeholder="How was it? Any thoughts? @mention friends"
                 placeholderTextColor="hsl(var(--muted-foreground))"
-                value={value}
+                value={value ?? ""}
                 onChangeText={onChange}
                 onBlur={onBlur}
                 multiline
@@ -340,6 +346,9 @@ export function DrinkFormBody({
             )}
           />
         </View>
+
+        {/* Tagged people */}
+        <TagPeopleField value={taggedUsers} onChange={onChangeTaggedUsers} />
 
         {error && (
           <View className="bg-destructive/10 border border-destructive/20 rounded-xl px-4 py-3">

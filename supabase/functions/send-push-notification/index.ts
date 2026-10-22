@@ -2,16 +2,39 @@ import { serve } from "https://deno.land/std@0.195.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
 
-interface PushPayload {
-  actor_id: string;
-  actor_name: string;
-  recipient_id: string;
-  type: "like" | "comment" | "follow" | "session_invite" | "follow_request" | "follow_request_accepted";
+/**
+ * Sends the push for one in_app_notifications row.
+ *
+ * Called by a database trigger with { notification_id } whenever a
+ * notification is inserted. The row is claimed by setting pushed_at, so each
+ * notification is pushed at most once, and the message is built only from the
+ * stored row. That makes it safe to deploy with --no-verify-jwt: a caller can
+ * at most trigger a not-yet-sent notification to go out.
+ */
+
+type NotificationType =
+  | "like"
+  | "comment"
+  | "follow"
+  | "session_invite"
+  | "follow_request"
+  | "follow_request_accepted"
+  | "mention"
+  | "tag";
+
+interface NotificationRow {
+  id: string;
+  user_id: string;
+  actor_id: string | null;
+  actor_name: string | null;
+  type: NotificationType;
   context: {
     drink_log_id?: string;
     comment_preview?: string;
     session_id?: string;
     invite_token?: string;
+    /** mention: where the mention was made */
+    source?: "drink" | "comment";
   };
 }
 
@@ -20,10 +43,7 @@ interface NotificationPreferences {
   notify_comments: boolean;
   notify_follows: boolean;
   notify_session_invites: boolean;
-}
-
-interface PushTokenRow {
-  token: string;
+  notify_mentions: boolean;
 }
 
 interface ExpoMessage {
@@ -34,39 +54,58 @@ interface ExpoMessage {
   data: Record<string, string>;
 }
 
-interface ExpoPushResult {
-  status: string;
+interface ExpoPushTicket {
+  status: "ok" | "error";
+  message?: string;
   details?: { error?: string };
 }
 
-interface ExpoPushResponse {
-  data?: ExpoPushResult[];
-}
+const PREF_BY_TYPE: Record<NotificationType, keyof NotificationPreferences> = {
+  like: "notify_likes",
+  comment: "notify_comments",
+  follow: "notify_follows",
+  follow_request: "notify_follows",
+  follow_request_accepted: "notify_follows",
+  session_invite: "notify_session_invites",
+  mention: "notify_mentions",
+  tag: "notify_mentions",
+};
 
-function buildNotification(
-  actorName: string,
-  type: PushPayload["type"],
-  context: PushPayload["context"]
-): { title: string; body: string } {
-  switch (type) {
+function buildNotification(n: NotificationRow): { title: string; body: string } {
+  const name = n.actor_name ?? "Someone";
+  switch (n.type) {
     case "like":
-      return { title: "New Like", body: `${actorName} liked your drink` };
+      return { title: "New Like", body: `${name} liked your drink` };
     case "comment":
       return {
         title: "New Comment",
-        body: context.comment_preview
-          ? `${actorName}: ${context.comment_preview}`
-          : `${actorName} commented on your drink`,
+        body: n.context.comment_preview ? `${name}: ${n.context.comment_preview}` : `${name} commented on your drink`,
       };
     case "follow":
-      return { title: "New Follower", body: `${actorName} started following you` };
+      return { title: "New Follower", body: `${name} started following you` };
     case "follow_request":
-      return { title: "Follow Request", body: `${actorName} requested to follow you` };
+      return { title: "Follow Request", body: `${name} requested to follow you` };
     case "follow_request_accepted":
-      return { title: "Request Accepted", body: `${actorName} accepted your follow request` };
+      return { title: "Request Accepted", body: `${name} accepted your follow request` };
     case "session_invite":
-      return { title: "Session Invite", body: `${actorName} invited you to join their session` };
+      return { title: "Session Invite", body: `${name} invited you to join their session` };
+    case "mention":
+      return {
+        title: "New Mention",
+        body: n.context.comment_preview
+          ? `${name} mentioned you: ${n.context.comment_preview}`
+          : `${name} mentioned you`,
+      };
+    case "tag":
+      return { title: "Tagged", body: `${name} tagged you in a drink` };
   }
+}
+
+function json(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
 }
 
 serve(async (req) => {
@@ -75,14 +114,9 @@ serve(async (req) => {
   }
 
   try {
-    const payload: PushPayload = await req.json();
-    const { actor_id, actor_name, recipient_id, type, context } = payload;
-
-    if (actor_id === recipient_id) {
-      return new Response(
-        JSON.stringify({ success: true, skipped: "self" }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    const { notification_id } = await req.json();
+    if (typeof notification_id !== "string") {
+      return json({ success: false, error: "notification_id required" }, 400);
     }
 
     // Service role client bypasses RLS so we can read another user's data
@@ -91,69 +125,63 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
+    // Claim the notification; if it's already been pushed (or doesn't exist) stop.
+    const { data: claimed, error: claimError } = await supabase
+      .from("in_app_notifications")
+      .update({ pushed_at: new Date().toISOString() })
+      .eq("id", notification_id)
+      .is("pushed_at", null)
+      .select("id, user_id, actor_id, actor_name, type, context")
+      .maybeSingle();
+    if (claimError) throw claimError;
+    if (!claimed) return json({ success: true, skipped: "already_pushed" });
+
+    const notification = claimed as NotificationRow;
+    const recipientId = notification.user_id;
+
     // Ensure a preferences row exists with defaults, then read it
     await supabase
       .from("notification_preferences")
-      .insert({ user_id: recipient_id })
-      .select()
-      .maybeSingle();
+      .upsert({ user_id: recipientId }, { onConflict: "user_id", ignoreDuplicates: true });
 
-    const { data: prefs } = await supabase
+    const { data: prefs, error: prefsError } = await supabase
       .from("notification_preferences")
-      .select("notify_likes, notify_comments, notify_follows, notify_session_invites")
-      .eq("user_id", recipient_id)
+      .select("notify_likes, notify_comments, notify_follows, notify_session_invites, notify_mentions")
+      .eq("user_id", recipientId)
       .single();
+    if (prefsError) throw prefsError;
 
-    if (!prefs) {
-      return new Response(
-        JSON.stringify({ success: true, skipped: "no_prefs" }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    const prefKey = PREF_BY_TYPE[notification.type];
+    if (prefKey && !(prefs as NotificationPreferences)[prefKey]) {
+      return json({ success: true, skipped: "preference_disabled" });
     }
 
-    const prefsByType: Record<PushPayload["type"], keyof NotificationPreferences> = {
-      like: "notify_likes",
-      comment: "notify_comments",
-      follow: "notify_follows",
-      follow_request: "notify_follows",
-      follow_request_accepted: "notify_follows",
-      session_invite: "notify_session_invites",
-    };
-
-    if (!(prefs as NotificationPreferences)[prefsByType[type]]) {
-      return new Response(
-        JSON.stringify({ success: true, skipped: "preference_disabled" }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    const { data: tokens } = await supabase
+    const { data: tokens, error: tokensError } = await supabase
       .from("push_tokens")
       .select("token")
-      .eq("user_id", recipient_id);
+      .eq("user_id", recipientId);
+    if (tokensError) throw tokensError;
 
-    const tokenRows = (tokens ?? []) as PushTokenRow[];
-
-    if (tokenRows.length === 0) {
-      return new Response(
-        JSON.stringify({ success: true, skipped: "no_tokens" }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    const tokenList = (tokens ?? []).map((t: { token: string }) => t.token);
+    if (tokenList.length === 0) {
+      return json({ success: true, skipped: "no_tokens" });
     }
 
-    const { title, body } = buildNotification(actor_name, type, context);
+    const { title, body } = buildNotification(notification);
+    const ctx = notification.context ?? {};
 
-    const messages: ExpoMessage[] = tokenRows.map((t) => ({
-      to: t.token,
+    const messages: ExpoMessage[] = tokenList.map((to) => ({
+      to,
       sound: "default",
       title,
       body,
       data: {
-        type,
-        actor_id,
-        drink_log_id:  context.drink_log_id  ?? "",
-        session_id:    context.session_id    ?? "",
-        invite_token:  context.invite_token  ?? "",
+        type: notification.type,
+        notification_id: notification.id,
+        actor_id: notification.actor_id ?? "",
+        drink_log_id: ctx.drink_log_id ?? "",
+        session_id: ctx.session_id ?? "",
+        invite_token: ctx.invite_token ?? "",
       },
     }));
 
@@ -166,27 +194,39 @@ serve(async (req) => {
       body: JSON.stringify(messages),
     });
 
-    const expoResult: ExpoPushResponse = await expoResponse.json();
-    const results: ExpoPushResult[] = Array.isArray(expoResult.data) ? expoResult.data : [];
+    const expoResult = await expoResponse.json();
+    if (!expoResponse.ok) {
+      // Request-level failure (e.g. bad payload, missing credentials) —
+      // surface it in the function logs instead of failing silently.
+      console.error("send-push-notification: Expo rejected request:", JSON.stringify(expoResult));
+      return json({ success: false, error: "expo_request_failed", details: expoResult }, 502);
+    }
 
-    const staleTokens = tokenRows
-      .filter((_, i) => results[i]?.details?.error === "DeviceNotRegistered")
-      .map((t) => t.token);
+    const tickets: ExpoPushTicket[] = Array.isArray(expoResult.data) ? expoResult.data : [];
+    const staleTokens: string[] = [];
+    tickets.forEach((ticket, i) => {
+      if (ticket.status !== "error") return;
+      if (ticket.details?.error === "DeviceNotRegistered") {
+        staleTokens.push(tokenList[i]);
+      } else {
+        // e.g. InvalidCredentials (APNs/FCM not configured in EAS), MessageTooBig
+        console.error(
+          `send-push-notification: ticket error for ${notification.id}:`,
+          ticket.details?.error ?? "unknown",
+          ticket.message ?? ""
+        );
+      }
+    });
 
     if (staleTokens.length > 0) {
       await supabase.from("push_tokens").delete().in("token", staleTokens);
     }
 
-    return new Response(
-      JSON.stringify({ success: true, sent: tokenRows.length - staleTokens.length }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
-    );
+    const sent = tickets.filter((t) => t.status === "ok").length;
+    return json({ success: true, sent });
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : "Unknown error";
+    const message = error instanceof Error ? error.message : JSON.stringify(error);
     console.error("send-push-notification error:", message);
-    return new Response(
-      JSON.stringify({ success: false, error: message }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
-    );
+    return json({ success: false, error: message }, 500);
   }
 });

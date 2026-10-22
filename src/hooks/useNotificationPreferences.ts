@@ -6,6 +6,7 @@ export interface NotificationPreferences {
   notify_comments: boolean;
   notify_follows: boolean;
   notify_session_invites: boolean;
+  notify_mentions: boolean;
 }
 
 const DEFAULTS: NotificationPreferences = {
@@ -13,6 +14,7 @@ const DEFAULTS: NotificationPreferences = {
   notify_comments: true,
   notify_follows: true,
   notify_session_invites: true,
+  notify_mentions: true,
 };
 
 export function useNotificationPreferences(
@@ -30,7 +32,7 @@ export function useNotificationPreferences(
 
       const { data, error } = await supabase
         .from('notification_preferences')
-        .select('notify_likes, notify_comments, notify_follows, notify_session_invites')
+        .select('notify_likes, notify_comments, notify_follows, notify_session_invites, notify_mentions')
         .eq('user_id', userId!)
         .single();
 
