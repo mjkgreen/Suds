@@ -2,7 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useRef, useState } from "react";
-import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View, useWindowDimensions } from "react-native";
+import { ActivityIndicator, Alert, Platform, Pressable, ScrollView, Text, TextInput, View, useWindowDimensions } from "react-native";
 import { useColorScheme } from "nativewind";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Avatar } from "@/components/common/Avatar";
@@ -17,7 +17,7 @@ import { useReportContent } from "@/hooks/useReports";
 import { useLikers } from "@/hooks/useLikers";
 import { AvatarStack } from "@/components/social/AvatarStack";
 import { LikersModal } from "@/components/social/LikersModal";
-import { MentionInput } from "@/components/social/MentionInput";
+import { CommentComposer } from "@/components/social/CommentComposer";
 import { MentionText } from "@/components/social/MentionText";
 import { TaggedUsersLine } from "@/components/social/TaggedUsersLine";
 import { useDrinkTags, useRemoveMyTag } from "@/hooks/useDrinkTags";
@@ -197,8 +197,12 @@ export default function DrinkDetailScreen() {
         </View>
       </View>
 
-      <KeyboardAvoidingView className="flex-1" behavior={Platform.OS === "ios" ? "padding" : "height"}>
-      <ScrollView contentContainerStyle={{ padding: 24 }}>
+      <ScrollView
+        className="flex-1"
+        contentContainerStyle={{ padding: 24 }}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="interactive"
+      >
         {/* Photos */}
         {(() => {
           const media = getDrinkMedia(data);
@@ -346,38 +350,19 @@ export default function DrinkDetailScreen() {
             <Text className="text-muted-foreground text-sm">No comments yet.</Text>
           )}
 
-          {/* Input */}
-          {user && (
-            <View className="flex-row items-end gap-2 mt-4">
-              <MentionInput
-                ref={inputRef}
-                value={commentText}
-                onChangeText={setCommentText}
-                suggestionsPosition="above"
-                containerClassName="flex-1"
-                placeholder="Add a comment… @mention someone"
-                placeholderTextColor="gray"
-                multiline
-                maxLength={500}
-                className="bg-card border border-border rounded-2xl px-4 py-2.5 text-foreground text-sm max-h-24"
-                style={{ lineHeight: 20 }}
-              />
-              <Pressable
-                onPress={handleSendComment}
-                disabled={!commentText.trim() || addComment.isPending}
-                className="w-9 h-9 items-center justify-center rounded-full bg-primary disabled:opacity-40"
-              >
-                {addComment.isPending ? (
-                  <ActivityIndicator size="small" color="white" />
-                ) : (
-                  <Ionicons name="send" size={16} color="white" />
-                )}
-              </Pressable>
-            </View>
-          )}
         </View>
       </ScrollView>
-      </KeyboardAvoidingView>
+
+      {/* Comment box, pinned above the keyboard */}
+      {user && (
+        <CommentComposer
+          ref={inputRef}
+          value={commentText}
+          onChangeText={setCommentText}
+          onSend={handleSendComment}
+          isSending={addComment.isPending}
+        />
+      )}
       </View>
     </SafeAreaView>
   );
