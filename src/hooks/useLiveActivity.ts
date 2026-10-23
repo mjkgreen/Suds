@@ -2,6 +2,7 @@ import { AppState, Platform } from 'react-native';
 import { useAuthStore } from '@/stores/authStore';
 import { useSessionStore } from '@/stores/sessionStore';
 import { supabase } from '@/lib/supabase';
+import { adoptNewerSharedTokens } from '@/lib/sharedAuth';
 import { queryClient } from '@/lib/queryClient';
 import * as LiveActivityBridge from 'suds-live-activity-bridge';
 import { SessionMember, SessionWithRole } from '@/types/models';
@@ -152,7 +153,9 @@ function _unsubscribeFromSessionDrinks(): void {
 function _reconcileAuthFromSharedStorage(): void {
   const shared = LiveActivityBridge.readSharedAuthTokens();
   const { session } = useAuthStore.getState();
-  if (!shared || !session || shared.refreshToken === session.refresh_token) return;
+  // Same check as the launch-time reconcile in lib/supabase.ts: only adopt a
+  // later token for the same user, never an older (already spent) one.
+  if (!shared || !session || !adoptNewerSharedTokens(JSON.stringify(session), shared)) return;
   void supabase.auth.setSession({
     access_token: shared.accessToken,
     refresh_token: shared.refreshToken,

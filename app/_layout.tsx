@@ -1,14 +1,15 @@
 import '../global.css';
-import { QueryClientProvider } from '@tanstack/react-query';
+import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { useEffect, useRef } from 'react';
-import { ActivityIndicator, View, useColorScheme as useReactNativeColorScheme } from 'react-native';
+import { ActivityIndicator, Platform, Pressable, Text, View, useColorScheme as useReactNativeColorScheme } from 'react-native';
 import * as Linking from 'expo-linking';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { queryClient } from '@/lib/queryClient';
-import { useAuth } from '@/hooks/useAuth';
+import { persistOptions } from '@/lib/offlineCache';
+import { retryProfileLoad, useAuth, useAuthBootstrap } from '@/hooks/useAuth';
 import { useAuthStore } from '@/stores/authStore';
 import { useColorScheme } from 'nativewind';
 import { useThemeStore } from '@/stores/themeStore';
@@ -35,8 +36,9 @@ function ThemeSync() {
 }
 
 function AuthGuard() {
+  useAuthBootstrap();
   const { session, isLoading } = useAuth();
-  const { user, profile } = useAuthStore();
+  const { user, profile, profileError } = useAuthStore();
   const segments = useSegments();
   const router = useRouter();
 
@@ -73,8 +75,10 @@ function AuthGuard() {
     const segs = segments as string[];
     const inAuthGroup = segs[0] === '(auth)';
     const isOnboarding = segs[0] === '(auth)' && segs[1] === 'onboarding';
-    // Public web routes: root index, terms, privacy, support
-    const isPublicRoute = segs.length === 0 || ['terms', 'privacy', 'support'].includes(segs[0]);
+    // Public routes: terms, privacy, support — plus the root marketing page on web.
+    // (On native the root is just a launch spinner, so it isn't public.)
+    const isPublicRoute =
+      (segs.length === 0 && Platform.OS === 'web') || ['terms', 'privacy', 'support'].includes(segs[0]);
 
     if (!session && !inAuthGroup && !isPublicRoute) {
       router.replace('/(auth)/sign-in');
@@ -103,6 +107,22 @@ function AuthGuard() {
     return (
       <View className={`flex-1 items-center justify-center bg-background ${isDark ? 'dark' : ''}`}>
         <ActivityIndicator size="large" color="#f59e0b" />
+      </View>
+    );
+  }
+
+  // Signed in, but the profile couldn't load and nothing is cached (e.g. first
+  // launch after updating, with no signal). Offer a retry — not the sign-in screen.
+  if (session && !profile && profileError) {
+    return (
+      <View className={`flex-1 items-center justify-center bg-background px-8 ${isDark ? 'dark' : ''}`}>
+        <Text className="text-foreground text-lg font-semibold text-center">Couldn't load your account</Text>
+        <Text className="text-muted-foreground text-sm text-center mt-2">
+          Check your connection and try again. You're still signed in.
+        </Text>
+        <Pressable onPress={retryProfileLoad} className="mt-6 bg-primary rounded-xl px-6 py-3 active:opacity-90">
+          <Text className="text-primary-foreground font-semibold">Try again</Text>
+        </Pressable>
       </View>
     );
   }
@@ -137,10 +157,10 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <KeyboardProvider>
         <SafeAreaProvider>
-          <QueryClientProvider client={queryClient}>
+          <PersistQueryClientProvider client={queryClient} persistOptions={persistOptions}>
             <ThemeSync />
             <AuthGuard />
-          </QueryClientProvider>
+          </PersistQueryClientProvider>
         </SafeAreaProvider>
       </KeyboardProvider>
     </GestureHandlerRootView>
