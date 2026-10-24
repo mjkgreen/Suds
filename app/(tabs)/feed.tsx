@@ -17,6 +17,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Button } from "@/components/common/Button";
 import { EmptyState } from "@/components/common/EmptyState";
+import { SyncStatusPill } from "@/components/common/SyncStatusPill";
 import { DrinkCard } from "@/components/drink/DrinkCard";
 import { useVisibleItems, VisibleItemsProvider } from "@/components/media/VisibleItems";
 import { SessionCard } from "@/components/session/SessionCard";
@@ -81,9 +82,29 @@ export default function FeedScreen() {
 
   const unreadCount = useUnreadNotificationCount();
 
-  const { data, isLoading, isError, fetchNextPage, hasNextPage, isFetchingNextPage, refetch, isRefetching } = useFeed(
-    user?.id,
-  );
+  const {
+    data,
+    isLoading,
+    isLoadingError,
+    isRefetchError,
+    isFetching,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    refetch,
+  } = useFeed(user?.id);
+
+  // Only the user's own pull shows the pull-to-refresh spinner; background
+  // refreshes show the "Updating…" pill instead.
+  const [pulling, setPulling] = useState(false);
+  const handlePullRefresh = useCallback(async () => {
+    setPulling(true);
+    try {
+      await refetch();
+    } finally {
+      setPulling(false);
+    }
+  }, [refetch]);
 
   const entries = useMemo<FeedEntry[]>(() => {
     const allEntries = data?.pages.flatMap((p) => p.entries) ?? [];
@@ -134,7 +155,8 @@ export default function FeedScreen() {
     );
   }
 
-  if (isError) {
+  // Only when there's nothing saved to show; otherwise keep the saved feed up.
+  if (isLoadingError) {
     return (
       <SafeAreaView className="flex-1 bg-background" edges={topEdges}>
         <EmptyState
@@ -162,6 +184,11 @@ export default function FeedScreen() {
             renderItem={renderItem}
             ListHeaderComponent={
               <View className="px-4 pt-0 mt-0 pb-3 gap-3">
+              <SyncStatusPill
+                isFetching={isFetching && !isFetchingNextPage}
+                isRefetchError={isRefetchError}
+                isPullRefreshing={pulling}
+              />
                 {!isDesktop && (
                   <View>
                     <View className="flex-row items-center justify-between">
@@ -220,7 +247,7 @@ export default function FeedScreen() {
             }
             onEndReached={handleEndReached}
             onEndReachedThreshold={0.4}
-            refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor="#f59e0b" />}
+            refreshControl={<RefreshControl refreshing={pulling} onRefresh={handlePullRefresh} tintColor="#f59e0b" />}
             initialNumToRender={6}
             maxToRenderPerBatch={4}
             windowSize={7}

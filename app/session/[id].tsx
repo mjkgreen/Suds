@@ -5,10 +5,8 @@ import React, { useMemo, useRef, useState, useEffect } from "react";
 import {
   ActivityIndicator,
   Alert,
-  KeyboardAvoidingView,
   Platform,
   Pressable,
-  ScrollView,
   Text,
   TextInput,
   View,
@@ -18,6 +16,10 @@ import { useColorScheme } from "nativewind";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Avatar } from "@/components/common/Avatar";
 import { MediaCarousel } from "@/components/common/MediaCarousel";
+import { CommentComposer } from "@/components/social/CommentComposer";
+import { useCommentAutoScroll } from "@/hooks/useCommentAutoScroll";
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
+import { MentionText } from "@/components/social/MentionText";
 import { getDrinkMedia } from "@/lib/media";
 import { DrinkIcon } from "@/components/icons/DrinkIcon";
 import { NightOutBACProfile } from "@/components/session/NightOutBACProfile";
@@ -184,6 +186,7 @@ export default function SessionDetailScreen() {
 
   const representativeDrinkId = data?.drinks[0]?.id;
   const { data: comments, isLoading: commentsLoading } = useComments(representativeDrinkId);
+  const { scrollRef, onComposerFocus, onCommentSent } = useCommentAutoScroll(comments?.length ?? 0);
   const addComment = useAddComment(user?.id);
   const deleteComment = useDeleteComment(user?.id);
 
@@ -191,6 +194,7 @@ export default function SessionDetailScreen() {
     const trimmed = commentText.trim();
     if (!trimmed || !user || !representativeDrinkId) return;
     setCommentText("");
+    onCommentSent();
     await addComment.mutateAsync({ drinkLogId: representativeDrinkId, content: trimmed });
   }
 
@@ -280,11 +284,13 @@ export default function SessionDetailScreen() {
           {!(canEnd || canLeave) && !(isHost && !isActive) && <View className="w-10" />}
         </View>
 
-        <KeyboardAvoidingView
-          className="flex-1"
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-        >
-          <ScrollView contentContainerStyle={{ padding: 24 }}>
+          <KeyboardAwareScrollView
+            ref={scrollRef}
+            className="flex-1"
+            contentContainerStyle={{ padding: 24 }}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="interactive"
+          >
             {/* Photos carousel */}
             {media.length > 0 && (
               <MediaCarousel media={media} borderRadius={16} />
@@ -629,36 +635,21 @@ export default function SessionDetailScreen() {
                   <Text className="text-muted-foreground text-sm">No comments yet.</Text>
                 )}
 
-                {user && (
-                  <View className="flex-row items-end gap-2 mt-4">
-                    <TextInput
-                      ref={inputRef}
-                      value={commentText}
-                      onChangeText={setCommentText}
-                      placeholder="Add a comment…"
-                      placeholderTextColor="gray"
-                      multiline
-                      maxLength={500}
-                      className="flex-1 bg-card border border-border rounded-2xl px-4 py-2.5 text-foreground text-sm max-h-24"
-                      style={{ lineHeight: 20 }}
-                    />
-                    <Pressable
-                      onPress={handleSendComment}
-                      disabled={!commentText.trim() || addComment.isPending}
-                      className="w-9 h-9 items-center justify-center rounded-full bg-primary disabled:opacity-40"
-                    >
-                      {addComment.isPending ? (
-                        <ActivityIndicator size="small" color="white" />
-                      ) : (
-                        <Ionicons name="send" size={16} color="white" />
-                      )}
-                    </Pressable>
-                  </View>
-                )}
               </View>
             )}
-          </ScrollView>
-        </KeyboardAvoidingView>
+          </KeyboardAwareScrollView>
+
+          {/* Comment box, pinned above the keyboard */}
+          {user && representativeDrinkId && (
+            <CommentComposer
+              ref={inputRef}
+              value={commentText}
+              onChangeText={setCommentText}
+              onSend={handleSendComment}
+              onFocus={onComposerFocus}
+              isSending={addComment.isPending}
+            />
+          )}
       </View>
     </SafeAreaView>
   );
@@ -691,7 +682,7 @@ function CommentRow({ comment, isOwn, onDelete, isDeleting, onNavigate }: Commen
             · {relativeTime(comment.created_at)}
           </Text>
         </View>
-        <Text className="text-foreground text-sm mt-0.5 leading-5">{comment.content}</Text>
+        <MentionText className="text-foreground text-sm mt-0.5 leading-5">{comment.content}</MentionText>
       </View>
       {isOwn && (
         <Pressable onPress={onDelete} disabled={isDeleting} hitSlop={8} className="pt-0.5">
