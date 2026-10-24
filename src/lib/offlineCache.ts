@@ -18,6 +18,7 @@ import { Profile } from '@/types/models';
 
 const PROFILE_KEY = 'suds-cached-profile';
 const QUERY_CACHE_KEY = 'suds-query-cache';
+const CACHE_OWNER_KEY = 'suds-cache-owner';
 
 /**
  * Bump when the shape of cached data changes (e.g. a query starts returning
@@ -114,7 +115,23 @@ export async function clearOfflineCache(): Promise<void> {
   queryClient.clear();
   try {
     await persister.removeClient();
-    await AsyncStorage.removeItem(PROFILE_KEY);
+    await AsyncStorage.multiRemove([PROFILE_KEY, CACHE_OWNER_KEY]);
+  } catch {
+    // Best-effort.
+  }
+}
+
+/**
+ * Records which account the cache belongs to, and wipes it if it belonged to
+ * someone else. Some cached queries (e.g. notifications) aren't keyed by user,
+ * so a different account must never inherit them — even if the previous
+ * session ended without a normal sign-out.
+ */
+export async function claimOfflineCache(userId: string): Promise<void> {
+  try {
+    const owner = await AsyncStorage.getItem(CACHE_OWNER_KEY);
+    if (owner && owner !== userId) await clearOfflineCache();
+    if (owner !== userId) await AsyncStorage.setItem(CACHE_OWNER_KEY, userId);
   } catch {
     // Best-effort.
   }

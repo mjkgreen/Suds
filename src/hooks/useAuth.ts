@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { Platform } from 'react-native';
 import { readStoredSession, supabase } from '@/lib/supabase';
-import { clearOfflineCache, loadCachedProfile, saveCachedProfile } from '@/lib/offlineCache';
+import { claimOfflineCache, clearOfflineCache, loadCachedProfile, saveCachedProfile } from '@/lib/offlineCache';
 import { unregisterPushToken } from '@/hooks/useNotifications';
 import { useAuthStore } from '@/stores/authStore';
 import { Session } from '@supabase/supabase-js';
@@ -112,6 +112,7 @@ async function bootstrapAuth() {
       // The profile doesn't change when the token is renewed — only refetch
       // for a new sign-in, a different user, or the launch refresh.
       if (event !== 'TOKEN_REFRESHED' || profileUserId !== session.user.id) {
+        if (profileUserId !== session.user.id) claimOfflineCache(session.user.id);
         profileUserId = session.user.id;
         // Deferred: supabase-js warns against calling Supabase from inside
         // this callback (it holds the auth lock).
@@ -136,6 +137,9 @@ async function bootstrapAuth() {
       }
       clearTimeout(timeout);
       profileUserId = null;
+      // Covers sessions Supabase ends on its own (e.g. a revoked login), not
+      // just the sign-out button.
+      await clearOfflineCache();
       useAuthStore.getState().signOut();
       setLoading(false);
     })();
