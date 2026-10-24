@@ -2,7 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useRef, useState } from "react";
-import { ActivityIndicator, Alert, Platform, Pressable, ScrollView, Text, TextInput, View, useWindowDimensions } from "react-native";
+import { ActivityIndicator, Alert, Platform, Pressable, Text, TextInput, View, useWindowDimensions } from "react-native";
 import { useColorScheme } from "nativewind";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Avatar } from "@/components/common/Avatar";
@@ -18,6 +18,8 @@ import { useLikers } from "@/hooks/useLikers";
 import { AvatarStack } from "@/components/social/AvatarStack";
 import { LikersModal } from "@/components/social/LikersModal";
 import { CommentComposer } from "@/components/social/CommentComposer";
+import { useCommentAutoScroll } from "@/hooks/useCommentAutoScroll";
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { MentionText } from "@/components/social/MentionText";
 import { TaggedUsersLine } from "@/components/social/TaggedUsersLine";
 import { useDrinkTags, useRemoveMyTag } from "@/hooks/useDrinkTags";
@@ -43,6 +45,7 @@ export default function DrinkDetailScreen() {
   const inputRef = useRef<TextInput>(null);
 
   const { data: comments, isLoading: commentsLoading } = useComments(id);
+  const { scrollRef, onComposerFocus, onCommentSent } = useCommentAutoScroll(comments?.length ?? 0);
   const { data: likers } = useLikers(id);
   const { data: taggedUsers = [] } = useDrinkTags(id);
   const removeMyTag = useRemoveMyTag();
@@ -56,6 +59,7 @@ export default function DrinkDetailScreen() {
     const trimmed = commentText.trim();
     if (!trimmed || !user || !id) return;
     setCommentText("");
+    onCommentSent();
     await addComment.mutateAsync({ drinkLogId: id, content: trimmed });
   }
 
@@ -197,7 +201,8 @@ export default function DrinkDetailScreen() {
         </View>
       </View>
 
-      <ScrollView
+      <KeyboardAwareScrollView
+        ref={scrollRef}
         className="flex-1"
         contentContainerStyle={{ padding: 24 }}
         keyboardShouldPersistTaps="handled"
@@ -351,7 +356,7 @@ export default function DrinkDetailScreen() {
           )}
 
         </View>
-      </ScrollView>
+      </KeyboardAwareScrollView>
 
       {/* Comment box, pinned above the keyboard */}
       {user && (
@@ -360,6 +365,7 @@ export default function DrinkDetailScreen() {
           value={commentText}
           onChangeText={setCommentText}
           onSend={handleSendComment}
+          onFocus={onComposerFocus}
           isSending={addComment.isPending}
         />
       )}

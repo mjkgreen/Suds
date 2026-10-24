@@ -7,7 +7,6 @@ import {
   Alert,
   Platform,
   Pressable,
-  ScrollView,
   Text,
   TextInput,
   View,
@@ -18,6 +17,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Avatar } from "@/components/common/Avatar";
 import { MediaCarousel } from "@/components/common/MediaCarousel";
 import { CommentComposer } from "@/components/social/CommentComposer";
+import { useCommentAutoScroll } from "@/hooks/useCommentAutoScroll";
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { MentionText } from "@/components/social/MentionText";
 import { getDrinkMedia } from "@/lib/media";
 import { DrinkIcon } from "@/components/icons/DrinkIcon";
@@ -185,6 +186,7 @@ export default function SessionDetailScreen() {
 
   const representativeDrinkId = data?.drinks[0]?.id;
   const { data: comments, isLoading: commentsLoading } = useComments(representativeDrinkId);
+  const { scrollRef, onComposerFocus, onCommentSent } = useCommentAutoScroll(comments?.length ?? 0);
   const addComment = useAddComment(user?.id);
   const deleteComment = useDeleteComment(user?.id);
 
@@ -192,6 +194,7 @@ export default function SessionDetailScreen() {
     const trimmed = commentText.trim();
     if (!trimmed || !user || !representativeDrinkId) return;
     setCommentText("");
+    onCommentSent();
     await addComment.mutateAsync({ drinkLogId: representativeDrinkId, content: trimmed });
   }
 
@@ -281,7 +284,8 @@ export default function SessionDetailScreen() {
           {!(canEnd || canLeave) && !(isHost && !isActive) && <View className="w-10" />}
         </View>
 
-          <ScrollView
+          <KeyboardAwareScrollView
+            ref={scrollRef}
             className="flex-1"
             contentContainerStyle={{ padding: 24 }}
             keyboardShouldPersistTaps="handled"
@@ -633,7 +637,7 @@ export default function SessionDetailScreen() {
 
               </View>
             )}
-          </ScrollView>
+          </KeyboardAwareScrollView>
 
           {/* Comment box, pinned above the keyboard */}
           {user && representativeDrinkId && (
@@ -642,6 +646,7 @@ export default function SessionDetailScreen() {
               value={commentText}
               onChangeText={setCommentText}
               onSend={handleSendComment}
+              onFocus={onComposerFocus}
               isSending={addComment.isPending}
             />
           )}

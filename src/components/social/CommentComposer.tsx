@@ -10,6 +10,7 @@ interface CommentComposerProps {
   onChangeText: (text: string) => void;
   onSend: () => void;
   isSending: boolean;
+  onFocus?: () => void;
 }
 
 /**
@@ -20,7 +21,7 @@ interface CommentComposerProps {
  * Render it after the screen's ScrollView, inside a bottom-edge SafeAreaView.
  */
 export const CommentComposer = forwardRef<TextInput, CommentComposerProps>(function CommentComposer(
-  { value, onChangeText, onSend, isSending },
+  { value, onChangeText, onSend, isSending, onFocus },
   ref,
 ) {
   const insets = useSafeAreaInsets();
@@ -34,6 +35,7 @@ export const CommentComposer = forwardRef<TextInput, CommentComposerProps>(funct
           ref={ref}
           value={value}
           onChangeText={onChangeText}
+          onFocus={onFocus}
           suggestionsPosition="above"
           containerClassName="flex-1"
           placeholder="Add a comment… @mention someone"

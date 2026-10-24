@@ -26,6 +26,7 @@ import { getDisplayName, getUsername } from "@/utils/profileHelpers";
 import { getEarnedBadges, findBadgeById, UserBadge, TIER_COLORS } from "@/utils/badgeHelpers";
 import { BadgeInfoModal } from "@/components/profile/BadgeInfoModal";
 import { DrinkCard } from "@/components/drink/DrinkCard";
+import { SyncStatusPill } from "@/components/common/SyncStatusPill";
 import { useVisibleItems, VisibleItemsProvider } from "@/components/media/VisibleItems";
 import { SessionCard } from "@/components/session/SessionCard";
 import { DrinkIcon } from "@/components/icons/DrinkIcon";
@@ -93,8 +94,10 @@ export default function ProfileScreen() {
   const { width } = useWindowDimensions();
   const isDesktop = Platform.OS === "web" && width >= 1024;
 
-  const { data: profile, isLoading: profileLoading, refetch: refetchProfile } = useProfile(user?.id);
-  const { data: stats, refetch: refetchStats } = useUserStats(user?.id);
+  const profileQuery = useProfile(user?.id);
+  const { data: profile, isLoading: profileLoading, refetch: refetchProfile } = profileQuery;
+  const statsQuery = useUserStats(user?.id);
+  const { data: stats, refetch: refetchStats } = statsQuery;
   const { data: streaks } = useStreaks(user?.id);
   const { data: milestones } = useMilestones(user?.id);
   const { mutate: updateProfile } = useUpdateProfile();
@@ -106,7 +109,18 @@ export default function ProfileScreen() {
     hasNextPage,
     isFetchingNextPage,
     refetch: refetchFeed,
+    isFetching: feedFetching,
+    isRefetchError: feedRefetchError,
   } = useMyFeed(user?.id);
+
+  // Opens with saved data; say when it's refreshing or can't connect.
+  const syncPill = (
+    <SyncStatusPill
+      isFetching={profileQuery.isFetching || statsQuery.isFetching || (feedFetching && !isFetchingNextPage)}
+      isRefetchError={profileQuery.isRefetchError || statsQuery.isRefetchError || feedRefetchError}
+      style={{ marginTop: 4, marginBottom: 8 }}
+    />
+  );
 
   const myEntries = useMemo<FeedEntry[]>(
     () => feedData?.pages.flatMap((p) => p.entries) ?? [],
@@ -346,6 +360,7 @@ export default function ProfileScreen() {
         </Head>
         <SafeAreaView className="flex-1 bg-background" edges={topEdges}>
           {profileHeader}
+          {syncPill}
           {badgePicker}
           <View style={{ flex: 1, flexDirection: "row", maxWidth: 1400, width: "100%", alignSelf: "center", paddingHorizontal: 24 }}>
             {/* Left: Activities feed */}
@@ -484,6 +499,7 @@ export default function ProfileScreen() {
     return (
       <SafeAreaView className="flex-1 bg-background" edges={topEdges}>
         {profileHeader}
+        {syncPill}
         {badgePicker}
         <TabBar active={activeTab} onChange={setActiveTab} />
         <ScrollView
@@ -580,6 +596,7 @@ export default function ProfileScreen() {
       </Head>
       <SafeAreaView className="flex-1 bg-background" edges={topEdges}>
         {profileHeader}
+        {syncPill}
         {badgePicker}
         <TabBar active={activeTab} onChange={setActiveTab} />
         <VisibleItemsProvider value={visibleKeys}>
