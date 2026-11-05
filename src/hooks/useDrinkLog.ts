@@ -114,6 +114,7 @@ export function useLogDrink() {
       return data;
     },
     onSuccess: (_data, { userId, sessionId, formData }) => {
+      if (sessionId) queryClient.invalidateQueries({ queryKey: ['sessionDrinks', sessionId] });
       queryClient.invalidateQueries({ queryKey: ['drinkLogs', userId] });
       queryClient.invalidateQueries({ queryKey: ['mapLogs', userId] });
       queryClient.invalidateQueries({ queryKey: ['feed', userId] });
@@ -181,6 +182,7 @@ export function useUpdateDrinkLog() {
       return data;
     },
     onSuccess: (_data, { userId, id }) => {
+      queryClient.invalidateQueries({ queryKey: ['sessionDrinks'] });
       queryClient.invalidateQueries({ queryKey: ['drinkLogs', userId] });
       queryClient.invalidateQueries({ queryKey: ['mapLogs', userId] });
       queryClient.invalidateQueries({ queryKey: ['drinkDetail', id] });
@@ -226,6 +228,7 @@ export function useQuickLogDrink() {
       return data;
     },
     onSuccess: (_data, { userId, sessionId, item }) => {
+      queryClient.invalidateQueries({ queryKey: ['sessionDrinks', sessionId] });
       queryClient.invalidateQueries({ queryKey: ['drinkLogs', userId] });
       queryClient.invalidateQueries({ queryKey: ['mapLogs', userId] });
       queryClient.invalidateQueries({ queryKey: ['feed', userId] });
@@ -248,6 +251,9 @@ export function useDeleteDrinkLog() {
       return { id, userId };
     },
     onSuccess: (_data, { userId }) => {
+      // Session drink lists no longer poll every few seconds, so refresh
+      // whichever one this drink was in.
+      queryClient.invalidateQueries({ queryKey: ['sessionDrinks'] });
       queryClient.invalidateQueries({ queryKey: ['drinkLogs', userId] });
       queryClient.invalidateQueries({ queryKey: ['mapLogs', userId] });
       queryClient.invalidateQueries({ queryKey: ['feed', userId] });

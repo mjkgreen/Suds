@@ -139,6 +139,10 @@ export function useSessionDrinks(sessionId: string | undefined) {
       return data;
     },
     enabled: !!sessionId,
-    refetchInterval: 5_000,
+    // Drinks logged in the app invalidate this query directly, and drinks
+    // logged from the widget invalidate it via the quick-log signal
+    // (useLiveActivity). The interval is only a fallback; polling every few
+    // seconds was one of the largest sources of database load.
+    refetchInterval: 60_000,
   });
 }

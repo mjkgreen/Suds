@@ -35,6 +35,7 @@ async function _refresh(): Promise<void> {
 
     let drinkCount = useSessionStore.getState().liveActivityDrinkCount;
     let groupDrinkCount = useSessionStore.getState().liveActivityGroupDrinkCount;
+    const prevGroupDrinkCount = groupDrinkCount;
     let memberCount = 1;
     let memberNames = useSessionStore.getState().liveActivityMemberNames;
 
@@ -78,8 +79,13 @@ async function _refresh(): Promise<void> {
       memberCount,
       memberNames,
     );
-    void queryClient.invalidateQueries({ queryKey: ['feed'] });
-    void queryClient.invalidateQueries({ queryKey: ['my-feed'] });
+    // This runs every minute while a session is live. Only refetch the feed
+    // (every loaded page) when the session's drinks actually changed.
+    if (groupDrinkCount !== prevGroupDrinkCount) {
+      void queryClient.invalidateQueries({ queryKey: ['feed'] });
+      void queryClient.invalidateQueries({ queryKey: ['my-feed'] });
+      void queryClient.invalidateQueries({ queryKey: ['sessionDrinks', activeSession?.id] });
+    }
   } catch {
     // Silently ignore — timer will retry on the next tick
   }
@@ -120,6 +126,7 @@ function _subscribeToSessionDrinks(sessionId: string): void {
         void _refresh();
         void queryClient.invalidateQueries({ queryKey: ['feed'] });
         void queryClient.invalidateQueries({ queryKey: ['my-feed'] });
+        void queryClient.invalidateQueries({ queryKey: ['sessionDrinks', sessionId] });
       },
     )
     .subscribe((status) => {
@@ -189,6 +196,7 @@ const _quickLogSub = Platform.OS === 'ios'
         void _refresh();
         void queryClient.invalidateQueries({ queryKey: ['feed'] });
         void queryClient.invalidateQueries({ queryKey: ['my-feed'] });
+        void queryClient.invalidateQueries({ queryKey: ['sessionDrinks'] });
       }
     })
   : null;
