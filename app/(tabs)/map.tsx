@@ -163,9 +163,12 @@ export default function MapScreen() {
       // Single database query fetching sessions along with their coordinates, joining the sessions table with drink_logs
       const { data: sessionsData, error: sError } = await supabase
         .from('sessions')
-        .select('*, logs:drink_logs(*)')
+        // Only what the route lines need, and only recent sessions: this used
+        // to pull every column of every drink in every session, unbounded.
+        .select('*, logs:drink_logs(id, location_lat, location_lng, location_name, logged_at)')
         .in('user_id', allIds)
-        .order('started_at', { ascending: false });
+        .order('started_at', { ascending: false })
+        .limit(200);
 
       if (sError) throw sError;
       if (!sessionsData || sessionsData.length === 0) return [];
