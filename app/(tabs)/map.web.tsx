@@ -151,7 +151,7 @@ export default function MapScreen() {
     enabled: !!user,
   });
 
-  const { data: sessionsWithRoutes, isLoading: sessionsLoading, error: sessionsError } = useQuery({
+  const { data: sessionsWithRoutes } = useQuery({
     queryKey: ['sessionRoutes', user?.id],
     queryFn: async () => {
       if (!user) return [];
@@ -244,8 +244,12 @@ export default function MapScreen() {
     });
   }, [clusters, filter]);
 
-  const showLoading = isLoading || sessionsLoading;
-  const showError = !showLoading && (logsError || sessionsError);
+  // Pins are what the map is for: show them as soon as they're here (or
+  // saved from last time) instead of waiting on the slower routes query.
+  // Routes just appear when they arrive, and a routes failure isn't worth
+  // covering the pins with an error.
+  const showLoading = isLoading;
+  const showError = !showLoading && !!logsError && !logs;
 
   return (
     <SafeAreaView className="flex-1 bg-background" edges={['top']}>
@@ -503,9 +507,9 @@ export default function MapScreen() {
         <View className="absolute inset-0 items-center justify-center" style={{ zIndex: 999 }}>
           <View className="bg-card rounded-2xl px-8 py-6 mx-8 items-center shadow-lg border border-border">
             <Text className="text-3xl mb-2">⚠️</Text>
-            <Text className="text-foreground font-semibold text-center">Could not load drinks or routes</Text>
+            <Text className="text-foreground font-semibold text-center">Could not load drinks</Text>
             <Text className="text-muted-foreground text-sm text-center mt-1">
-              {((logsError || sessionsError) as Error)?.message ?? 'Something went wrong.'}
+              {(logsError as Error)?.message ?? 'Something went wrong.'}
             </Text>
           </View>
         </View>
