@@ -41,6 +41,7 @@ const PERSISTED_QUERIES = new Set([
   'goal',
   'drinkLogs',
   'mapLogs',
+  'sessionRoutes',
   'drinkDetail',
   'drinkTags',
   'comments',

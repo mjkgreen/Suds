@@ -23,6 +23,10 @@ function getNotifications(): ExpoNotifications | null {
 
 /** The Expo push token registered for the signed-in user on this device. */
 let registeredToken: string | null = null;
+/** Which user `registeredToken` was registered for. */
+let registeredForUser: string | null = null;
+/** Registration already running, so overlapping triggers share one call. */
+let registrationInFlight: Promise<void> | null = null;
 
 /** Notification taps already routed, so a cold-start tap isn't handled twice. */
 const handledResponses = new Set<string>();
@@ -47,7 +51,7 @@ export function useNotifications({ userId }: { userId: string | undefined }): vo
 
     // Runs for every sign-in (including switching accounts), so the token
     // always belongs to whoever is signed in now.
-    registerForPushNotificationsAsync(Notifications);
+    registerForPushNotificationsAsync(Notifications, userId);
 
     function handleResponse(response: NotificationResponse) {
       const id = response.notification.request.identifier;
@@ -94,8 +98,11 @@ export function useNotifications({ userId }: { userId: string | undefined }): vo
       .catch(() => {});
 
     // Expo/APNs/FCM can rotate the token while the app is running.
+    // getExpoPushTokenAsync() itself fires this listener, so without the
+    // same-token check in registerForPushNotificationsAsync this would loop:
+    // register → listener → register … each one an upsert on the database.
     const tokenSub = Notifications.addPushTokenListener(() => {
-      registerForPushNotificationsAsync(Notifications);
+      registerForPushNotificationsAsync(Notifications, userId);
     });
 
     return () => {
@@ -106,7 +113,16 @@ export function useNotifications({ userId }: { userId: string | undefined }): vo
   }, [userId]);
 }
 
-async function registerForPushNotificationsAsync(Notifications: ExpoNotifications): Promise<void> {
+function registerForPushNotificationsAsync(Notifications: ExpoNotifications, userId: string): Promise<void> {
+  if (!registrationInFlight) {
+    registrationInFlight = doRegister(Notifications, userId).finally(() => {
+      registrationInFlight = null;
+    });
+  }
+  return registrationInFlight;
+}
+
+async function doRegister(Notifications: ExpoNotifications, userId: string): Promise<void> {
   try {
     // Android 13+ won't show the permission prompt (or deliver anything)
     // until a channel exists.
@@ -132,6 +148,8 @@ async function registerForPushNotificationsAsync(Notifications: ExpoNotification
 
     const token = result.data;
     if (!token) return;
+    // Already registered for this user — nothing to write.
+    if (token === registeredToken && registeredForUser === userId) return;
 
     const { error } = await supabase.rpc('upsert_push_token', {
       p_token: token,
@@ -143,6 +161,7 @@ async function registerForPushNotificationsAsync(Notifications: ExpoNotification
       return;
     }
     registeredToken = token;
+    registeredForUser = userId;
   } catch (err) {
     console.error('Push notification registration failed:', err);
   }
@@ -156,6 +175,7 @@ export async function unregisterPushToken(): Promise<void> {
   if (!registeredToken) return;
   const token = registeredToken;
   registeredToken = null;
+  registeredForUser = null;
   try {
     await supabase.from('push_tokens').delete().eq('token', token);
   } catch {

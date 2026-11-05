@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient } from '@supabase/supabase-js';
 import { AppState, Platform } from 'react-native';
 import * as LiveActivityBridge from 'suds-live-activity-bridge';
+import { createFetchWithTimeout } from '@/lib/fetchWithTimeout';
 import { adoptNewerSharedTokens } from '@/lib/sharedAuth';
 import { Database } from '@/types/database';
 
@@ -52,6 +53,8 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
     persistSession: true,
     detectSessionInUrl: Platform.OS === 'web',
   },
+  // Database and auth calls give up after 20s instead of waiting forever.
+  global: { fetch: createFetchWithTimeout((...args) => fetch(...args)) },
 });
 
 // Supabase's recommended React Native setup: only renew the login in the
