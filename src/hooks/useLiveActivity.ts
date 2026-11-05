@@ -117,7 +117,7 @@ function _subscribeToSessionDrinks(sessionId: string): void {
   if (_channel) return; // already subscribed to this session
 
   _channelSessionId = sessionId;
-  _channel = supabase
+  const channel = supabase
     .channel(`la-drinks-${sessionId}`)
     .on(
       'postgres_changes',
@@ -128,13 +128,22 @@ function _subscribeToSessionDrinks(sessionId: string): void {
         void queryClient.invalidateQueries({ queryKey: ['my-feed'] });
         void queryClient.invalidateQueries({ queryKey: ['sessionDrinks', sessionId] });
       },
-    )
-    .subscribe((status) => {
+    );
+  // Set before subscribing so the status callback can tell it's current.
+  _channel = channel;
+  channel.subscribe((status) => {
       // WebSocket drops (common on iOS background/foreground) leave the channel in
       // CLOSED or CHANNEL_ERROR without triggering a reconnect by default. Detect it
       // and retry after 5s so the channel stays live for the duration of the session.
       // Cancel any pending timer first to prevent duplicate channels from multiple callbacks.
+      // Ignore channels we've already replaced or removed: removeChannel()
+      // reports CLOSED, and without this a deliberate removal (session ended,
+      // switched session) would null out the live channel and resubscribe.
+      if (channel !== _channel) return;
       if (status === 'CHANNEL_ERROR' || status === 'CLOSED') {
+        // Drop the broken channel before making a new one, so failed
+        // channels don't pile up on the socket and each keep retrying.
+        void supabase.removeChannel(channel);
         _channel = null;
         _channelSessionId = null;
         if (_reconnectTimer) clearTimeout(_reconnectTimer);
