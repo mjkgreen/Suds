@@ -54,6 +54,7 @@ const PERSISTED_QUERIES = new Set([
   'followers',
   'following',
   'blockedIds',
+  'drinkCatalog',
 ]);
 
 /** Infinite lists only keep their first page — enough to fill the screen. */

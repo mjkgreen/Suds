@@ -364,6 +364,33 @@ export interface Database {
           status?: 'pending' | 'accepted' | 'declined';
         };
       };
+      drink_catalog: {
+        Row: {
+          id: number;
+          kind: 'name' | 'brand';
+          label: string;
+          drink_type: string;
+          normalized: string;
+          source: 'auto' | 'manual';
+          user_count: number;
+          hidden: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          kind: 'name' | 'brand';
+          label: string;
+          drink_type: string;
+          source?: 'auto' | 'manual';
+          user_count?: number;
+          hidden?: boolean;
+        };
+        Update: {
+          label?: string;
+          hidden?: boolean;
+          user_count?: number;
+        };
+      };
       in_app_notifications: {
         Row: {
           id: string;
