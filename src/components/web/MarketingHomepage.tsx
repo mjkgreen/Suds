@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { Link, useRouter } from "expo-router";
 import { useState } from "react";
 import { Image } from "expo-image";
 import { Pressable, Text, useWindowDimensions, View } from "react-native";
@@ -551,6 +551,8 @@ export function MarketingHomepage() {
             }}
           >
             <Text
+              role="heading"
+              aria-level={1}
               className={`font-bold text-center mb-4 ${isDark ? "text-white" : "text-gray-900"}`}
               style={{ fontSize: 48, lineHeight: 56, letterSpacing: -1.5 }}
             >
@@ -561,7 +563,7 @@ export function MarketingHomepage() {
               className={`text-base text-center mb-10 ${isDark ? "text-gray-400" : "text-gray-500"}`}
               style={{ lineHeight: 26, maxWidth: 360 }}
             >
-              The social drink tracker that helps you log what you drink, and share the night with friends.
+              Strava for drinking. The social drink tracker that helps you log what you drink, and share the night with friends.
             </Text>
 
             <SignUpButtons
@@ -590,6 +592,8 @@ export function MarketingHomepage() {
           style={{ paddingVertical: 56, paddingHorizontal: 24, alignItems: "center" }}
         >
           <Text
+            role="heading"
+            aria-level={1}
             className={`font-bold text-center mb-4 ${isDark ? "text-white" : "text-gray-900"}`}
             style={{ fontSize: 36, lineHeight: 44, letterSpacing: -1.5 }}
           >
@@ -599,7 +603,7 @@ export function MarketingHomepage() {
             className={`text-base text-center mb-10 ${isDark ? "text-gray-400" : "text-gray-500"}`}
             style={{ lineHeight: 26, maxWidth: 360 }}
           >
-            The social drink tracker that helps you log what you drink, and share the night with friends.
+            Strava for drinking. The social drink tracker that helps you log what you drink, and share the night with friends.
           </Text>
           <SignUpButtons
             isDark={isDark}
@@ -620,6 +624,35 @@ export function MarketingHomepage() {
       >
         <View style={{ maxWidth: 1100, width: "100%", alignSelf: "center" }}>
           <FeatureShowcase isDark={isDark} isWide={isWide} />
+        </View>
+      </View>
+
+      {/* ── What is Suds (plain-language summary for search and AI crawlers) ── */}
+      <View
+        className={`w-full ${isDark ? "bg-gray-950" : "bg-white"}`}
+        style={{ paddingVertical: 64, paddingHorizontal: 24 }}
+      >
+        <View style={{ maxWidth: 760, width: "100%", alignSelf: "center" }}>
+          <Text
+            role="heading"
+            aria-level={2}
+            className={`font-bold mb-4 ${isDark ? "text-white" : "text-gray-900"}`}
+            style={{ fontSize: isWide ? 32 : 26, letterSpacing: -0.5 }}
+          >
+            Strava for drinking
+          </Text>
+          <Text className={`text-base mb-4 ${isDark ? "text-gray-400" : "text-gray-600"}`} style={{ lineHeight: 26 }}>
+            Suds is a social drinking app. Strava made workouts something you log, share and look back on; Suds does
+            the same for your nights out. Every drink lands in your friends' feed, a night out becomes a session with a
+            duration and a pace, and your profile builds up stats, streaks and milestones over time.
+          </Text>
+          <Text className={`text-base mb-6 ${isDark ? "text-gray-400" : "text-gray-600"}`} style={{ lineHeight: 26 }}>
+            It's built for awareness, not for drinking more: set a weekly goal, keep a sober streak, log water between
+            rounds, and keep your account private whenever you want.
+          </Text>
+          <Link href="/faq" className="text-primary text-base font-semibold">
+            Read the FAQ →
+          </Link>
         </View>
       </View>
 

@@ -1,0 +1,15 @@
+User-agent: *
+Allow: /
+Disallow: /feed
+Disallow: /log
+Disallow: /map
+Disallow: /profile
+Disallow: /search
+Disallow: /notifications
+Disallow: /onboarding
+Disallow: /callback
+Disallow: /user/
+Disallow: /drink/
+Disallow: /session/
+
+Sitemap: https://drink-with-suds.com/sitemap.xml

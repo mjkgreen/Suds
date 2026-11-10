@@ -1,6 +1,7 @@
 import { Linking, Pressable, Text, View } from "react-native";
 import { useColorScheme } from "nativewind";
 import Head from "expo-router/head";
+import { Link } from "expo-router";
 import { PublicLayout } from "@/components/web/PublicLayout";
 
 function Section({ title, children, isDark }: { title: string; children: React.ReactNode; isDark: boolean }) {
@@ -177,6 +178,9 @@ export default function SupportScreen() {
         {FAQS.map((faq) => (
           <FAQ key={faq.q} q={faq.q} a={faq.a} isDark={isDark} />
         ))}
+        <Link href="/faq" className="text-primary text-sm font-semibold mt-2">
+          More questions about Suds →
+        </Link>
       </Section>
     </PublicLayout>
   );
