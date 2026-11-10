@@ -7,7 +7,7 @@
 -- update: the app downloads this table and merges it in.
 --
 -- Rows come from two places:
---   • 'auto': a nightly job promotes any name or brand that at
+--   • 'auto': a weekly job promotes any name or brand that at
 --     least 3 different people have logged under the same drink
 --     type. Counting people rather than logs means one person
 --     logging their homebrew 40 times doesn't add it for everyone.
@@ -20,7 +20,7 @@
 --                 VALUES ('brand', 'Collective Arts', 'beer');
 --   Hide one:     UPDATE drink_catalog SET hidden = true
 --                 WHERE label = 'Something';
---                 (Hidden rows stay hidden; the nightly job never
+--                 (Hidden rows stay hidden; the weekly job never
 --                 brings them back.)
 --   Block a word: INSERT INTO drink_catalog_blocked_terms VALUES ('word');
 --                 then SELECT refresh_drink_catalog();
@@ -94,7 +94,7 @@ INSERT INTO public.drink_catalog_blocked_terms (term) VALUES
   ('weed'), ('shroom'), ('shrooms'), ('lsd')
 ON CONFLICT DO NOTHING;
 
--- ── 4. Nightly promotion job ─────────────────────────────────
+-- ── 4. Weekly promotion job ──────────────────────────────────
 CREATE OR REPLACE FUNCTION public.refresh_drink_catalog(p_min_users integer DEFAULT 3)
 RETURNS void
 LANGUAGE plpgsql
@@ -135,7 +135,7 @@ BEGIN
      );
 
   -- Add new entries and update counts. Only rewrite rows that changed,
-  -- so a quiet night writes nothing.
+  -- so a quiet week writes nothing.
   INSERT INTO public.drink_catalog (kind, label, drink_type, source, user_count)
   SELECT c.kind, c.label, c.drink_type, 'auto', c.user_count
     FROM _drink_catalog_candidates c
@@ -166,12 +166,12 @@ $$;
 
 REVOKE ALL ON FUNCTION public.refresh_drink_catalog(integer) FROM PUBLIC, anon, authenticated;
 
--- ── 5. Schedule it (daily, 08:23 UTC ≈ 3–4am Eastern) ────────
+-- ── 5. Schedule it (weekly, Mondays 08:23 UTC ≈ 3–4am Eastern) ────────
 CREATE EXTENSION IF NOT EXISTS pg_cron;
 
 SELECT cron.schedule(
   'refresh-drink-catalog',
-  '23 8 * * *',
+  '23 8 * * 1',
   'SELECT public.refresh_drink_catalog()'
 );
 
