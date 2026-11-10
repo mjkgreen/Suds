@@ -5,24 +5,24 @@ import { useColorScheme } from "nativewind";
 import { PublicLayout } from "@/components/web/PublicLayout";
 import { WEB_ORIGIN } from "@/lib/share";
 
-// Written as the questions people ask search engines and AI assistants
-// ("is there a Strava for drinking?"), so the answers can be quoted on their
-// own. Keep every answer true to what the app does today.
+// Written as the questions people ask search engines and AI assistants, so
+// each answer can be quoted on its own. Keep every answer true to what the app
+// does today, and keep competitor descriptions fair and current.
 const FAQ_GROUPS: { title: string; items: { q: string; a: string }[] }[] = [
   {
     title: "About Suds",
     items: [
       {
         q: "What is Suds?",
-        a: "Suds is a social drink tracking app, best described as Strava for drinking. You log each drink, follow your friends, and see everyone's nights out in a shared feed, with stats, streaks and milestones for your own drinking history. It's available on iPhone and on the web.",
+        a: "Suds is a social drink tracker. You log each drink, follow your friends, and see everyone's nights out in a shared feed, while your profile builds up stats, streaks and milestones from your own drinking history. It's available on iPhone and on the web.",
+      },
+      {
+        q: "What is a social drink tracker?",
+        a: "A drink tracker you share with friends instead of keeping to yourself. In Suds, friends can like and comment on your drinks, tag each other, join the same session on a night out, and see where the group has been on a shared map. You still get the private side too: your own history, stats and goals.",
       },
       {
         q: "Is there a Strava for drinking?",
-        a: "Yes, that's Suds. Strava turned workouts into something you log, share and look back on; Suds does the same for drinks. Every drink is an activity in your feed, nights out become sessions with a duration and pace, and your profile builds a record of what, where and how much you drink over time.",
-      },
-      {
-        q: "What is a social drinking app?",
-        a: "A social drinking app lets you share what you're drinking with friends instead of keeping a private log. In Suds, friends can like and comment on your drinks, tag each other, join the same session on a night out, and see where the group has been on a shared map.",
+        a: "Suds is the closest thing to it. Strava turned workouts into something you log, share with friends and look back on; Suds does the same for drinks. Each drink is an activity in your feed, a night out becomes a session with a duration and a pace, and your profile keeps the record.",
       },
       {
         q: "Who is Suds for?",
@@ -31,44 +31,64 @@ const FAQ_GROUPS: { title: string; items: { q: string; a: string }[] }[] = [
     ],
   },
   {
-    title: "Tracking drinks",
+    title: "Why track your drinks",
     items: [
+      {
+        q: "What are the benefits of tracking your drinks?",
+        a: "Most people underestimate how much they drink, because a night out blurs together and nobody remembers last month. A log gives you real numbers: how many drinks a week, which nights run longest, how fast you drink once you're out. That makes it easier to notice patterns and set limits you'll actually keep.",
+      },
+      {
+        q: "Why track drinks with friends instead of on your own?",
+        a: "Private logs are easy to abandon. Sharing makes logging part of the night: friends see your drinks, react to them, and log their own, so the habit sticks. You also end up with a shared record of the night (who was there, where you went, what everyone had) that's more fun to look back on than a spreadsheet.",
+      },
+      {
+        q: "Does tracking your drinks help you drink less?",
+        a: "Seeing your numbers helps you stay within limits you choose. In Suds you can set a weekly drink goal, watch your pace in drinks per hour, keep a sober streak, and log water between rounds. Suds isn't a treatment program; if you're worried about your drinking, talk to a doctor or call the SAMHSA National Helpline at 1-800-662-4357 (US).",
+      },
       {
         q: "What can I log in Suds?",
         a: "Beer, wine, cocktails, spirits, cider and seltzer, plus water, mocktails, soft drinks and non-alcoholic drinks. Each log can include the brand, quantity, ABV, a rating, notes, photos or video, the place you were, and the friends you were with.",
       },
       {
-        q: "How do I track drinks with friends?",
-        a: "Follow your friends to see their drinks in your feed. Start a session for a night out and invite friends to join it, so the whole group's drinks are grouped together. You can tag friends on a drink and @mention them in notes and comments.",
-      },
-      {
         q: "What is a drinking session?",
-        a: "A session groups the drinks from one outing, like a Friday night out. Suds shows how long it lasted, how many drinks were logged, and your pace in drinks per hour (DPH). Sessions can be shared with friends who were there.",
+        a: "A session groups the drinks from one outing, like a Friday night out. Suds shows how long it lasted, how many drinks were logged, and your pace in drinks per hour (DPH). Friends can join the same session so the whole group's night is in one place.",
       },
       {
         q: "What stats does Suds track?",
-        a: "Drink counts by type, your top drinks, weekly and monthly trends, which days and hours you drink most, year-over-year comparisons, drinking streaks and sober streaks, milestones, and progress against a weekly drink goal you set.",
+        a: "Drink counts by type, your top drinks, weekly and monthly trends, which days and hours you drink most, year-over-year comparisons, drinking streaks and sober streaks, milestones, and progress against your weekly drink goal.",
       },
       {
         q: "Does Suds estimate BAC?",
         a: "Suds can show an approximate blood alcohol content (BAC) for an active session, based on your body details, the drinks you logged and the time that has passed. It's an estimate only, not a medical measurement. Never use it to decide whether you can drive.",
       },
-      {
-        q: "Can Suds help me cut back?",
-        a: "It can help you see your habits clearly. Set a weekly drink goal, watch your sober streak, and log water between drinks. Suds isn't a treatment program; if you're worried about your drinking, talk to a doctor or call the SAMHSA National Helpline at 1-800-662-4357 (US).",
-      },
     ],
   },
   {
-    title: "Compared with other apps",
+    title: "Suds compared with other apps",
     items: [
       {
         q: "How is Suds different from Untappd?",
-        a: "Untappd is built around beer check-ins and rating beers and breweries. Suds tracks every kind of drink and focuses on the night and the people rather than the beer: sessions with drinks-per-hour pace, a friends feed, a shared map, streaks, goals and personal drinking stats.",
+        a: "Untappd is built for beer: you check in beers, rate them, and follow breweries and venues. Suds covers every drink, not just beer, and is about the night and the people rather than the beer itself: sessions with a pace, a friends feed, a shared map, streaks, goals and personal drinking stats. If you mostly want to rate craft beer, Untappd is the better fit; if you want to track your whole night with friends, use Suds.",
       },
       {
-        q: "How is Suds different from a drink counter app?",
-        a: "Most drink counters are private logs for cutting back. Suds keeps the same tracking (goals, streaks, history) and adds a social layer, so logging a drink is something you share with friends instead of a chore.",
+        q: "How is Suds different from Vivino?",
+        a: "Vivino is for wine: scanning labels, reading ratings and buying bottles. Suds isn't a wine guide. It tracks what you actually drink (wine included) across a night out, with friends, and turns it into stats and history.",
+      },
+      {
+        q: "How is Suds different from Distiller?",
+        a: "Distiller is a spirits review app for discovering and rating whiskey, gin, rum and so on. Suds logs the drinks you have and who you had them with, rather than reviewing bottles.",
+      },
+      {
+        q: "How is Suds different from Sunnyside, Reframe or other cut-back apps?",
+        a: "Apps like Sunnyside and Reframe are built to help you drink less, with plans, coaching or lessons. Suds isn't a reduction program: it's a social tracker for people who drink and want to stay aware of it. It does include goals, sober streaks and pace tracking, but there's no coaching or curriculum.",
+      },
+      {
+        q: "How is Suds different from a private drink counter?",
+        a: "Drink counters and alcohol diaries are private logs. Suds keeps that tracking (history, goals, streaks) and adds friends, a feed, shared sessions and a map, so logging a drink feels like part of the night rather than a chore.",
+      },
+      {
+        q: "What's the best app for tracking drinks with friends?",
+        a: "It depends what you want. For rating beer, Untappd; for wine, Vivino; for cutting back with coaching, a program like Sunnyside or Reframe. For logging every kind of drink, sharing nights out with friends, and seeing your own stats and pace, Suds is built for exactly that.",
       },
     ],
   },
@@ -104,9 +124,9 @@ const FAQ_JSON_LD = JSON.stringify({
   })),
 });
 
-const TITLE = "Suds FAQ: the Strava for drinking, explained";
+const TITLE = "Suds FAQ: social drink tracking, benefits, and how Suds compares";
 const DESCRIPTION =
-  "Answers about Suds, the social drinking app: how it works as a Strava for drinking, tracking drinks with friends, sessions, stats, privacy, and how it compares with Untappd.";
+  "How Suds works, why track your drinks with friends, and how Suds compares with Untappd, Vivino, Distiller, Sunnyside and Reframe.";
 
 export default function FaqScreen() {
   const { colorScheme } = useColorScheme();
@@ -134,7 +154,7 @@ export default function FaqScreen() {
           Frequently asked questions
         </Text>
         <Text className={`text-base ${isDark ? "text-gray-400" : "text-gray-500"}`} style={{ lineHeight: 26 }}>
-          Suds is the social drink tracker: Strava for drinking. Here's how it works.
+          How Suds works, why people track their drinks, and how Suds compares with other drink apps.
         </Text>
       </View>
 

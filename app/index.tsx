@@ -3,16 +3,15 @@ import Head from "expo-router/head";
 import { MarketingHomepage } from "@/components/web/MarketingHomepage";
 import { WEB_ORIGIN } from "@/lib/share";
 
-const TITLE = "Suds | The social drink tracker. Strava for drinking.";
+const TITLE = "Suds | The social drink tracker";
 const DESCRIPTION =
-  "Suds is the social drinking app: Strava for drinking. Log every drink, follow friends, share your nights out, and track your stats, streaks and pace.";
+  "Log every drink, follow friends, share your nights out, and track your stats, streaks and pace with Suds, the social drink tracker.";
 
 // schema.org markup that tells search engines and AI assistants what Suds is.
 const APP_JSON_LD = JSON.stringify({
   "@context": "https://schema.org",
   "@type": "SoftwareApplication",
   name: "Suds",
-  alternateName: "Suds: Strava for drinking",
   description: DESCRIPTION,
   url: WEB_ORIGIN,
   applicationCategory: "SocialNetworkingApplication",
