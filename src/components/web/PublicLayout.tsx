@@ -33,6 +33,9 @@ function PublicHeader() {
         </Pressable>
 
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+          <Link href="/about" className={`text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
+            About
+          </Link>
           <Pressable onPress={() => router.push('/(auth)/sign-in' as never)}>
             <Text className={`text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
               Sign In
@@ -102,7 +105,7 @@ function PublicFooter() {
               <Text className={`text-xs font-semibold uppercase tracking-wider ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>Product</Text>
               <FooterLink href="/sign-up" label="Get Started" isDark={isDark} />
               <FooterLink href="/sign-in" label="Sign In" isDark={isDark} />
-              <FooterLink href="/faq" label="FAQ" isDark={isDark} />
+              <FooterLink href="/about" label="About & FAQ" isDark={isDark} />
             </View>
             <View style={{ gap: 12 }}>
               <Text className={`text-xs font-semibold uppercase tracking-wider ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>Legal</Text>

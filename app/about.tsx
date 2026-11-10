@@ -10,7 +10,7 @@ import { WEB_ORIGIN } from "@/lib/share";
 // does today, and keep competitor descriptions fair and current.
 const FAQ_GROUPS: { title: string; items: { q: string; a: string }[] }[] = [
   {
-    title: "About Suds",
+    title: "The basics",
     items: [
       {
         q: "What is Suds?",
@@ -124,11 +124,11 @@ const FAQ_JSON_LD = JSON.stringify({
   })),
 });
 
-const TITLE = "Suds FAQ: social drink tracking, benefits, and how Suds compares";
+const TITLE = "About Suds: the social drink tracker, and how it compares";
 const DESCRIPTION =
-  "How Suds works, why track your drinks with friends, and how Suds compares with Untappd, Vivino, Distiller, Sunnyside and Reframe.";
+  "What Suds is, why track your drinks with friends, and answers to common questions, including how Suds compares with Untappd, Vivino, Distiller, Sunnyside and Reframe.";
 
-export default function FaqScreen() {
+export default function AboutScreen() {
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === "dark";
 
@@ -137,10 +137,10 @@ export default function FaqScreen() {
       <Head>
         <title>{TITLE}</title>
         <meta name="description" content={DESCRIPTION} />
-        <link rel="canonical" href={`${WEB_ORIGIN}/faq`} />
+        <link rel="canonical" href={`${WEB_ORIGIN}/about`} />
         <meta property="og:title" content={TITLE} />
         <meta property="og:description" content={DESCRIPTION} />
-        <meta property="og:url" content={`${WEB_ORIGIN}/faq`} />
+        <meta property="og:url" content={`${WEB_ORIGIN}/about`} />
         <meta property="og:type" content="website" />
         <script type="application/ld+json">{FAQ_JSON_LD}</script>
       </Head>
@@ -151,19 +151,37 @@ export default function FaqScreen() {
           aria-level={1}
           className={`text-4xl font-bold mb-3 ${isDark ? "text-white" : "text-gray-900"}`}
         >
-          Frequently asked questions
+          About Suds
         </Text>
-        <Text className={`text-base ${isDark ? "text-gray-400" : "text-gray-500"}`} style={{ lineHeight: 26 }}>
-          How Suds works, why people track their drinks, and how Suds compares with other drink apps.
+        <Text className={`text-base mb-4 ${isDark ? "text-gray-400" : "text-gray-600"}`} style={{ lineHeight: 26 }}>
+          Suds is a social drink tracker. You log what you drink, your friends see it and log theirs, and a night out
+          becomes a session with a length and a pace. Over time your profile turns into a real picture of how much
+          you drink, not a guess.
+        </Text>
+        <Text className={`text-base mb-4 ${isDark ? "text-gray-400" : "text-gray-600"}`} style={{ lineHeight: 26 }}>
+          Private drink logs are easy to forget about. Doing it with friends makes logging part of the night, and
+          leaves you with a shared record of who was there, where you went and what everyone had.
+        </Text>
+        <Text className={`text-base ${isDark ? "text-gray-400" : "text-gray-600"}`} style={{ lineHeight: 26 }}>
+          It's built for awareness, not for drinking more: set a weekly goal, keep a sober streak, log water between
+          rounds, and keep your account private whenever you want.
         </Text>
       </View>
+
+      <Text
+        role="heading"
+        aria-level={2}
+        className={`text-3xl font-bold mb-6 ${isDark ? "text-white" : "text-gray-900"}`}
+      >
+        Frequently asked questions
+      </Text>
 
       {FAQ_GROUPS.map((group) => (
         <View key={group.title} style={{ marginBottom: 40 }}>
           <Text
             role="heading"
-            aria-level={2}
-            className={`text-2xl font-bold mb-4 ${isDark ? "text-white" : "text-gray-900"}`}
+            aria-level={3}
+            className={`text-xl font-bold mb-4 ${isDark ? "text-white" : "text-gray-900"}`}
           >
             {group.title}
           </Text>
@@ -171,7 +189,7 @@ export default function FaqScreen() {
             <View key={q} className={`rounded-xl p-4 mb-3 ${isDark ? "bg-gray-800" : "bg-gray-50"}`}>
               <Text
                 role="heading"
-                aria-level={3}
+                aria-level={4}
                 className={`text-base font-semibold mb-2 ${isDark ? "text-white" : "text-gray-900"}`}
               >
                 {q}

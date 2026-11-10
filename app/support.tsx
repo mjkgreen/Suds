@@ -178,7 +178,7 @@ export default function SupportScreen() {
         {FAQS.map((faq) => (
           <FAQ key={faq.q} q={faq.q} a={faq.a} isDark={isDark} />
         ))}
-        <Link href="/faq" className="text-primary text-sm font-semibold mt-2">
+        <Link href="/about" className="text-primary text-sm font-semibold mt-2">
           More questions about Suds →
         </Link>
       </Section>

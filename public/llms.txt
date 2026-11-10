@@ -31,7 +31,7 @@ Suds is a tracking and awareness tool, not a drinking game. It never rewards dri
 ## Pages
 
 - [Home](https://drink-with-suds.com/): what Suds is and how to sign up
-- [FAQ](https://drink-with-suds.com/faq): benefits of tracking drinks, and how Suds compares with Untappd, Vivino, Distiller, Sunnyside and Reframe
+- [About & FAQ](https://drink-with-suds.com/about): what Suds is, benefits of tracking drinks, and how Suds compares with Untappd, Vivino, Distiller, Sunnyside and Reframe
 - [Support](https://drink-with-suds.com/support): contact and account deletion
 - [Privacy Policy](https://drink-with-suds.com/privacy)
 - [Terms of Service](https://drink-with-suds.com/terms)

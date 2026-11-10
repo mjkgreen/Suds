@@ -19,7 +19,7 @@ import { useNotificationRealtime } from '@/hooks/useInAppNotifications';
 // Pages anyone can read without an account. On web these also render while
 // auth is still loading, so the static export holds their real content for
 // search engines and AI crawlers (which mostly don't run JavaScript).
-const PUBLIC_PAGES = ['terms', 'privacy', 'support', 'faq'];
+const PUBLIC_PAGES = ['terms', 'privacy', 'support', 'about'];
 
 function isPublicRoute(segs: string[]) {
   // The root is the marketing page on web; on native it's just a launch spinner.
@@ -157,7 +157,7 @@ function AuthGuard() {
         <Stack.Screen name="terms" />
         <Stack.Screen name="privacy" />
         <Stack.Screen name="support" />
-        <Stack.Screen name="faq" />
+        <Stack.Screen name="about" />
       </Stack>
     </View>
   );
