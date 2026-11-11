@@ -153,6 +153,7 @@ function AuthGuard() {
         <Stack.Screen name="user/[id]" />
         <Stack.Screen name="user/edit" />
         <Stack.Screen name="user/requests" />
+        <Stack.Screen name="browse" />
         <Stack.Screen name="notifications" />
         <Stack.Screen name="terms" />
         <Stack.Screen name="privacy" />

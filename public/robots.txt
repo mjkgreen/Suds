@@ -11,5 +11,6 @@ Disallow: /callback
 Disallow: /user/
 Disallow: /drink/
 Disallow: /session/
+Disallow: /browse
 
 Sitemap: https://drink-with-suds.com/sitemap.xml
