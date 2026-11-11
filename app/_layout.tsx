@@ -2,7 +2,7 @@ import '../global.css';
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { useEffect, useRef } from 'react';
-import { ActivityIndicator, Platform, Pressable, Text, View, useColorScheme as useReactNativeColorScheme } from 'react-native';
+import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, View, useColorScheme as useReactNativeColorScheme } from 'react-native';
 import * as Linking from 'expo-linking';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
@@ -15,6 +15,8 @@ import { useColorScheme } from 'nativewind';
 import { useThemeStore } from '@/stores/themeStore';
 import { useNotifications } from '@/hooks/useNotifications';
 import { useNotificationRealtime } from '@/hooks/useInAppNotifications';
+import { useLegalAgeGate } from '@/hooks/useLegalAgeGate';
+import { AgeRestrictedScreen } from '@/components/common/AgeRestrictedScreen';
 
 // Pages anyone can read without an account. On web these also render while
 // auth is still loading, so the static export holds their real content for
@@ -47,8 +49,10 @@ function ThemeSync() {
 
 function AuthGuard() {
   useAuthBootstrap();
-  const { session, isLoading } = useAuth();
+  const { session, isLoading, signOut } = useAuth();
   const { user, profile, profileError } = useAuthStore();
+  // People who aren't of legal drinking age where they are can't use the app.
+  const ageGate = useLegalAgeGate(user?.id, profile?.birthdate, !!session && !!profile?.onboarded);
   const segments = useSegments();
   const router = useRouter();
 
@@ -160,6 +164,19 @@ function AuthGuard() {
         <Stack.Screen name="support" />
         <Stack.Screen name="about" />
       </Stack>
+      {/* Covers the app (rather than replacing the navigator, which would
+          make the redirects above loop) for people under the legal age. */}
+      {ageGate.blocked && !showPublicPageWhileLoading && (
+        <View style={StyleSheet.absoluteFill}>
+          <AgeRestrictedScreen
+            minimumAge={ageGate.blocked.minimumAge}
+            place={ageGate.blocked.place}
+            checking={ageGate.checking}
+            onCheckAgain={ageGate.recheck}
+            onSignOut={signOut}
+          />
+        </View>
+      )}
     </View>
   );
 }

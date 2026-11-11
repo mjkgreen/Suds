@@ -14,6 +14,8 @@ import { useRouter } from "expo-router";
 import { supabase } from "@/lib/supabase";
 import { useAuthStore } from "@/stores/authStore";
 import { BirthdatePicker } from "@/components/profile/BirthdatePicker";
+import { checkLegalAge, underageMessage } from "@/lib/ageCheck";
+import { rememberAgeCheck } from "@/hooks/useLegalAgeGate";
 
 // ─── Unit Toggle ─────────────────────────────────────────────────────────────
 
@@ -90,6 +92,20 @@ export default function OnboardingScreen() {
         Alert.alert("Error", "Date of birth is required for BAC calculations.");
         return;
       }
+      // Must be of legal drinking age where they are: checked against the
+      // birthdate and, on iOS 26+, the age range Apple has on file.
+      setIsLoading(true);
+      let ageCheck;
+      try {
+        ageCheck = await checkLegalAge(birthdate);
+      } finally {
+        setIsLoading(false);
+      }
+      if (!ageCheck.allowed) {
+        Alert.alert("Suds is for adults", underageMessage(ageCheck));
+        return;
+      }
+      if (profile) rememberAgeCheck(profile.id, true);
       await completeOnboarding();
     }
   };

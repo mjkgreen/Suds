@@ -27,7 +27,8 @@
         "ITSAppUsesNonExemptEncryption": false
       },
       "entitlements": {
-        "com.apple.security.application-groups": ["group.com.sudssocial.app"]
+        "com.apple.security.application-groups": ["group.com.sudssocial.app"],
+        "com.apple.developer.declared-age-range": true
       }
     },
     "android": {
