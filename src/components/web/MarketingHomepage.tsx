@@ -223,7 +223,7 @@ function FeatureShowcase({ isDark, isWide }: { isDark: boolean; isWide: boolean 
         "See drink type, brand, location, and notes",
         "Reactions and social engagement built in",
       ],
-      imageSource: require("../../../assets/feed.png"),
+      imageSource: require("../../../assets/screenshots/feed.png"),
     },
     {
       label: "Log Drinks",
@@ -236,7 +236,7 @@ function FeatureShowcase({ isDark, isWide }: { isDark: boolean; isWide: boolean 
         "Set ABV, quantity, and session grouping",
         "GPS location tagging with privacy controls",
       ],
-      imageSource: require("../../../assets/log-drinks.png"),
+      imageSource: require("../../../assets/screenshots/log-drink.png"),
     },
     {
       label: "Live BAC",
@@ -248,7 +248,7 @@ function FeatureShowcase({ isDark, isWide }: { isDark: boolean; isWide: boolean 
         "Personalized to your body metrics",
         "Live BAC updated drink-by-drink (coming soon!)",
       ],
-      imageSource: require("../../../assets/view-stats.png"),
+      imageSource: require("../../../assets/screenshots/stats.png"),
     },
     {
       label: "Map",
@@ -261,7 +261,7 @@ function FeatureShowcase({ isDark, isWide }: { isDark: boolean; isWide: boolean 
         "Privacy Mode hides your exact address",
         "Filter by time, drink type, or friends",
       ],
-      imageSource: require("../../../assets/map.png"),
+      imageSource: require("../../../assets/screenshots/map.png"),
     },
   ];
 
