@@ -3,10 +3,9 @@ import { supabase } from '@/lib/supabase';
 import { FeedEntry, FeedItem } from '@/types/models';
 import { FEED_PAGE_SIZE } from '@/lib/constants';
 
-function parseFeedRows(data: any[]): FeedEntry[] {
-
-  const rows: FeedItem[] = (data ?? []).map((row: any) => {
-return {
+/** One get_feed-shaped row (get_feed, get_matching_drinks) as a FeedItem. */
+export function parseFeedItem(row: any): FeedItem {
+  return {
     id: row.id,
     user_id: row.user_id,
     drink_type: row.drink_type,
@@ -49,8 +48,12 @@ return {
       created_at: '',
       updated_at: '',
     },
-    };
-  });
+  };
+}
+
+function parseFeedRows(data: any[]): FeedEntry[] {
+
+  const rows: FeedItem[] = (data ?? []).map(parseFeedItem);
 
   // Collect actual session start/end times from raw rows before FeedItem mapping strips them
   const sessionTimes = new Map<string, { started_at: string | null; ended_at: string | null }>();

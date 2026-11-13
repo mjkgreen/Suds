@@ -1,9 +1,13 @@
 {
+  "cleanUrls": true,
   "rewrites": [
     {
       "source": "/.well-known/apple-developer-domain-association.txt",
       "destination": "https://gbenibgytweskljxneup.supabase.co/.well-known/apple-developer-domain-association.txt"
     },
-    { "source": "/(.*)", "destination": "/index.html" }
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
   ]
 }

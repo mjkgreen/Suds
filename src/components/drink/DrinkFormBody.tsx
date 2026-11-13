@@ -10,6 +10,7 @@ import { AutocompleteTextInput } from "@/components/drink/AutocompleteTextInput"
 import { DrinkTypePicker } from "@/components/drink/DrinkTypePicker";
 import { MentionInput } from "@/components/social/MentionInput";
 import { TagPeopleField } from "@/components/social/TagPeopleField";
+import { useDrinkCatalog } from "@/hooks/useDrinkCatalog";
 import { getTypesForBrand, getTypesForName, searchBrands, searchDrinkNames } from "@/lib/drinkSearch";
 import { formatClipLength, MAX_MEDIA, mediaAspect, MediaType } from "@/lib/media";
 import { DrinkType, TaggedUser } from "@/types/models";
@@ -66,6 +67,7 @@ export function DrinkFormBody({
 }: DrinkFormBodyProps) {
   const [ratingPickerVisible, setRatingPickerVisible] = useState(false);
   const [quantityPickerVisible, setQuantityPickerVisible] = useState(false);
+  const catalog = useDrinkCatalog();
 
   const quantity = watch("quantity");
   const rating = watch("rating");
@@ -129,9 +131,9 @@ export function DrinkFormBody({
             onChangeText={(text) => setValue("brand", text)}
             onSelectSuggestion={(s) => {
               setValue("brand", s.label);
-              autoSetType(getTypesForBrand(s.label));
+              autoSetType(getTypesForBrand(s.label, catalog.brands));
             }}
-            getSuggestions={(q) => searchBrands(q, drinkType)}
+            getSuggestions={(q) => searchBrands(q, drinkType, catalog.brands)}
             placeholder="e.g. Guinness, Moosehead"
           />
         </View>
@@ -144,9 +146,9 @@ export function DrinkFormBody({
             onChangeText={(text) => setValue("drink_name", text)}
             onSelectSuggestion={(s) => {
               setValue("drink_name", s.label);
-              autoSetType(getTypesForName(s.label));
+              autoSetType(getTypesForName(s.label, catalog.names));
             }}
-            getSuggestions={(q) => searchDrinkNames(q, drinkType)}
+            getSuggestions={(q) => searchDrinkNames(q, drinkType, catalog.names)}
             placeholder="e.g. IPA, Old Fashioned"
           />
         </View>

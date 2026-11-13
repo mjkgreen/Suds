@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { Link, useRouter } from 'expo-router';
 import { Image } from 'expo-image';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { useColorScheme } from 'nativewind';
@@ -33,6 +33,9 @@ function PublicHeader() {
         </Pressable>
 
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+          <Link href="/about" className={`text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
+            About
+          </Link>
           <Pressable onPress={() => router.push('/(auth)/sign-in' as never)}>
             <Text className={`text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
               Sign In
@@ -47,6 +50,14 @@ function PublicHeader() {
         </View>
       </View>
     </View>
+  );
+}
+
+function FooterLink({ href, label, isDark }: { href: string; label: string; isDark: boolean }) {
+  return (
+    <Link href={href as never} className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+      {label}
+    </Link>
   );
 }
 
@@ -88,28 +99,19 @@ function PublicFooter() {
             </Pressable>
           </View>
 
-          {/* Links */}
+          {/* Links: real <a href>s on web, so crawlers can follow them */}
           <View style={{ flexDirection: 'row', gap: 48, flexWrap: 'wrap' }}>
             <View style={{ gap: 12 }}>
               <Text className={`text-xs font-semibold uppercase tracking-wider ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>Product</Text>
-              <Pressable onPress={() => router.push('/(auth)/sign-up' as never)}>
-                <Text className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Get Started</Text>
-              </Pressable>
-              <Pressable onPress={() => router.push('/(auth)/sign-in' as never)}>
-                <Text className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Sign In</Text>
-              </Pressable>
+              <FooterLink href="/sign-up" label="Get Started" isDark={isDark} />
+              <FooterLink href="/sign-in" label="Sign In" isDark={isDark} />
+              <FooterLink href="/about" label="About & FAQ" isDark={isDark} />
             </View>
             <View style={{ gap: 12 }}>
               <Text className={`text-xs font-semibold uppercase tracking-wider ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>Legal</Text>
-              <Pressable onPress={() => router.push('/support' as never)}>
-                <Text className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Support</Text>
-              </Pressable>
-              <Pressable onPress={() => router.push('/privacy' as never)}>
-                <Text className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Privacy Policy</Text>
-              </Pressable>
-              <Pressable onPress={() => router.push('/terms' as never)}>
-                <Text className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Terms of Service</Text>
-              </Pressable>
+              <FooterLink href="/support" label="Support" isDark={isDark} />
+              <FooterLink href="/privacy" label="Privacy Policy" isDark={isDark} />
+              <FooterLink href="/terms" label="Terms of Service" isDark={isDark} />
             </View>
           </View>
         </View>

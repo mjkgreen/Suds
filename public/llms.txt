@@ -1,0 +1,37 @@
+# Suds
+
+> Suds is a social drink tracking app. People log each drink, follow friends, share their nights out in a feed, and track their own stats, streaks and pace. It's available on iPhone (App Store) and on the web at https://drink-with-suds.com. For adults of legal drinking age (21+ in the US).
+
+Suds is a tracking and awareness tool, not a drinking game. It never rewards drinking more: users can set a weekly drink goal, keep a sober streak, and log water and non-alcoholic drinks.
+
+## What it does
+
+- Drink logging: beer, wine, cocktails, spirits, cider, seltzer, water, mocktails, soft drinks and non-alcoholic drinks, with brand, quantity, ABV, rating, notes, photos or video, place, and tagged friends.
+- Social feed: friends' drinks in real time, with likes, comments, @mentions and tags.
+- Sessions: a night out grouped into one session with duration, drink count and drinks per hour (DPH); friends can join the same session.
+- Map: a heatmap of where you and friends have been drinking, with Privacy Mode to hide exact addresses.
+- Stats: drink counts by type, weekly and monthly trends, day-of-week and hour-of-day breakdowns, streaks, sober streaks, milestones, weekly goals, and an approximate BAC estimate (not a medical measurement).
+- Privacy: private accounts with follow requests, Privacy Mode, blocking and reporting.
+- Price: free. During the launch period every account also gets Suds Plus (advanced analytics, full history, BAC estimate, data export).
+
+## Why track drinks with friends
+
+- Most people underestimate how much they drink; a log gives real numbers per week, per night and per hour.
+- Private logs are easy to abandon. Sharing with friends makes logging part of the night, so the habit sticks.
+- A shared record of each night: who was there, where the group went, what everyone had.
+
+## Compared with other apps
+
+- Untappd: built for beer check-ins and rating beers, breweries and venues. Suds covers every drink and centres on the night and the people: sessions, pace, a friends feed, a shared map, streaks and goals.
+- Vivino: a wine guide for scanning labels, ratings and buying. Suds logs what you actually drink, wine included, across a night out.
+- Distiller: a spirits review app. Suds logs drinks and who you had them with rather than reviewing bottles.
+- Sunnyside, Reframe and similar: programs to help people drink less, with plans or coaching. Suds is a social tracker with goals and sober streaks, not a reduction program.
+- Private drink counters and alcohol diaries: Suds keeps the same tracking and adds friends, a feed, shared sessions and a map.
+
+## Pages
+
+- [Home](https://drink-with-suds.com/): what Suds is and how to sign up
+- [About & FAQ](https://drink-with-suds.com/about): what Suds is, benefits of tracking drinks, and how Suds compares with Untappd, Vivino, Distiller, Sunnyside and Reframe
+- [Support](https://drink-with-suds.com/support): contact and account deletion
+- [Privacy Policy](https://drink-with-suds.com/privacy)
+- [Terms of Service](https://drink-with-suds.com/terms)

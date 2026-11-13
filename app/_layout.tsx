@@ -2,7 +2,7 @@ import '../global.css';
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { useEffect, useRef } from 'react';
-import { ActivityIndicator, Platform, Pressable, Text, View, useColorScheme as useReactNativeColorScheme } from 'react-native';
+import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, View, useColorScheme as useReactNativeColorScheme } from 'react-native';
 import * as Linking from 'expo-linking';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
@@ -15,6 +15,18 @@ import { useColorScheme } from 'nativewind';
 import { useThemeStore } from '@/stores/themeStore';
 import { useNotifications } from '@/hooks/useNotifications';
 import { useNotificationRealtime } from '@/hooks/useInAppNotifications';
+import { useLegalAgeGate } from '@/hooks/useLegalAgeGate';
+import { AgeRestrictedScreen } from '@/components/common/AgeRestrictedScreen';
+
+// Pages anyone can read without an account. On web these also render while
+// auth is still loading, so the static export holds their real content for
+// search engines and AI crawlers (which mostly don't run JavaScript).
+const PUBLIC_PAGES = ['terms', 'privacy', 'support', 'about'];
+
+function isPublicRoute(segs: string[]) {
+  // The root is the marketing page on web; on native it's just a launch spinner.
+  return (segs.length === 0 && Platform.OS === 'web') || PUBLIC_PAGES.includes(segs[0]);
+}
 
 // Module-level store for deep links that arrive before auth resolves
 let pendingDeepLink: string | null = null;
@@ -37,8 +49,10 @@ function ThemeSync() {
 
 function AuthGuard() {
   useAuthBootstrap();
-  const { session, isLoading } = useAuth();
+  const { session, isLoading, signOut } = useAuth();
   const { user, profile, profileError } = useAuthStore();
+  // People who aren't of legal drinking age where they are can't use the app.
+  const ageGate = useLegalAgeGate(user?.id, profile?.birthdate, !!session && !!profile?.onboarded);
   const segments = useSegments();
   const router = useRouter();
 
@@ -75,12 +89,7 @@ function AuthGuard() {
     const segs = segments as string[];
     const inAuthGroup = segs[0] === '(auth)';
     const isOnboarding = segs[0] === '(auth)' && segs[1] === 'onboarding';
-    // Public routes: terms, privacy, support — plus the root marketing page on web.
-    // (On native the root is just a launch spinner, so it isn't public.)
-    const isPublicRoute =
-      (segs.length === 0 && Platform.OS === 'web') || ['terms', 'privacy', 'support'].includes(segs[0]);
-
-    if (!session && !inAuthGroup && !isPublicRoute) {
+    if (!session && !inAuthGroup && !isPublicRoute(segs)) {
       router.replace('/(auth)/sign-in');
     } else if (session) {
       if (profile && !profile.onboarded) {
@@ -103,7 +112,12 @@ function AuthGuard() {
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
 
-  if (isLoading) {
+  // Public web pages don't need auth to render, so don't hide them behind the
+  // spinner. Signed-in visitors to the root are still sent to the feed once
+  // auth resolves.
+  const showPublicPageWhileLoading = Platform.OS === 'web' && isPublicRoute(segments as string[]);
+
+  if (isLoading && !showPublicPageWhileLoading) {
     return (
       <View className={`flex-1 items-center justify-center bg-background ${isDark ? 'dark' : ''}`}>
         <ActivityIndicator size="large" color="#f59e0b" />
@@ -143,11 +157,26 @@ function AuthGuard() {
         <Stack.Screen name="user/[id]" />
         <Stack.Screen name="user/edit" />
         <Stack.Screen name="user/requests" />
+        <Stack.Screen name="browse" />
         <Stack.Screen name="notifications" />
         <Stack.Screen name="terms" />
         <Stack.Screen name="privacy" />
         <Stack.Screen name="support" />
+        <Stack.Screen name="about" />
       </Stack>
+      {/* Covers the app (rather than replacing the navigator, which would
+          make the redirects above loop) for people under the legal age. */}
+      {ageGate.blocked && !showPublicPageWhileLoading && (
+        <View style={StyleSheet.absoluteFill}>
+          <AgeRestrictedScreen
+            minimumAge={ageGate.blocked.minimumAge}
+            place={ageGate.blocked.place}
+            checking={ageGate.checking}
+            onCheckAgain={ageGate.recheck}
+            onSignOut={signOut}
+          />
+        </View>
+      )}
     </View>
   );
 }

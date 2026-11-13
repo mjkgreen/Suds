@@ -2,6 +2,8 @@ import { DRINK_BRANDS, DRINK_NAMES } from './drinkData';
 import {
   getTypesForBrand,
   getTypesForName,
+  mergeCatalog,
+  normalizeLabel,
   searchBrands,
   searchDrinkNames,
 } from './drinkSearch';
@@ -93,5 +95,46 @@ describe('drink data integrity', () => {
     expect(getTypesForBrand('Growers')).toEqual(['cider']);
     expect(getTypesForBrand('Jackson-Triggs')).toEqual(['wine']);
     expect(getTypesForBrand('Twisted Tea')).toEqual(['other']);
+  });
+});
+
+describe('normalizeLabel', () => {
+  it('ignores case, apostrophes, periods, "&" and extra spaces', () => {
+    expect(normalizeLabel("Joe's  IPA")).toBe('joes ipa');
+    expect(normalizeLabel('joe’s ipa')).toBe('joes ipa');
+    expect(normalizeLabel('Rum & Coke')).toBe(normalizeLabel('rum and coke'));
+    expect(normalizeLabel('St. Bernardus ')).toBe('st bernardus');
+  });
+});
+
+describe('mergeCatalog (drink_catalog table entries)', () => {
+  it('returns the built-in catalog unchanged when there are no entries', () => {
+    expect(mergeCatalog(DRINK_BRANDS, [])).toBe(DRINK_BRANDS);
+  });
+
+  it('adds new entries without changing the built-in catalog', () => {
+    const before = DRINK_BRANDS.beer.length;
+    const merged = mergeCatalog(DRINK_BRANDS, [{ label: 'Zzyzx Brewing', drink_type: 'beer' }]);
+    expect(merged.beer).toContain('Zzyzx Brewing');
+    expect(DRINK_BRANDS.beer.length).toBe(before);
+  });
+
+  it('skips entries the built-in list already has under another spelling', () => {
+    const merged = mergeCatalog(DRINK_BRANDS, [{ label: 'MOOSEHEAD', drink_type: 'beer' }]);
+    expect(merged.beer.filter((b) => normalizeLabel(b) === 'moosehead')).toHaveLength(1);
+  });
+
+  it('makes merged entries searchable and usable for type auto-set', () => {
+    const merged = mergeCatalog(DRINK_BRANDS, [{ label: "Zzyzx's Cider House", drink_type: 'cider' }]);
+    expect(searchBrands('zzyzxs', undefined, merged)).toEqual([{ label: "Zzyzx's Cider House", type: 'cider' }]);
+    expect(getTypesForBrand('zzyzx’s cider house', merged)).toEqual(['cider']);
+    // The built-in catalog is still the default and doesn't know it
+    expect(searchBrands('zzyzx')).toEqual([]);
+  });
+
+  it('works for drink names too', () => {
+    const merged = mergeCatalog(DRINK_NAMES, [{ label: 'Zzyzx Sour', drink_type: 'cocktail' }]);
+    expect(searchDrinkNames('zzyzx sour', 'cocktail', merged)[0]).toEqual({ label: 'Zzyzx Sour', type: 'cocktail' });
+    expect(getTypesForName('Zzyzx Sour', merged)).toEqual(['cocktail']);
   });
 });

@@ -551,6 +551,8 @@ export function MarketingHomepage() {
             }}
           >
             <Text
+              role="heading"
+              aria-level={1}
               className={`font-bold text-center mb-4 ${isDark ? "text-white" : "text-gray-900"}`}
               style={{ fontSize: 48, lineHeight: 56, letterSpacing: -1.5 }}
             >
@@ -590,6 +592,8 @@ export function MarketingHomepage() {
           style={{ paddingVertical: 56, paddingHorizontal: 24, alignItems: "center" }}
         >
           <Text
+            role="heading"
+            aria-level={1}
             className={`font-bold text-center mb-4 ${isDark ? "text-white" : "text-gray-900"}`}
             style={{ fontSize: 36, lineHeight: 44, letterSpacing: -1.5 }}
           >
