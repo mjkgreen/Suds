@@ -1,6 +1,6 @@
 {
   "name": "suds",
-  "version": "1.5.1",
+  "version": "1.6.0",
   "main": "expo-router/entry",
   "scripts": {
     "start": "expo start",
@@ -28,14 +28,14 @@
     "expo-apple-authentication": "~8.0.8",
     "expo-blur": "~15.0.8",
     "expo-constants": "~18.0.13",
-    "expo-crypto": "~15.0.8",
+    "expo-crypto": "~15.0.9",
     "expo-dev-client": "~6.0.20",
     "expo-file-system": "~19.0.23",
     "expo-font": "~14.0.11",
     "expo-haptics": "~15.0.8",
     "expo-image": "~3.0.11",
     "expo-image-manipulator": "~14.0.8",
-    "expo-image-picker": "~17.0.10",
+    "expo-image-picker": "~17.0.11",
     "expo-linking": "~8.0.11",
     "expo-location": "~19.0.8",
     "expo-notifications": "~0.32.17",
@@ -75,5 +75,13 @@
     "ts-jest": "^29.1.1",
     "typescript": "~5.9.2"
   },
-  "private": true
+  "private": true,
+  "expo": {
+    "autolinking": {
+      "searchPaths": ["./modules"]
+    },
+    "install": {
+      "exclude": ["react-native-keyboard-controller"]
+    }
+  }
 }

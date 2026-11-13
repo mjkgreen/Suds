@@ -3,6 +3,7 @@ import { Link } from "expo-router";
 import Head from "expo-router/head";
 import { useColorScheme } from "nativewind";
 import { PublicLayout } from "@/components/web/PublicLayout";
+import { HelpResources } from "@/components/web/HelpResources";
 import { WEB_ORIGIN } from "@/lib/share";
 
 // Written as the questions people ask search engines and AI assistants, so
@@ -35,7 +36,7 @@ const FAQ_GROUPS: { title: string; items: { q: string; a: string }[] }[] = [
     items: [
       {
         q: "What are the benefits of tracking your drinks?",
-        a: "Most people underestimate how much they drink, because a night out blurs together and nobody remembers last month. A log gives you real numbers: how many drinks a week, which nights run longest, how fast you drink once you're out. That makes it easier to notice patterns and set limits you'll actually keep.",
+        a: "Most people underestimate how much they drink, because a night out blurs together and nobody remembers last month. A log gives you real numbers: how many drinks a week, which nights run longest, how fast you drink once you're out. That makes it easier to notice patterns and set limits you'll actually keep. Additionally, you'll get actual data on how many drinks you have, which can help you make more informed decisions about your drinking habits.",
       },
       {
         q: "Why track drinks with friends instead of on your own?",
@@ -43,7 +44,7 @@ const FAQ_GROUPS: { title: string; items: { q: string; a: string }[] }[] = [
       },
       {
         q: "Does tracking your drinks help you drink less?",
-        a: "Seeing your numbers helps you stay within limits you choose. In Suds you can set a weekly drink goal, watch your pace in drinks per hour, keep a sober streak, and log water between rounds. Suds isn't a treatment program; if you're worried about your drinking, talk to a doctor or call the SAMHSA National Helpline at 1-800-662-4357 (US).",
+        a: "Seeing your numbers helps you stay within limits you choose. In Suds you can set a weekly drink goal, watch your pace in drinks per hour, keep a sober streak, and log water between rounds. Suds isn't a treatment program; if you're worried about your drinking, talk to a doctor or contact a free, confidential helpline. In the US, call the SAMHSA National Helpline at 1-800-662-4357; elsewhere, findahelpline.com lists free services by country. More resources are under Getting help on this page.",
       },
       {
         q: "What can I log in Suds?",
@@ -80,7 +81,7 @@ const FAQ_GROUPS: { title: string; items: { q: string; a: string }[] }[] = [
       },
       {
         q: "How is Suds different from Sunnyside, Reframe or other cut-back apps?",
-        a: "Apps like Sunnyside and Reframe are built to help you drink less, with plans, coaching or lessons. Suds isn't a reduction program: it's a social tracker for people who drink and want to stay aware of it. It does include goals, sober streaks and pace tracking, but there's no coaching or curriculum.",
+        a: "Apps like Sunnyside and Reframe are built to help you drink less, with plans, coaching or lessons. Suds isn't a reduction program: it's a social tracker for people who want to drink responsibly and stay aware of it. It does include goals, sober streaks and pace tracking, but there's no coaching or curriculum.",
       },
       {
         q: "How is Suds different from a private drink counter?",
@@ -155,16 +156,16 @@ export default function AboutScreen() {
         </Text>
         <Text className={`text-base mb-4 ${isDark ? "text-gray-400" : "text-gray-600"}`} style={{ lineHeight: 26 }}>
           Suds is a social drink tracker. You log what you drink, your friends see it and log theirs, and a night out
-          becomes a session with a length and a pace. Over time your profile turns into a real picture of how much
-          you drink, not a guess.
+          becomes a session with a length and a pace. Over time your profile turns into a real picture of how much you
+          drink, not a guess.
         </Text>
         <Text className={`text-base mb-4 ${isDark ? "text-gray-400" : "text-gray-600"}`} style={{ lineHeight: 26 }}>
-          Private drink logs are easy to forget about. Doing it with friends makes logging part of the night, and
-          leaves you with a shared record of who was there, where you went and what everyone had.
+          Private drink logs are easy to forget about. Doing it with friends makes logging part of the night, and leaves
+          you with a shared record of who was there, where you went and what everyone had.
         </Text>
         <Text className={`text-base ${isDark ? "text-gray-400" : "text-gray-600"}`} style={{ lineHeight: 26 }}>
-          It's built for awareness, not for drinking more: set a weekly goal, keep a sober streak, log water between
-          rounds, and keep your account private whenever you want.
+          It's built for awareness, and can help you drink more mindfully: set a weekly goal, keep a sober streak, log
+          water between rounds, and make your account private whenever you want.
         </Text>
       </View>
 
@@ -201,6 +202,8 @@ export default function AboutScreen() {
           ))}
         </View>
       ))}
+
+      <HelpResources isDark={isDark} />
 
       <Text className={`text-sm ${isDark ? "text-gray-400" : "text-gray-600"}`}>
         Still stuck?{" "}
