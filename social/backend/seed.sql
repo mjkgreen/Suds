@@ -82,11 +82,49 @@ SELECT ('00000000-0000-4000-b000-00000000010' || n)::uuid, '00000000-0000-4000-a
        now() - interval '5 hours' + n * interval '40 minutes', now() - interval '5 hours' + n * interval '40 minutes'
 FROM (VALUES (1,'beer','Pilsner'),(2,'beer','Stout'),(3,'cocktail','Margarita'),(4,'water','Water'),(5,'beer','Pilsner')) v(n,t,nm);
 
+-- A shared Night Out from last night with friends tagged and a crowd photo.
+INSERT INTO sessions (id, user_id, title, started_at, ended_at, created_at) VALUES
+ ('00000000-0000-4000-c000-000000000002','00000000-0000-4000-a000-000000000003','Patio night',
+  now()-interval '26 hours', now()-interval '21 hours', now()-interval '26 hours');
+INSERT INTO drink_logs (id, user_id, session_id, drink_type, drink_name, brand, quantity, location_name, location_lat, location_lng,
+                        notes, logged_at, created_at)
+SELECT ('00000000-0000-4000-b000-00000000020' || n)::uuid, '00000000-0000-4000-a000-000000000003',
+       '00000000-0000-4000-c000-000000000002', t, nm, br, 1, 'Sunset Rooftop', 39.7505, -105.0004, note,
+       now() - interval '26 hours' + n * interval '55 minutes', now() - interval '26 hours' + n * interval '55 minutes'
+FROM (VALUES (1,'beer','Pilsner','Copper Tap',NULL),(2,'beer','Hazy IPA','Half Moon','first round on @priyap'),
+             (3,'cocktail','Margarita',NULL,NULL),(4,'water','Water',NULL,'hydration check')) v(n,t,nm,br,note);
+INSERT INTO drink_tags (drink_log_id, user_id)
+SELECT '00000000-0000-4000-b000-000000000202'::uuid, id FROM profiles WHERE username IN ('priyap','lukeb','mayachen');
+
+-- Photos and a clip on the posts (stock library, see social/media/library/credits.json).
+UPDATE drink_logs SET media = pg_temp.stock('clip-garnish', 'espresso-martini-1') WHERE id = '00000000-0000-4000-b000-000000000001';
+UPDATE drink_logs SET media = pg_temp.stock('two-pints') WHERE id = '00000000-0000-4000-b000-000000000002';
+UPDATE drink_logs SET media = pg_temp.stock('red-wine-pour', 'wine-glasses-hand') WHERE id = '00000000-0000-4000-b000-000000000003';
+UPDATE drink_logs SET media = pg_temp.stock('mocktail-mint') WHERE id = '00000000-0000-4000-b000-000000000004';
+UPDATE drink_logs SET media = pg_temp.stock('cider') WHERE id = '00000000-0000-4000-b000-000000000005';
+UPDATE drink_logs SET media = pg_temp.stock('beer-trio', 'bar-hands') WHERE id = '00000000-0000-4000-b000-000000000101';
+UPDATE drink_logs SET media = pg_temp.stock('margarita-1') WHERE id = '00000000-0000-4000-b000-000000000103';
+UPDATE drink_logs SET media = pg_temp.stock('cheers-patio', 'string-lights-crowd') WHERE id = '00000000-0000-4000-b000-000000000202';
+UPDATE drink_logs SET media = pg_temp.stock('margarita-night') WHERE id = '00000000-0000-4000-b000-000000000203';
+-- About a quarter of the history gets a photo matching its drink type.
+CREATE TEMP TABLE type_photos(drink_type text, names text[]);
+INSERT INTO type_photos VALUES
+ ('beer', ARRAY['pint-pale','beer-railing','beers-table','flight-hand','beer-garden-dusk']),
+ ('wine', ARRAY['red-wine-1','red-wine-2','champagne']),
+ ('cocktail', ARRAY['espresso-martini-2','margarita-2','margarita-strawberry','old-fashioned-1','old-fashioned-2','cocktail-coupe','cheers-straws']),
+ ('cider', ARRAY['cider']), ('mocktail', ARRAY['mocktail-purple','mocktail-lavender']),
+ ('spirit', ARRAY['old-fashioned-2']), ('seltzer', ARRAY['cheers-straws']);
+UPDATE drink_logs l SET media = pg_temp.stock(tp.names[1 + floor(random() * array_length(tp.names, 1))::int])
+FROM type_photos tp
+WHERE tp.drink_type = l.drink_type AND l.media = '[]'::jsonb AND l.id::text NOT LIKE '00000000-%' AND random() < 0.25;
+
 INSERT INTO drink_likes (drink_log_id, user_id)
 SELECT l.id, p.id FROM drink_logs l JOIN profiles p ON p.id <> l.user_id
 WHERE l.id::text LIKE '00000000-0000-4000-b000-%' AND random() < 0.7;
 
 INSERT INTO drink_comments (drink_log_id, user_id, content, created_at) VALUES
+ ('00000000-0000-4000-b000-000000000202','00000000-0000-4000-a000-000000000004','best patio in town', now()-interval '22 hours'),
+ ('00000000-0000-4000-b000-000000000202','00000000-0000-4000-a000-000000000005','same time next week?', now()-interval '21 hours'),
  ('00000000-0000-4000-b000-000000000001','00000000-0000-4000-a000-000000000004','saving me a seat?', now()-interval '30 minutes'),
  ('00000000-0000-4000-b000-000000000002','00000000-0000-4000-a000-000000000005','omw', now()-interval '1 hour'),
  ('00000000-0000-4000-b000-000000000004','00000000-0000-4000-a000-000000000002','proud of you!!', now()-interval '3 hours');

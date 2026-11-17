@@ -20,7 +20,7 @@ for f in $(ls "$ROOT"/supabase/migrations/*.sql | grep -v combined.sql | sort); 
   # pg_cron / pg_net are Supabase-hosted extensions; the shim provides no-op stand-ins.
   sed -E '/CREATE EXTENSION IF NOT EXISTS (pg_cron|pg_net)/d' "$f" | $PSQL -o /dev/null -f - 2>&1 | grep -v -E "NOTICE|WARNING|HINT|DETAIL|^$" || true
 done
-$PSQL -o /dev/null -f "$ROOT/social/backend/seed.sql"
+{ python3 "$ROOT/social/backend/media_lib.py"; cat "$ROOT/social/backend/seed.sql"; } | $PSQL -o /dev/null -f -
 # Tell a running PostgREST to re-read the rebuilt schema.
 $PSQL -c "NOTIFY pgrst, 'reload schema'"
 echo "db ready on 127.0.0.1:$PORT"

@@ -36,6 +36,11 @@ async function openApp({ width = 540, height = 960, scale = 2, route = '/feed', 
     localStorage.setItem('sb-127-auth-token', JSON.stringify(s));
     localStorage.setItem('suds-age-check:' + uid, JSON.stringify({ allowed: true, checkedAt: Date.now() }));
   }, [session, DEMO_USER.id]);
+  // Safety net: captures must never reach the production backend.
+  await context.route(/\.supabase\.(co|in)\//, (route) => {
+    console.error('blocked production request:', route.request().url());
+    return route.abort();
+  });
   // The app geocodes with OpenStreetMap Nominatim. Captures answer from the
   // seed's fictional venues instead (no real businesses, no external calls).
   await context.route('https://nominatim.openstreetmap.org/**', (route) => {

@@ -11,6 +11,8 @@ const { tokens, DEMO_USER } = require('./tokens');
 
 const PORT = 54321, PGRST = 3000;
 const MEDIA = path.join(__dirname, 'media');
+// Stock photos/clips for seeded posts (see social/media), served as drink-media/stock/*.
+const LIBRARY = path.join(__dirname, '..', 'media', 'library');
 
 function session() {
   return { access_token: tokens.user, token_type: 'bearer', expires_in: 86400,
@@ -44,7 +46,9 @@ http.createServer((req, res) => {
   }
   const pub = url.pathname.match(/^\/storage\/v1\/object\/public\/(.+)$/);
   if (pub) {
-    const f = path.join(MEDIA, decodeURIComponent(pub[1]).replace(/\.\./g, ''));
+    const rel = decodeURIComponent(pub[1]).replace(/\.\./g, '');
+    const f = rel.startsWith('drink-media/stock/')
+      ? path.join(LIBRARY, rel.slice('drink-media/stock/'.length)) : path.join(MEDIA, rel);
     if (fs.existsSync(f)) {
       const ext = path.extname(f).slice(1).toLowerCase();
       return send(res, 200, fs.readFileSync(f), { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', mp4: 'video/mp4' }[ext] || 'application/octet-stream');
