@@ -18,7 +18,9 @@ PSQL="psql -h $PGDIR -p $PORT -U postgres -q -v ON_ERROR_STOP=1"
 $PSQL -f "$ROOT/social/backend/shim.sql" 2>/dev/null
 for f in $(ls "$ROOT"/supabase/migrations/*.sql | grep -v combined.sql | sort); do
   # pg_cron / pg_net are Supabase-hosted extensions; the shim provides no-op stand-ins.
-  sed -E '/CREATE EXTENSION IF NOT EXISTS (pg_cron|pg_net)/d' "$f" | $PSQL -f - 2>&1 | grep -v -E "NOTICE|WARNING|HINT|DETAIL|^$" || true
+  sed -E '/CREATE EXTENSION IF NOT EXISTS (pg_cron|pg_net)/d' "$f" | $PSQL -o /dev/null -f - 2>&1 | grep -v -E "NOTICE|WARNING|HINT|DETAIL|^$" || true
 done
-$PSQL -f "$ROOT/social/backend/seed.sql"
+$PSQL -o /dev/null -f "$ROOT/social/backend/seed.sql"
+# Tell a running PostgREST to re-read the rebuilt schema.
+$PSQL -c "NOTIFY pgrst, 'reload schema'"
 echo "db ready on 127.0.0.1:$PORT"
