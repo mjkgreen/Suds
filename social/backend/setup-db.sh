@@ -14,6 +14,7 @@ su postgres -c "$PGBIN/pg_ctl -D $PGDIR/data stop -m fast" >/dev/null 2>&1 || tr
 rm -rf "$PGDIR"; mkdir -p "$PGDIR"; chown postgres "$PGDIR"
 su postgres -c "$PGBIN/initdb -D $PGDIR/data -A trust -U postgres" >/dev/null
 su postgres -c "$PGBIN/pg_ctl -D $PGDIR/data -o '-p $PORT -k $PGDIR -c listen_addresses=127.0.0.1' -l $PGDIR/log -w start" >/dev/null
+export PGOPTIONS="-c client_min_messages=warning"
 PSQL="psql -h $PGDIR -p $PORT -U postgres -q -v ON_ERROR_STOP=1"
 $PSQL -f "$ROOT/social/backend/shim.sql" 2>/dev/null
 for f in $(ls "$ROOT"/supabase/migrations/*.sql | grep -v combined.sql | sort); do
