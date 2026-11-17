@@ -53,6 +53,21 @@ repository checkout (`mjkgreen/Suds`, branch `main`). Everything you need is in
      scenes, in the same order as the defaults' scenes.
    - `headline`: for a still: 2–6 words, on 2 lines.
 
+4b. **Pick photos that match this post.** Run `python3 social/media/pick.py slots <subject>`.
+   It lists the photo slots this subject's footage shows: which seeded post, what
+   drink and setting (`shows`), a starting `query`, and how many photos (`count`).
+   For each slot:
+   - `python3 social/media/pick.py fetch <slot> "<query>"`. Tune the query to the slot's
+     drink and to today's angle (e.g. "espresso martini bar night"). If it returns no
+     candidates, try a broader query (e.g. just the drink's name).
+   - Open the printed contact `sheet` and choose photos that match the drink and setting,
+     with **no clearly visible faces, no readable brand logos or labels, and nobody who
+     looks under 21**. Hands, crowds from behind or far away, and silhouettes are good:
+     they show the social side.
+   - `python3 social/media/pick.py use <slot> <id> [<id> ...]` with `count` ids, best first.
+   If Unsplash fails or nothing suitable turns up, skip that slot. Its library photo
+   is used instead. Picks apply when the post is rendered in step 6.
+
 5. **Draft the record and check it.** Write `social/out/post.json`:
    ```json
    {"date": "<today, YYYY-MM-DD>", "type": "<reel|still>", "subject": "<subject>",
@@ -73,6 +88,7 @@ repository checkout (`mjkgreen/Suds`, branch `main`). Everything you need is in
    - a reel ends on the orange Suds end card, and the audio spectrogram isn't empty
    If something is wrong, fix the words or re-render once. If it's still wrong, stop and report.
 
+   Also check that the photos in the footage match their drinks and pass the rules in step 4b.
    Then write `social/out/post/caption.txt`:
    - 1–3 short lines in the same voice as the hook, then `Free on the App Store, link in bio.`
    - a blank line, then 5–8 hashtags (mix broad and niche, e.g. #nightout #cocktails #drinktracker)
@@ -88,7 +104,8 @@ repository checkout (`mjkgreen/Suds`, branch `main`). Everything you need is in
       Upload each file by reference: `base64Content` = `sha256:<hex>:<absolute path>`, where
       the hex comes from `sha256sum` and the path is absolute and inside the repo
       (e.g. `/…/Suds/social/out/post/reel.mp4`). References to files outside the repo are refused.
-   3. Add `"drive_folder_id": "<new folder id>"` to `post.json` and upload it **last** as
+   3. Add `"drive_folder_id": "<new folder id>"` and `"photos"` (the `photo_url` values from
+      `social/out/media/credits.json`, or `[]`) to `post.json`, and upload it **last** as
       `application/json` (no conversion). It is the history record, so a post without
       it doesn't count, and one with it must be complete.
 

@@ -1,0 +1,184 @@
+{
+ "about": "Photo slots on the seeded posts. Each run may refill the slots its subject shows (media/pick.py); otherwise the defaults from media/library are used.",
+ "slots": [
+  {
+   "slot": "maya-espresso",
+   "post": "00000000-0000-4000-b000-000000000001",
+   "shows": "Espresso Martini at a cocktail bar, after work (shown after the post's video clip)",
+   "query": "espresso martini cocktail",
+   "subjects": [
+    "feed",
+    "log-a-drink",
+    "night-out"
+   ],
+   "count": 1,
+   "defaults": [
+    "espresso-martini-1"
+   ]
+  },
+  {
+   "slot": "sam-ipa",
+   "post": "00000000-0000-4000-b000-000000000002",
+   "shows": "2 pints of Hazy IPA at a brewery",
+   "query": "two pints hazy ipa beer",
+   "subjects": [
+    "feed"
+   ],
+   "count": 1,
+   "defaults": [
+    "two-pints"
+   ]
+  },
+  {
+   "slot": "priya-wine",
+   "post": "00000000-0000-4000-b000-000000000003",
+   "shows": "Pinot Noir at a wine bar",
+   "query": "red wine glass bar",
+   "subjects": [
+    "feed"
+   ],
+   "count": 2,
+   "defaults": [
+    "red-wine-pour",
+    "wine-glasses-hand"
+   ]
+  },
+  {
+   "slot": "tess-mocktail",
+   "post": "00000000-0000-4000-b000-000000000004",
+   "shows": "Ginger mocktail on a rooftop",
+   "query": "mocktail ginger mint",
+   "subjects": [
+    "feed"
+   ],
+   "count": 1,
+   "defaults": [
+    "mocktail-mint"
+   ]
+  },
+  {
+   "slot": "luke-cider",
+   "post": "00000000-0000-4000-b000-000000000005",
+   "shows": "Dry apple cider",
+   "query": "apple cider glass",
+   "subjects": [
+    "feed"
+   ],
+   "count": 1,
+   "defaults": [
+    "cider"
+   ]
+  },
+  {
+   "slot": "luke-trivia",
+   "post": "00000000-0000-4000-b000-000000000101",
+   "shows": "Pilsner at a taproom on trivia night",
+   "query": "beer flight taproom",
+   "subjects": [
+    "feed",
+    "map"
+   ],
+   "count": 2,
+   "defaults": [
+    "beer-trio",
+    "bar-hands"
+   ]
+  },
+  {
+   "slot": "luke-margarita",
+   "post": "00000000-0000-4000-b000-000000000103",
+   "shows": "Margarita at a taproom",
+   "query": "margarita cocktail lime",
+   "subjects": [
+    "feed"
+   ],
+   "count": 1,
+   "defaults": [
+    "margarita-1"
+   ]
+  },
+  {
+   "slot": "patio-night",
+   "post": "00000000-0000-4000-b000-000000000202",
+   "shows": "Hazy IPA on a busy rooftop patio at night, friends tagged",
+   "query": "rooftop patio night crowd string lights",
+   "subjects": [
+    "feed",
+    "map"
+   ],
+   "count": 2,
+   "defaults": [
+    "string-lights-crowd",
+    "patio-crowd-night"
+   ]
+  },
+  {
+   "slot": "patio-margarita",
+   "post": "00000000-0000-4000-b000-000000000203",
+   "shows": "Margarita late on the patio",
+   "query": "margarita night bar",
+   "subjects": [
+    "feed",
+    "map"
+   ],
+   "count": 1,
+   "defaults": [
+    "margarita-night"
+   ]
+  },
+  {
+   "slot": "mia-cheers",
+   "post": "00000000-0000-4000-b000-000000000301",
+   "shows": "Margarita, first round of a birthday night, friends cheersing",
+   "query": "friends cheers drinks birthday",
+   "subjects": [
+    "night-out"
+   ],
+   "count": 2,
+   "defaults": [
+    "cheers-patio",
+    "margarita-2"
+   ]
+  },
+  {
+   "slot": "mia-espresso",
+   "post": "00000000-0000-4000-b000-000000000304",
+   "shows": "Espresso Martini on a rooftop bar at night",
+   "query": "espresso martini rooftop night",
+   "subjects": [
+    "night-out"
+   ],
+   "count": 2,
+   "defaults": [
+    "espresso-martini-2",
+    "rooftop-night"
+   ]
+  },
+  {
+   "slot": "mia-mocktail",
+   "post": "00000000-0000-4000-b000-000000000305",
+   "shows": "Ginger mocktail, pacing the night",
+   "query": "mocktail glass bar",
+   "subjects": [
+    "night-out"
+   ],
+   "count": 1,
+   "defaults": [
+    "mocktail-purple"
+   ]
+  },
+  {
+   "slot": "mia-ipa",
+   "post": "00000000-0000-4000-b000-000000000306",
+   "shows": "Last round: Hazy IPA at a brewery",
+   "query": "beer flight brewery",
+   "subjects": [
+    "night-out"
+   ],
+   "count": 1,
+   "defaults": [
+    "flight-hand"
+   ]
+  }
+ ]
+}

@@ -137,20 +137,21 @@ INSERT INTO drink_tags (drink_log_id, user_id)
 SELECT ('00000000-0000-4000-b000-00000000030' || n)::uuid, p.id FROM generate_series(1, 6) n, profiles p
 WHERE p.username IN ('mayachen', 'priyap') AND n IN (1, 4);
 
--- Photos and a clip on the posts (stock library, see social/media/library/credits.json).
-UPDATE drink_logs SET media = pg_temp.stock('clip-garnish', 'espresso-martini-1') WHERE id = '00000000-0000-4000-b000-000000000001';
-UPDATE drink_logs SET media = pg_temp.stock('two-pints') WHERE id = '00000000-0000-4000-b000-000000000002';
-UPDATE drink_logs SET media = pg_temp.stock('red-wine-pour', 'wine-glasses-hand') WHERE id = '00000000-0000-4000-b000-000000000003';
-UPDATE drink_logs SET media = pg_temp.stock('mocktail-mint') WHERE id = '00000000-0000-4000-b000-000000000004';
-UPDATE drink_logs SET media = pg_temp.stock('cider') WHERE id = '00000000-0000-4000-b000-000000000005';
-UPDATE drink_logs SET media = pg_temp.stock('beer-trio', 'bar-hands') WHERE id = '00000000-0000-4000-b000-000000000101';
-UPDATE drink_logs SET media = pg_temp.stock('margarita-1') WHERE id = '00000000-0000-4000-b000-000000000103';
-UPDATE drink_logs SET media = pg_temp.stock('string-lights-crowd', 'patio-crowd-night') WHERE id = '00000000-0000-4000-b000-000000000202';
-UPDATE drink_logs SET media = pg_temp.stock('margarita-night') WHERE id = '00000000-0000-4000-b000-000000000203';
-UPDATE drink_logs SET media = pg_temp.stock('cheers-patio', 'margarita-2') WHERE id = '00000000-0000-4000-b000-000000000301';
-UPDATE drink_logs SET media = pg_temp.stock('espresso-martini-2', 'rooftop-night') WHERE id = '00000000-0000-4000-b000-000000000304';
-UPDATE drink_logs SET media = pg_temp.stock('mocktail-purple') WHERE id = '00000000-0000-4000-b000-000000000305';
-UPDATE drink_logs SET media = pg_temp.stock('flight-hand') WHERE id = '00000000-0000-4000-b000-000000000306';
+-- Photos on the posts. Each slot (social/media/slots.json) uses this run's picks if any
+-- (social/media/pick.py), else these library defaults.
+UPDATE drink_logs SET media = pg_temp.stock('clip-garnish') || pg_temp.slot('maya-espresso', 'espresso-martini-1') WHERE id = '00000000-0000-4000-b000-000000000001';
+UPDATE drink_logs SET media = pg_temp.slot('sam-ipa', 'two-pints') WHERE id = '00000000-0000-4000-b000-000000000002';
+UPDATE drink_logs SET media = pg_temp.slot('priya-wine', 'red-wine-pour', 'wine-glasses-hand') WHERE id = '00000000-0000-4000-b000-000000000003';
+UPDATE drink_logs SET media = pg_temp.slot('tess-mocktail', 'mocktail-mint') WHERE id = '00000000-0000-4000-b000-000000000004';
+UPDATE drink_logs SET media = pg_temp.slot('luke-cider', 'cider') WHERE id = '00000000-0000-4000-b000-000000000005';
+UPDATE drink_logs SET media = pg_temp.slot('luke-trivia', 'beer-trio', 'bar-hands') WHERE id = '00000000-0000-4000-b000-000000000101';
+UPDATE drink_logs SET media = pg_temp.slot('luke-margarita', 'margarita-1') WHERE id = '00000000-0000-4000-b000-000000000103';
+UPDATE drink_logs SET media = pg_temp.slot('patio-night', 'string-lights-crowd', 'patio-crowd-night') WHERE id = '00000000-0000-4000-b000-000000000202';
+UPDATE drink_logs SET media = pg_temp.slot('patio-margarita', 'margarita-night') WHERE id = '00000000-0000-4000-b000-000000000203';
+UPDATE drink_logs SET media = pg_temp.slot('mia-cheers', 'cheers-patio', 'margarita-2') WHERE id = '00000000-0000-4000-b000-000000000301';
+UPDATE drink_logs SET media = pg_temp.slot('mia-espresso', 'espresso-martini-2', 'rooftop-night') WHERE id = '00000000-0000-4000-b000-000000000304';
+UPDATE drink_logs SET media = pg_temp.slot('mia-mocktail', 'mocktail-purple') WHERE id = '00000000-0000-4000-b000-000000000305';
+UPDATE drink_logs SET media = pg_temp.slot('mia-ipa', 'flight-hand') WHERE id = '00000000-0000-4000-b000-000000000306';
 -- About a quarter of the history gets a photo matching its drink type.
 CREATE TEMP TABLE type_photos(drink_type text, names text[]);
 INSERT INTO type_photos VALUES

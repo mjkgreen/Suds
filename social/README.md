@@ -27,11 +27,19 @@ runs it 4 days a week by following [`TASK.md`](TASK.md).
 Each one has a reel, a still, default words and an `about` line. To add a
 subject, add a file there and list it in `plan.json`.
 
+## Photos per post
+
+Seeded posts have photo **slots** (`media/slots.json`): which post, what drink, which
+subjects show it. Each run fetches fresh Unsplash photos for just the slots its
+subject shows, matched to the drink and the day's angle, and reviews them before use
+(`media/pick.py slots|fetch|use`). Picks live in `social/out/media/` for that run
+only. Slots that aren't refilled use the library defaults.
+
 ## Demo data and media
 
 - People and venues are fictional. Times are relative to each run, and the
   browser is always set to ~9 pm.
-- Drink photos come from Unsplash (`media/library`, credits in `credits.json`,
+- Fallback drink photos come from Unsplash (`media/library`, credits in `credits.json`,
   no clearly visible faces). `clip-garnish.mp4` is a slow pan over one of those
   photos. `media/unsplash.py` adds more; it needs the environment's Unsplash
   network secret.
