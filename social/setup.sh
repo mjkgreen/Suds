@@ -35,7 +35,7 @@ install() {
     (cd "$ROOT" && npm ci --no-audit --no-fund >"$LOGDIR/npm.log" 2>&1)
     echo "$want" >"$stamp"
   fi
-  python3 -c "import PIL, numpy" 2>/dev/null || pip install -q pillow numpy
+  python3 -c "from PIL import Image; import numpy" 2>/dev/null || python3 -m pip install -q --ignore-installed pillow numpy
   command -v ffmpeg >/dev/null || (apt-get install -y -qq ffmpeg >/dev/null 2>&1)
 }
 
