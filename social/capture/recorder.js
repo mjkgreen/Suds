@@ -40,6 +40,7 @@ class Recorder {
   /** Hard cut: the next frame starts a new scene (camera snaps, no easing across). */
   cut(name) {
     this.scene += 1;
+    this.focusBox = null;
     this.meta.scenes.push({ name, startFrame: this.frames.length });
   }
 
@@ -82,6 +83,7 @@ class Recorder {
   async shoot(n = 1, speed = 1) {
     for (let i = 0; i < n; i++) {
       await this.page.clock.runFor(FRAME_MS * speed);
+      await this.stepVideos(FRAME_MS * speed);
       await this.page.waitForTimeout(8); // let network callbacks land
       const idx = this.frames.length;
       const file = `frames/${String(idx).padStart(5, '0')}.jpg`;
@@ -89,6 +91,57 @@ class Recorder {
       this.frames.push({ file, scene: this.scene, cam: { ...this.cam }, focus: this.focusBox, overlay: this.overlay, tap: this.pendingTap, speed });
       this.pendingTap = null;
     }
+  }
+
+  /**
+   * <video> elements play on the real clock, not the fake one, so they'd race
+   * ahead while we screenshot. Pause them and step their time with ours.
+   */
+  async stepVideos(ms) {
+    await this.page.evaluate(async (dt) => {
+      const vids = [...document.querySelectorAll('video')].filter((v) => v.readyState >= 1);
+      await Promise.all(vids.map((v) => {
+        if (!v.dataset.stepped) { v.dataset.stepped = '1'; v.dataset.t = String(v.currentTime || 0); }
+        v.pause();
+        let t = parseFloat(v.dataset.t) + dt / 1000;
+        if (v.duration && t > v.duration) t = v.loop || true ? t % v.duration : v.duration;
+        v.dataset.t = String(t);
+        return new Promise((res) => {
+          const done = () => { v.removeEventListener('seeked', done); res(); };
+          v.addEventListener('seeked', done); v.currentTime = t; setTimeout(done, 200);
+        });
+      }));
+    }, ms).catch(() => {});
+  }
+
+  /**
+   * Swipe a horizontal carousel one page (`pages` < 0 goes back), like a finger
+   * drag: scroll its container a little each frame (snap off while dragging).
+   */
+  async swipe(locator, pages = 1, frames = 12) {
+    const b = await locator.boundingBox();
+    if (!b) return;
+    this.pendingTap = { x: b.x + b.width * 0.7, y: b.y + b.height / 2 };
+    const handle = await locator.evaluateHandle((el) => {
+      let n = el;
+      while (n && !(n.scrollWidth > n.clientWidth + 4 && getComputedStyle(n).overflowX !== 'visible')) n = n.parentElement;
+      return n;
+    });
+    const start = await handle.evaluate((n) => { if (!n) return null; n.style.scrollSnapType = 'none'; return n.scrollLeft; });
+    if (start === null) return;
+    const w = await handle.evaluate((n) => n.clientWidth);
+    for (let i = 1; i <= frames; i++) {
+      const t = 0.5 - 0.5 * Math.cos(Math.PI * i / frames);
+      await handle.evaluate((n, x) => { n.scrollLeft = x; n.dispatchEvent(new Event('scroll')); }, start + pages * w * t);
+      await this.shoot(1);
+    }
+    await handle.evaluate((n) => { n.style.scrollSnapType = 'x mandatory'; });
+  }
+
+  /** Off-camera navigation by URL path without reloading the app (expo-router listens to history). */
+  async navigate(pathname) {
+    await this.page.evaluate((p) => { window.history.pushState({}, '', p); window.dispatchEvent(new PopStateEvent('popstate')); }, pathname);
+    await this.settle(1500);
   }
 
   /** Shoot until fn() is true (checked each frame), at most maxFrames. */
@@ -118,11 +171,13 @@ class Recorder {
     }
   }
 
-  async scrollBy(dy, frames, x = 270, y = 600) {
+  async scrollBy(dy, frames, x = 270, y = 600, speed = 1) {
     await this.page.mouse.move(x, y);
     for (let i = 0; i < frames; i++) {
-      await this.page.mouse.wheel(0, dy / frames);
-      await this.shoot(1);
+      // eased: slow start and stop, like a thumb flick
+      const a = 0.5 - 0.5 * Math.cos(Math.PI * i / frames), b = 0.5 - 0.5 * Math.cos(Math.PI * (i + 1) / frames);
+      await this.page.mouse.wheel(0, dy * (b - a));
+      await this.shoot(1, speed);
     }
   }
 

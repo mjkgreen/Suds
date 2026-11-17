@@ -18,11 +18,24 @@ function eveningTimezone(targetHour = 21) {
 const PLACES = [
   { name: 'The Copper Tap', street: 'Wynkoop Street', lat: 39.7527, lng: -104.9997 },
   { name: 'Larkspur Wine Bar', street: 'Grant Street', lat: 39.7392, lng: -104.9849 },
-  { name: 'Half Moon Brewing', street: 'Larimer Street', lat: 39.7621, lng: -104.9810 },
-  { name: 'Ridgeline Taproom', street: 'South Pearl Street', lat: 39.7180, lng: -104.9566 },
-  { name: 'Juniper & Rye', street: 'Blake Street', lat: 39.7469, lng: -104.9920 },
+  { name: 'Half Moon Brewing', street: 'Larimer Street', lat: 39.7621, lng: -104.981 },
+  { name: 'Ridgeline Taproom', street: 'South Pearl Street', lat: 39.685, lng: -104.98 },
+  { name: 'Juniper & Rye', street: 'Blake Street', lat: 39.7469, lng: -104.992 },
   { name: 'Sunset Rooftop', street: '16th Street', lat: 39.7505, lng: -105.0004 },
-  { name: 'Mile High Cider House', street: 'Brighton Boulevard', lat: 39.7680, lng: -104.9730 },
+  { name: 'Mile High Cider House', street: 'Brighton Boulevard', lat: 39.768, lng: -104.973 },
+  { name: 'Lantern Room', street: 'Tennyson Street', lat: 39.7765, lng: -105.0435 },
+  { name: 'Bluebird Social', street: 'Colfax Avenue', lat: 39.7402, lng: -104.961 },
+  { name: 'Hollow Oak Pub', street: 'South Broadway', lat: 39.711, lng: -104.9875 },
+  { name: 'Parkside Beer Garden', street: 'York Street', lat: 39.747, lng: -104.953 },
+  { name: 'The Low Ceiling', street: 'Navajo Street', lat: 39.7745, lng: -105.0055 },
+  { name: 'Saltwater Oyster Bar', street: 'Fillmore Street', lat: 39.7195, lng: -104.9535 },
+  { name: 'Second Story Lounge', street: '32nd Avenue', lat: 39.762, lng: -105.011 },
+  { name: 'Lakeview Patio', street: 'Sheridan Boulevard', lat: 39.75, lng: -105.045 },
+  { name: 'Gilded Fox', street: 'Pearl Street', lat: 39.733, lng: -104.98 },
+  { name: 'Brick & Barrel', street: 'Walnut Street', lat: 39.76, lng: -104.987 },
+  { name: 'Willow Wine Co.', street: 'Old South Gaylord', lat: 39.699, lng: -104.961 },
+  { name: 'Fieldhouse Taps', street: 'Blake Street', lat: 39.756, lng: -104.994 },
+  { name: 'Night Owl Bar', street: 'Santa Fe Drive', lat: 39.727, lng: -104.999 },
 ];
 
 async function openApp({ width = 540, height = 960, scale = 2, route = '/feed', beforeLoad } = {}) {

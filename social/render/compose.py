@@ -72,9 +72,15 @@ def draw_overlay(img, ov, age, life_left, band_y=None):
     if not ov:
         return
     hook = ov.get('style') == 'hook'
-    f = font('ExtraBold', 88 if hook else 62)
     lines = wrap_lines(ov['text'])
     d = ImageDraw.Draw(img)
+    size = 88 if hook else 62
+    max_w = (SAFE_X1 - SAFE_X0) - (108 if hook else 80)
+    while True:  # shrink long lines to fit inside the safe area
+        f = font('ExtraBold', size)
+        if size <= 40 or max(d.textlength(l, font=f) for l in lines) <= max_w:
+            break
+        size -= 4
     lh = int(f.size * 1.18)
     tw = max(d.textlength(l, font=f) for l in lines)
     pad_x, pad_y = (54, 40) if hook else (40, 26)
@@ -280,7 +286,11 @@ def main():
         if starts[i] != i or not frames[i]['overlay'] or frames[i]['overlay'].get('style') == 'hook':
             continue
         end = min(ends[i], len(frames))
-        if frames[i]['overlay'].get('at') == 'above-focus':
+        at = frames[i]['overlay'].get('at')
+        if isinstance(at, (int, float)):          # explicit height, as a fraction of the frame
+            band_for[i] = H * at
+            continue
+        if at == 'above-focus':
             # sit just above the focused element once the camera has settled
             j = min(end - 1, i + 15)
             r = focus_rect(j)
