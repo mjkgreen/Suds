@@ -1,0 +1,57 @@
+{
+ "subject_gap_days": 6,
+ "types": {
+  "reel": {
+   "share": 0.6,
+   "size": "1080x1920",
+   "about": "vertical video for Reels / TikTok"
+  },
+  "still": {
+   "share": 0.4,
+   "size": "1080x1350",
+   "about": "feed image for Instagram"
+  }
+ },
+ "subjects": [
+  {
+   "id": "log-a-drink",
+   "types": [
+    "reel",
+    "still"
+   ],
+   "ready": true
+  },
+  {
+   "id": "night-out",
+   "types": [
+    "reel",
+    "still"
+   ],
+   "ready": true
+  },
+  {
+   "id": "map",
+   "types": [
+    "reel",
+    "still"
+   ],
+   "ready": true
+  },
+  {
+   "id": "profile",
+   "types": [
+    "reel",
+    "still"
+   ],
+   "ready": true
+  },
+  {
+   "id": "feed",
+   "types": [
+    "reel",
+    "still"
+   ],
+   "ready": true
+  }
+ ]
+}
