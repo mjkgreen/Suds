@@ -1,8 +1,8 @@
-import { Ionicons } from '@expo/vector-icons';
 import { Link, useRouter } from 'expo-router';
 import { Image } from 'expo-image';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { useColorScheme } from 'nativewind';
+import { AppStoreBadge } from './AppStoreBadge';
 
 interface PublicLayoutProps {
   children: React.ReactNode;
@@ -86,17 +86,9 @@ function PublicFooter() {
             <Text className={`text-xs max-w-xs leading-relaxed ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
               The social drink tracker. Know your limits. Follow friends.
             </Text>
-            {/* App Store badge */}
-            <Pressable
-              className={`self-start rounded-xl border ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}
-              style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 14, paddingVertical: 10 }}
-            >
-              <Ionicons name="logo-apple" size={20} color={isDark ? '#fff' : '#111827'} />
-              <View>
-                <Text className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>Download on the</Text>
-                <Text className={`text-sm font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>App Store</Text>
-              </View>
-            </Pressable>
+            <View style={{ alignSelf: 'flex-start' }}>
+              <AppStoreBadge variant={isDark ? 'white' : 'black'} height={44} />
+            </View>
           </View>
 
           {/* Links: real <a href>s on web, so crawlers can follow them */}

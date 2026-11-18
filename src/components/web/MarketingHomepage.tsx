@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Image } from "expo-image";
 import { Pressable, Text, useWindowDimensions, View } from "react-native";
 import { useColorScheme } from "nativewind";
+import { AppStoreBadge } from "./AppStoreBadge";
 import { PublicLayout } from "./PublicLayout";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -662,24 +663,8 @@ export function MarketingHomepage() {
         </Text>
 
         <View style={{ flexDirection: isWide ? "row" : "column", gap: 12, alignItems: "center" }}>
-          {/* App Store — proper Apple logo via Ionicons */}
-          <Pressable
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              gap: 10,
-              backgroundColor: "#fff",
-              borderRadius: 14,
-              paddingHorizontal: 20,
-              paddingVertical: 12,
-            }}
-          >
-            <Ionicons name="logo-apple" size={24} color="#111827" />
-            <View>
-              <Text style={{ fontSize: 11, color: "#6b7280", fontWeight: "500" }}>Download on the</Text>
-              <Text style={{ fontSize: 16, color: "#111827", fontWeight: "700" }}>App Store</Text>
-            </View>
-          </Pressable>
+          <AppStoreBadge variant="white" height={52} />
+
 
           <Pressable
             onPress={() => router.push("/(auth)/sign-up" as never)}
