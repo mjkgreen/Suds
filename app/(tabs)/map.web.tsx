@@ -437,11 +437,13 @@ export default function MapScreen() {
               );
             }
 
-            // Cluster: multiple drinks at this location
+            // Cluster: multiple drinks at this location (counted by quantity:
+            // a log of 2 counts 2).
+            const clusterCount = items.reduce((sum, i) => sum + Number(i.quantity), 0);
             const clusterIcon =
               typeof window !== 'undefined'
                 ? (window as any).L?.divIcon({
-                    html: `<div style="background:#f59e0b;width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;color:white;border:2px solid currentColor;box-shadow:0 2px 6px rgba(0,0,0,0.35)">${items.length}</div>`,
+                    html: `<div style="background:#f59e0b;width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;color:white;border:2px solid currentColor;box-shadow:0 2px 6px rgba(0,0,0,0.35)">${clusterCount}</div>`,
                     className: 'border-card',
                     iconSize: [44, 44],
                     iconAnchor: [22, 22],
@@ -456,7 +458,7 @@ export default function MapScreen() {
                 <L.Popup>
                   <div className="min-w-[180px] p-1 font-sans">
                     <h3 className="font-bold text-sm text-gray-900 m-0 mb-1">
-                      {items.length} drinks here
+                      {clusterCount} drinks here
                     </h3>
                     {items.slice(0, 3).map((log) => {
                       const info = DRINK_TYPE_MAP[log.drink_type as DrinkType] ?? DRINK_TYPE_MAP['other'];

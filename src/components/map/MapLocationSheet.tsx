@@ -72,7 +72,7 @@ export function MapLocationSheet({ items, onClose, onViewSession, onViewDrink }:
           {/* Header */}
           <View className="flex-row items-center justify-between px-4 pb-3">
             <Text className="text-foreground font-bold text-base">
-              {items.length > 1 ? `${items.length} drinks at this spot` : 'At this spot'}
+              {items.length > 1 ? `${items.reduce((sum, i) => sum + Number(i.quantity), 0)} drinks at this spot` : 'At this spot'}
             </Text>
             <Pressable onPress={onClose} hitSlop={12}>
               <Ionicons name="close-circle" size={24} color="#9ca3af" />

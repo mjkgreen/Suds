@@ -225,7 +225,10 @@ export const SessionCard = React.memo(function SessionCard({ group, currentUserI
       <View className="flex-row gap-1 mb-2">
         {drinkTypes.map((type) => {
           const info = DRINK_TYPE_MAP[type as DrinkType] ?? DRINK_TYPE_MAP["other"];
-          const count = group.items.filter((i) => i.drink_type === type).length;
+          // Sum quantities: one log of 2 beers is 2 beers, not 1.
+          const count = group.items
+            .filter((i) => i.drink_type === type)
+            .reduce((sum, i) => sum + Number(i.quantity), 0);
           return (
             <View key={type} className="flex-row items-center bg-accent rounded-full px-2 py-1 gap-1">
               <DrinkIcon type={type as DrinkType} size={16} color={info.color} />
