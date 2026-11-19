@@ -31,7 +31,7 @@ import { SyncStatusPill } from "@/components/common/SyncStatusPill";
 import { useVisibleItems, VisibleItemsProvider } from "@/components/media/VisibleItems";
 import { SessionCard } from "@/components/session/SessionCard";
 import { DrinkIcon } from "@/components/icons/DrinkIcon";
-import { TrendLine } from "@/components/profile/TrendLine";
+import { ProgressTrend } from "@/components/profile/ProgressTrend";
 import { DRINK_TYPE_MAP, MILESTONE_EMOJI } from "@/lib/constants";
 import { useThemeStore } from "@/stores/themeStore";
 import { usePrefsStore } from "@/stores/prefsStore";
@@ -422,17 +422,12 @@ export default function ProfileScreen() {
                       <StatBlock label="This Month" value={stats.drinks_this_month} />
                     </View>
 
-                    {stats.activity_by_day?.length > 0 && (
-                      <View className="pt-2">
-                        <Text className="text-xs text-muted-foreground mb-2 font-medium uppercase tracking-wide">
-                          Last 14 Days
-                        </Text>
-                        <TrendLine data={stats.activity_by_day.slice(-14)} isDark={colorScheme === "dark"} />
-                      </View>
-                    )}
+                    <View className="pt-2">
+                      <ProgressTrend activityByDay={stats.activity_by_day ?? []} isDark={colorScheme === "dark"} />
+                    </View>
 
                     <View className="pt-2">
-                      {stats.activity_by_day?.length > 0 && <ActivityCalendar activityByDay={stats.activity_by_day} />}
+                      <ActivityCalendar activityByDay={stats.activity_by_day ?? []} />
                     </View>
                   </View>
                 )}
@@ -524,17 +519,12 @@ export default function ProfileScreen() {
                 <StatBlock label="This Month" value={stats.drinks_this_month} />
               </View>
 
-              {stats.activity_by_day?.length > 0 && (
-                <View className="pt-2">
-                  <Text className="text-xs text-muted-foreground mb-2 font-medium uppercase tracking-wide">
-                    Last 14 Days
-                  </Text>
-                  <TrendLine data={stats.activity_by_day.slice(-14)} isDark={colorScheme === "dark"} />
-                </View>
-              )}
+              <View className="pt-2">
+                <ProgressTrend activityByDay={stats.activity_by_day ?? []} isDark={colorScheme === "dark"} />
+              </View>
 
               <View className="pt-2">
-                {stats.activity_by_day?.length > 0 && <ActivityCalendar activityByDay={stats.activity_by_day} />}
+                <ActivityCalendar activityByDay={stats.activity_by_day ?? []} />
               </View>
             </View>
           )}

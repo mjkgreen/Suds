@@ -14,6 +14,8 @@
 --   • get_advanced_stats counted entries of every type.
 --   • Days, weeks, months and hours were all cut in UTC, so for
 --     someone in the US an evening's drinks landed on the next day.
+--   • activity_by_day stopped at 365 days; it now covers all history
+--     for the progress chart's 1Y / All ranges.
 --   • delete_session_with_drinks deleted every drink in the night
 --     out — including guests' — although the app tells the host
 --     the drinks stay in their history.
@@ -117,7 +119,7 @@ BEGIN
           -- What the calendar, trend line and weekly-goal badges show: drinks.
           COALESCE(SUM(quantity) FILTER (WHERE alcoholic), 0) AS count
         FROM logs
-        WHERE local_at >= v_now_local - interval '365 days'
+        -- All history (was 365 days) so the progress chart's "All" range works.
         GROUP BY date_trunc('day', local_at)
         ORDER BY date
       ) t
