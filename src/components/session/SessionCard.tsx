@@ -206,10 +206,6 @@ export const SessionCard = React.memo(function SessionCard({ group, currentUserI
           <Text className="text-xs text-muted-foreground">drinks</Text>
         </View>
         <View className="items-center">
-          <Text className="text-xl font-bold text-primary">{group.items.length}</Text>
-          <Text className="text-xs text-muted-foreground">rounds</Text>
-        </View>
-        <View className="items-center">
           <Text className="text-xl font-bold text-primary">{duration}</Text>
           <Text className="text-xs text-muted-foreground">duration</Text>
         </View>
