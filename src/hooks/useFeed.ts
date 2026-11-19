@@ -119,6 +119,10 @@ export function useFeed(userId: string | undefined) {
         : undefined,
     initialPageParam: 0,
     enabled: !!userId,
+    // A first load on a slow connection often just needs a few more seconds.
+    // Keep retrying for ~20s before showing "Couldn't load feed".
+    retry: 5,
+    retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 5000),
   });
 }
 

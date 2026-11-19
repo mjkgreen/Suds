@@ -1,4 +1,7 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { QueryClient, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import * as Crypto from 'expo-crypto';
+import { addDrinkToFeedCaches, buildOptimisticFeedItem, removeDrinkFromFeedCaches } from '@/lib/feedCache';
+import { useAuthStore } from '@/stores/authStore';
 import { DrinkMedia, LocalMedia, MAX_MEDIA } from '@/lib/media';
 import { syncDrinkTags } from '@/hooks/useDrinkTags';
 import { uploadDrinkMedia } from '@/lib/storage';
@@ -48,6 +51,49 @@ function legacyPhotoUrls(media: DrinkMedia[]): string[] {
     .filter((url): url is string => !!url);
 }
 
+/**
+ * Ids for drinks being logged, chosen before the insert so the optimistic feed
+ * entry and the saved row share one id (tapping/liking it works straight away
+ * once saved, and the refetch replaces it in place). Keyed by the mutation's
+ * variables: onMutate runs before mutationFn with the same object.
+ */
+const pendingDrinkIds = new WeakMap<object, string>();
+
+function drinkIdFor(variables: object): string {
+  let id = pendingDrinkIds.get(variables);
+  if (!id) {
+    id = Crypto.randomUUID();
+    pendingDrinkIds.set(variables, id);
+  }
+  return id;
+}
+
+/** Shows a drink in the feeds right away; returns a rollback. */
+function showDrinkOptimistically(
+  queryClient: QueryClient,
+  userId: string,
+  fields: Parameters<typeof buildOptimisticFeedItem>[0],
+): () => void {
+  const profile = useAuthStore.getState().profile;
+  if (!profile || profile.id !== userId) return () => {};
+  const activeSession = useSessionStore.getState().activeSession;
+  const sessionTitle = activeSession?.id === fields.session_id ? activeSession.title : null;
+  return addDrinkToFeedCaches(queryClient, userId, buildOptimisticFeedItem(fields, profile), sessionTitle);
+}
+
+/** Everything that shows a user's drinks or a night out's drinks. */
+function refreshAfterDrinkChange(queryClient: QueryClient, userId: string, sessionId?: string | null) {
+  if (sessionId) {
+    queryClient.invalidateQueries({ queryKey: ['sessionDrinks', sessionId] });
+    queryClient.invalidateQueries({ queryKey: ['sessionDetail', sessionId] });
+  }
+  queryClient.invalidateQueries({ queryKey: ['drinkLogs', userId] });
+  queryClient.invalidateQueries({ queryKey: ['mapLogs', userId] });
+  queryClient.invalidateQueries({ queryKey: ['feed', userId] });
+  queryClient.invalidateQueries({ queryKey: ['my-feed', userId] });
+  queryClient.invalidateQueries({ queryKey: ['userStats', userId] });
+}
+
 export function useMyDrinkLogs(userId: string | undefined) {
   return useQuery({
     queryKey: ['drinkLogs', userId],
@@ -67,20 +113,42 @@ export function useMyDrinkLogs(userId: string | undefined) {
 export function useLogDrink() {
   const queryClient = useQueryClient();
 
+  type LogDrinkVars = {
+    userId: string;
+    formData: LogDrinkFormData;
+    sessionId?: string | null;
+    media?: LocalMedia[];
+    taggedUserIds?: string[];
+  };
+
   return useMutation({
-    mutationFn: async ({
-      userId,
-      formData,
-      sessionId,
-      media,
-      taggedUserIds,
-    }: {
-      userId: string;
-      formData: LogDrinkFormData;
-      sessionId?: string | null;
-      media?: LocalMedia[];
-      taggedUserIds?: string[];
-    }) => {
+    onMutate: (vars: LogDrinkVars) => {
+      const { userId, formData, sessionId } = vars;
+      const rollback = showDrinkOptimistically(queryClient, userId, {
+        id: drinkIdFor(vars),
+        user_id: userId,
+        drink_type: formData.drink_type,
+        drink_name: formData.drink_name || null,
+        brand: formData.brand || null,
+        quantity: formData.quantity,
+        location_name: formData.location_name || null,
+        location_lat: formData.location_lat ?? null,
+        location_lng: formData.location_lng ?? null,
+        notes: formData.notes || null,
+        // Photos show once they've uploaded and the feed refetches.
+        photo_url: null,
+        photo_urls: [],
+        media: [],
+        rating: formData.rating || null,
+        event_name: formData.event_name?.trim() || null,
+        logged_at: formData.logged_at ?? new Date().toISOString(),
+        ended_at: formData.ended_at || null,
+        session_id: sessionId ?? null,
+      });
+      return { rollback };
+    },
+    mutationFn: async (vars: LogDrinkVars) => {
+      const { userId, formData, sessionId, media, taggedUserIds } = vars;
       const uploaded: DrinkMedia[] = [];
       for (const item of (media ?? []).slice(0, MAX_MEDIA)) {
         uploaded.push(await uploadDrinkMedia(userId, item));
@@ -89,6 +157,7 @@ export function useLogDrink() {
 
       const { data, error } = await supabase.from('drink_logs')
         .insert({
+          id: drinkIdFor(vars),
           user_id: userId,
           drink_type: formData.drink_type,
           drink_name: formData.drink_name || null,
@@ -113,12 +182,13 @@ export function useLogDrink() {
       if (taggedUserIds?.length) await syncDrinkTags((data as DrinkLog).id, taggedUserIds);
       return data;
     },
-    onSuccess: (_data, { userId, sessionId, formData }) => {
-      if (sessionId) queryClient.invalidateQueries({ queryKey: ['sessionDrinks', sessionId] });
-      queryClient.invalidateQueries({ queryKey: ['drinkLogs', userId] });
-      queryClient.invalidateQueries({ queryKey: ['mapLogs', userId] });
-      queryClient.invalidateQueries({ queryKey: ['feed', userId] });
-      queryClient.invalidateQueries({ queryKey: ['userStats', userId] });
+    onError: (_err, _vars, context) => {
+      context?.rollback();
+    },
+    onSettled: (_data, _err, { userId, sessionId }) => {
+      refreshAfterDrinkChange(queryClient, userId, sessionId);
+    },
+    onSuccess: (_data, { sessionId, formData }) => {
       updateLiveActivity(sessionId, formData.drink_type, formData.drink_name || capitalise(formData.drink_type));
     },
   });
@@ -182,13 +252,11 @@ export function useUpdateDrinkLog() {
       return data;
     },
     onSuccess: (_data, { userId, id }) => {
+      refreshAfterDrinkChange(queryClient, userId);
       queryClient.invalidateQueries({ queryKey: ['sessionDrinks'] });
-      queryClient.invalidateQueries({ queryKey: ['drinkLogs', userId] });
-      queryClient.invalidateQueries({ queryKey: ['mapLogs', userId] });
+      queryClient.invalidateQueries({ queryKey: ['sessionDetail'] });
       queryClient.invalidateQueries({ queryKey: ['drinkDetail', id] });
       queryClient.invalidateQueries({ queryKey: ['drinkTags', id] });
-      queryClient.invalidateQueries({ queryKey: ['feed', userId] });
-      queryClient.invalidateQueries({ queryKey: ['userStats', userId] });
     },
   });
 }
@@ -196,18 +264,42 @@ export function useUpdateDrinkLog() {
 export function useQuickLogDrink() {
   const queryClient = useQueryClient();
 
+  type QuickLogVars = {
+    userId: string;
+    item: Pick<DrinkLog, 'drink_type' | 'drink_name' | 'brand' | 'quantity' | 'location_name' | 'location_lat' | 'location_lng'>;
+    sessionId: string;
+  };
+
   return useMutation({
-    mutationFn: async ({
-      userId,
-      item,
-      sessionId,
-    }: {
-      userId: string;
-      item: Pick<DrinkLog, 'drink_type' | 'drink_name' | 'brand' | 'quantity' | 'location_name' | 'location_lat' | 'location_lng'>;
-      sessionId: string;
-    }) => {
+    onMutate: (vars: QuickLogVars) => {
+      const { userId, item, sessionId } = vars;
+      const rollback = showDrinkOptimistically(queryClient, userId, {
+        id: drinkIdFor(vars),
+        user_id: userId,
+        drink_type: item.drink_type,
+        drink_name: item.drink_name || null,
+        brand: item.brand || null,
+        quantity: item.quantity,
+        location_name: item.location_name || null,
+        location_lat: item.location_lat ?? null,
+        location_lng: item.location_lng ?? null,
+        notes: null,
+        photo_url: null,
+        photo_urls: [],
+        media: [],
+        rating: null,
+        event_name: null,
+        logged_at: new Date().toISOString(),
+        ended_at: null,
+        session_id: sessionId,
+      });
+      return { rollback };
+    },
+    mutationFn: async (vars: QuickLogVars) => {
+      const { userId, item, sessionId } = vars;
       const { data, error } = await supabase.from('drink_logs')
         .insert({
+          id: drinkIdFor(vars),
           user_id: userId,
           drink_type: item.drink_type,
           drink_name: item.drink_name || null,
@@ -227,12 +319,13 @@ export function useQuickLogDrink() {
       if (error) throw error;
       return data;
     },
-    onSuccess: (_data, { userId, sessionId, item }) => {
-      queryClient.invalidateQueries({ queryKey: ['sessionDrinks', sessionId] });
-      queryClient.invalidateQueries({ queryKey: ['drinkLogs', userId] });
-      queryClient.invalidateQueries({ queryKey: ['mapLogs', userId] });
-      queryClient.invalidateQueries({ queryKey: ['feed', userId] });
-      queryClient.invalidateQueries({ queryKey: ['userStats', userId] });
+    onError: (_err, _vars, context) => {
+      context?.rollback();
+    },
+    onSettled: (_data, _err, { userId, sessionId }) => {
+      refreshAfterDrinkChange(queryClient, userId, sessionId);
+    },
+    onSuccess: (_data, { sessionId, item }) => {
       updateLiveActivity(sessionId, item.drink_type, item.drink_name || capitalise(item.drink_type));
     },
   });
@@ -250,14 +343,16 @@ export function useDeleteDrinkLog() {
       if (error) throw error;
       return { id, userId };
     },
-    onSuccess: (_data, { userId }) => {
+    onMutate: ({ id, userId }) => ({ rollback: removeDrinkFromFeedCaches(queryClient, userId, id) }),
+    onError: (_err, _vars, context) => {
+      context?.rollback();
+    },
+    onSettled: (_data, _err, { userId }) => {
+      refreshAfterDrinkChange(queryClient, userId);
       // Session drink lists no longer poll every few seconds, so refresh
       // whichever one this drink was in.
       queryClient.invalidateQueries({ queryKey: ['sessionDrinks'] });
-      queryClient.invalidateQueries({ queryKey: ['drinkLogs', userId] });
-      queryClient.invalidateQueries({ queryKey: ['mapLogs', userId] });
-      queryClient.invalidateQueries({ queryKey: ['feed', userId] });
-      queryClient.invalidateQueries({ queryKey: ['userStats', userId] });
+      queryClient.invalidateQueries({ queryKey: ['sessionDetail'] });
     },
   });
 }
@@ -274,10 +369,7 @@ export function useRemoveDrinkFromSession() {
       return { id, sessionId, userId };
     },
     onSuccess: (_data, { sessionId, userId, id }) => {
-      queryClient.invalidateQueries({ queryKey: ['sessionDrinks', sessionId] });
-      queryClient.invalidateQueries({ queryKey: ['sessionDetail', sessionId] });
-      queryClient.invalidateQueries({ queryKey: ['drinkLogs', userId] });
-      queryClient.invalidateQueries({ queryKey: ['feed', userId] });
+      refreshAfterDrinkChange(queryClient, userId, sessionId);
       queryClient.invalidateQueries({ queryKey: ['drinkDetail', id] });
     },
   });
