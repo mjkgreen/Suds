@@ -127,3 +127,40 @@ export function removeFromFeed(data: FeedData, drinkId: string): FeedData {
     })),
   };
 }
+
+/**
+ * Applies `mapEntry` to every entry of every cached feed (anyone's home or
+ * profile feed). Returns a rollback.
+ */
+export function patchFeedEntries(
+  queryClient: QueryClient,
+  mapEntry: (entry: FeedEntry) => FeedEntry,
+): () => void {
+  const snapshots: (readonly [readonly unknown[], FeedData | undefined])[] = [];
+  for (const prefix of [['feed'], ['my-feed']]) {
+    for (const [key, data] of queryClient.getQueriesData<FeedData>({ queryKey: prefix })) {
+      if (!data?.pages) continue;
+      snapshots.push([key, data] as const);
+      queryClient.setQueryData<FeedData>(key, {
+        ...data,
+        pages: data.pages.map((page) => ({ ...page, entries: page.entries.map(mapEntry) })),
+      });
+    }
+  }
+  return () => {
+    for (const [key, data] of snapshots) queryClient.setQueryData(key, data);
+  };
+}
+
+/** Patches one drink wherever it appears (alone or inside a night-out card). */
+export function patchFeedDrink(
+  queryClient: QueryClient,
+  drinkId: string,
+  patch: (item: FeedItem) => FeedItem,
+): () => void {
+  return patchFeedEntries(queryClient, (entry) => {
+    if (entry.type === 'drink') return entry.item.id === drinkId ? { ...entry, item: patch(entry.item) } : entry;
+    if (!entry.items.some((i) => i.id === drinkId)) return entry;
+    return { ...entry, items: entry.items.map((i) => (i.id === drinkId ? patch(i) : i)) };
+  });
+}

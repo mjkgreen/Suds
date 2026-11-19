@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import { patchFeedEntries } from '@/lib/feedCache';
 import { useSessionStore } from '@/stores/sessionStore';
 import { Session, SessionWithRole } from '@/types/models';
 import { useLiveActivity, resumeActivity } from './useLiveActivity';
@@ -38,6 +39,22 @@ export function useEndSession() {
   const { endActivity } = useLiveActivity();
 
   return useMutation({
+    // End it on screen right away; put it back if the update fails.
+    onMutate: (sessionId: string) => {
+      const previous = useSessionStore.getState().activeSession;
+      const endedAt = new Date().toISOString();
+      if (previous?.id === sessionId) setActiveSession(null);
+      const rollbackFeeds = patchFeedEntries(queryClient, (entry) =>
+        entry.type === 'session' && entry.session_id === sessionId ? { ...entry, ended_at: endedAt } : entry,
+      );
+      return {
+        endedAt,
+        rollback: () => {
+          if (previous?.id === sessionId) setActiveSession(previous);
+          rollbackFeeds();
+        },
+      };
+    },
     mutationFn: async (sessionId: string) => {
       const { error } = await supabase
         .from('sessions')
@@ -46,10 +63,17 @@ export function useEndSession() {
       if (error) throw error;
     },
     onSuccess: () => {
-      setActiveSession(null);
       endActivity();
+    },
+    onError: (_err, _sessionId, context) => {
+      context?.rollback();
+    },
+    onSettled: (_data, _err, sessionId) => {
       queryClient.invalidateQueries({ queryKey: ['feed'] });
+      queryClient.invalidateQueries({ queryKey: ['my-feed'] });
       queryClient.invalidateQueries({ queryKey: ['sessionMembers'] });
+      queryClient.invalidateQueries({ queryKey: ['sessionDetail', sessionId] });
+      queryClient.invalidateQueries({ queryKey: ['openSession'] });
     },
   });
 }
@@ -60,6 +84,11 @@ export function useLeaveSession() {
   const { endActivity } = useLiveActivity();
 
   return useMutation({
+    onMutate: ({ sessionId }: { sessionId: string; userId: string }) => {
+      const previous = useSessionStore.getState().activeSession;
+      if (previous?.id === sessionId) setActiveSession(null);
+      return { rollback: () => { if (previous?.id === sessionId) setActiveSession(previous); } };
+    },
     mutationFn: async ({ sessionId, userId }: { sessionId: string; userId: string }) => {
       const { error } = await supabase
         .from('session_members')
@@ -69,9 +98,16 @@ export function useLeaveSession() {
       if (error) throw error;
     },
     onSuccess: () => {
-      setActiveSession(null);
       endActivity();
+    },
+    onError: (_err, _vars, context) => {
+      context?.rollback();
+    },
+    onSettled: (_data, _err, { sessionId }) => {
       queryClient.invalidateQueries({ queryKey: ['feed'] });
+      queryClient.invalidateQueries({ queryKey: ['my-feed'] });
+      queryClient.invalidateQueries({ queryKey: ['sessionMembers', sessionId] });
+      queryClient.invalidateQueries({ queryKey: ['openSession'] });
     },
   });
 }
