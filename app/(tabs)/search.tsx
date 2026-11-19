@@ -8,6 +8,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Avatar } from "@/components/common/Avatar";
 import { DrinkIcon } from "@/components/icons/DrinkIcon";
 import { FollowButton } from "@/components/social/FollowButton";
+import { ShareInviteLinkSection } from "@/components/invite/ShareInviteLinkSection";
 import { useBlockedIds } from "@/hooks/useBlocks";
 import { useDebounce } from "@/hooks/useDebounce";
 import {
@@ -244,9 +245,19 @@ export default function SearchScreen() {
                   </Text>
                 </View>
               )}
+              {noResults && (
+                <View className="px-4">
+                  <ShareInviteLinkSection kind="profile" />
+                </View>
+              )}
             </>
           ) : (
             <>
+              {/* Friends who aren't on Suds yet */}
+              <View className="px-4 pt-4">
+                <ShareInviteLinkSection kind="profile" />
+              </View>
+
               {visibleSuggested.length > 0 && (
                 <>
                   <SectionHeader title="Suggested people" />

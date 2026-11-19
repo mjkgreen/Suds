@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import { useColorScheme } from "nativewind";
 import { Avatar } from "@/components/common/Avatar";
+import { ShareInviteLinkSection } from "@/components/invite/ShareInviteLinkSection";
 import { useFollowing } from "@/hooks/useFollow";
 import { useInviteToSession } from "@/hooks/useSessionMembers";
 import { useAuthStore } from "@/stores/authStore";
@@ -21,6 +22,7 @@ interface FollowerPickerModalProps {
   visible: boolean;
   onClose: () => void;
   sessionId: string;
+  sessionTitle?: string | null;
   currentInvites: SessionInvite[];
   currentMembers: SessionMember[];
 }
@@ -87,6 +89,7 @@ export function FollowerPickerModal({
   visible,
   onClose,
   sessionId,
+  sessionTitle,
   currentInvites,
   currentMembers,
 }: FollowerPickerModalProps) {
@@ -162,6 +165,11 @@ export function FollowerPickerModal({
           <Pressable onPress={onClose} hitSlop={8}>
             <Ionicons name="close" size={22} color={isDark ? "#9ca3af" : "#6b7280"} />
           </Pressable>
+        </View>
+
+        {/* Anyone, on Suds or not */}
+        <View className="px-4 pt-4">
+          <ShareInviteLinkSection kind="session" sessionId={sessionId} sessionTitle={sessionTitle} enabled={visible} />
         </View>
 
         {/* Search */}
