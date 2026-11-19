@@ -28,6 +28,7 @@ import { useDeleteSession, useEndSession, useLeaveSession } from "@/hooks/useSes
 import { useRemoveDrinkFromSession } from "@/hooks/useDrinkLog";
 import { useSessionMembers } from "@/hooks/useSessionMembers";
 import { supabase } from "@/lib/supabase";
+import { drinkTotal } from "@/lib/drinkCounts";
 import { DRINK_TYPE_MAP } from "@/lib/constants";
 import { useAuthStore } from "@/stores/authStore";
 import {
@@ -121,8 +122,8 @@ export default function SessionDetailScreen() {
   function handleDeleteSession() {
     if (!data) return;
     const message = isActive
-      ? "This will end the night out for all members and permanently delete it. This cannot be undone."
-      : "This will permanently delete this night out. Your drinks will remain in your history. This cannot be undone.";
+      ? "This will end the night out for all members and permanently delete it. Everyone's drinks stay in their own history. This cannot be undone."
+      : "This will permanently delete this night out. Everyone's drinks stay in their own history. This cannot be undone.";
     Alert.alert("Delete Night Out?", message, [
       { text: "Cancel", style: "cancel" },
       {
@@ -178,7 +179,7 @@ export default function SessionDetailScreen() {
     if (!members || members.length <= 1 || !data) return [];
     return members.map((m) => {
       const mDrinks = data.drinks.filter((d) => d.user_id === m.user_id);
-      const mTotal = mDrinks.reduce((s, d) => s + d.quantity, 0);
+      const mTotal = drinkTotal(mDrinks);
       const mTypes = [...new Set(mDrinks.map((d) => d.drink_type))];
       return { member: m, drinkCount: mTotal, drinkTypes: mTypes };
     });
@@ -211,7 +212,8 @@ export default function SessionDetailScreen() {
   const { session, drinks, profile } = data;
   const isMultiMember = (members?.length ?? 1) > 1;
 
-  const totalQuantity = drinks.reduce((s, d) => s + d.quantity, 0);
+  // Alcoholic drinks by quantity — the same count as the profile and BAC.
+  const totalQuantity = drinkTotal(drinks);
   const locations = [
     ...new Set(drinks.map((d) => d.location_name).filter(Boolean)),
   ] as string[];

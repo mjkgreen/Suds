@@ -134,3 +134,23 @@ describe('BAC Helpers', () => {
     });
   });
 });
+
+describe('personalBACDrinks', () => {
+  const { personalBACDrinks } = require('./bacHelpers');
+  const isAlcoholic = (t: string) => t !== 'water';
+  const drinks = [
+    { user_id: 'me', drink_type: 'beer', quantity: 2, logged_at: '2026-11-19T20:00:00Z', ended_at: null },
+    { user_id: 'me', drink_type: 'water', quantity: 1, logged_at: '2026-11-19T20:10:00Z', ended_at: null },
+    { user_id: 'friend', drink_type: 'spirit', quantity: 4, logged_at: '2026-11-19T20:20:00Z', ended_at: null },
+  ];
+
+  it("uses only the person's own alcoholic drinks, not the whole night out", () => {
+    expect(personalBACDrinks(drinks, 'me', isAlcoholic)).toEqual([
+      { quantity: 2, loggedAt: '2026-11-19T20:00:00Z', endedAt: null },
+    ]);
+  });
+
+  it('is empty without a user', () => {
+    expect(personalBACDrinks(drinks, undefined, isAlcoholic)).toEqual([]);
+  });
+});

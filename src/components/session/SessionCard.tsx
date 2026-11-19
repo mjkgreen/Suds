@@ -15,6 +15,7 @@ import { AvatarStack } from "@/components/social/AvatarStack";
 import { LikersModal } from "@/components/social/LikersModal";
 import { DRINK_TYPE_MAP } from "@/lib/constants";
 import { groupDrinks } from "@/lib/drinkGroups";
+import { drinkTotal } from "@/lib/drinkCounts";
 import { shareLink } from "@/lib/share";
 import { DrinkType, FeedItem, SessionFeedGroup } from "@/types/models";
 import { formatDateTime, formatDuration } from "@/utils/dateHelpers";
@@ -88,7 +89,8 @@ export const SessionCard = React.memo(function SessionCard({ group, currentUserI
   );
   const coMembers = (members ?? []).filter((m) => m.user_id !== group.profile.id);
 
-  const totalQuantity = group.items.reduce((s, i) => s + i.quantity, 0);
+  // Alcoholic drinks by quantity — the same count as the profile and BAC.
+  const totalQuantity = drinkTotal(group.items);
   // Same drink logged more than once (by anyone) shows as one line with a count.
   const drinkGroups = useMemo(() => (isActive ? groupDrinks(group.items) : []), [group.items, isActive]);
   const locations = [...new Set(group.items.map((i) => i.location_name).filter(Boolean))];

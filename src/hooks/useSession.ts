@@ -131,7 +131,12 @@ export function useDeleteSession() {
       queryClient.invalidateQueries({ queryKey: ['openSession'] });
       queryClient.invalidateQueries({ queryKey: ['sessionDetail', sessionId] });
       queryClient.invalidateQueries({ queryKey: ['drinkLogs'] });
+      queryClient.invalidateQueries({ queryKey: ['my-feed'] });
+      queryClient.invalidateQueries({ queryKey: ['sessionDrinks', sessionId] });
       queryClient.invalidateQueries({ queryKey: ['userStats'] });
+      queryClient.invalidateQueries({ queryKey: ['milestones'] });
+      queryClient.invalidateQueries({ queryKey: ['streaks'] });
+      queryClient.invalidateQueries({ queryKey: ['advancedStats'] });
     },
   });
 }

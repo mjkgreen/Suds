@@ -6,7 +6,7 @@ import { DrinkMedia, LocalMedia, MAX_MEDIA } from '@/lib/media';
 import { syncDrinkTags } from '@/hooks/useDrinkTags';
 import { uploadDrinkMedia } from '@/lib/storage';
 import { supabase } from '@/lib/supabase';
-import { DrinkLog, LogDrinkFormData } from '@/types/models';
+import { DrinkLog, DrinkType, LogDrinkFormData, isAlcoholicDrink } from '@/types/models';
 import { useSessionStore } from '@/stores/sessionStore';
 import * as LiveActivityBridge from 'suds-live-activity-bridge';
 
@@ -14,8 +14,15 @@ function capitalise(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
-function updateLiveActivity(sessionId: string | null | undefined, drinkType: string, drinkName: string): void {
+function updateLiveActivity(
+  sessionId: string | null | undefined,
+  drinkType: DrinkType,
+  drinkName: string,
+  quantity: number,
+): void {
   if (!sessionId) return;
+  // Same rule as everywhere else: water etc. doesn't count, a quantity of 3 counts 3.
+  const added = isAlcoholicDrink(drinkType) ? Math.round(Number(quantity)) : 0;
   const {
     liveActivityId,
     liveActivityDrinkCount,
@@ -29,8 +36,8 @@ function updateLiveActivity(sessionId: string | null | undefined, drinkType: str
   if (!liveActivityId) return;
 
   // The user just logged their own drink — bump both the personal and group counts.
-  const newCount = liveActivityDrinkCount + 1;
-  const newGroupCount = liveActivityGroupDrinkCount + 1;
+  const newCount = liveActivityDrinkCount + added;
+  const newGroupCount = liveActivityGroupDrinkCount + added;
 
   setLiveActivityDrinkCount(newCount);
   setLiveActivityGroupDrinkCount(newGroupCount);
@@ -91,7 +98,11 @@ function refreshAfterDrinkChange(queryClient: QueryClient, userId: string, sessi
   queryClient.invalidateQueries({ queryKey: ['mapLogs', userId] });
   queryClient.invalidateQueries({ queryKey: ['feed', userId] });
   queryClient.invalidateQueries({ queryKey: ['my-feed', userId] });
+  // Every profile number that counts drinks.
   queryClient.invalidateQueries({ queryKey: ['userStats', userId] });
+  queryClient.invalidateQueries({ queryKey: ['milestones', userId] });
+  queryClient.invalidateQueries({ queryKey: ['streaks', userId] });
+  queryClient.invalidateQueries({ queryKey: ['advancedStats', userId] });
 }
 
 export function useMyDrinkLogs(userId: string | undefined) {
@@ -189,7 +200,7 @@ export function useLogDrink() {
       refreshAfterDrinkChange(queryClient, userId, sessionId);
     },
     onSuccess: (_data, { sessionId, formData }) => {
-      updateLiveActivity(sessionId, formData.drink_type, formData.drink_name || capitalise(formData.drink_type));
+      updateLiveActivity(sessionId, formData.drink_type, formData.drink_name || capitalise(formData.drink_type), formData.quantity);
     },
   });
 }
@@ -326,7 +337,7 @@ export function useQuickLogDrink() {
       refreshAfterDrinkChange(queryClient, userId, sessionId);
     },
     onSuccess: (_data, { sessionId, item }) => {
-      updateLiveActivity(sessionId, item.drink_type, item.drink_name || capitalise(item.drink_type));
+      updateLiveActivity(sessionId, item.drink_type, item.drink_name || capitalise(item.drink_type), item.quantity);
     },
   });
 }
