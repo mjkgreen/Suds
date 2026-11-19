@@ -3,6 +3,7 @@ import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useCallback, useMemo, useState } from "react";
 import { ActivityIndicator, FlatList, Platform, Pressable, RefreshControl, ScrollView, Text, View, useWindowDimensions } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Avatar } from "@/components/common/Avatar";
 import { DrinkBadge } from "@/components/drink/DrinkBadge";
@@ -502,8 +503,13 @@ export default function ProfileScreen() {
         {syncPill}
         {badgePicker}
         <TabBar active={activeTab} onChange={setActiveTab} />
-        <ScrollView
+        {/* Keyboard-aware so the BAC estimator's inputs (at the bottom) scroll
+            above the keyboard instead of being hidden behind it. */}
+        <KeyboardAwareScrollView
           contentContainerStyle={{ paddingBottom: 24 }}
+          bottomOffset={24}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
           refreshControl={<RefreshControl refreshing={false} onRefresh={onRefresh} tintColor="#f59e0b" />}
         >
           {stats && user?.id && <GoalCard userId={user.id} stats={stats} />}
@@ -584,7 +590,7 @@ export default function ProfileScreen() {
           <PremiumGate featureName="BAC Estimator" preview={<BACEstimatorPreview />}>
             <BACEstimator />
           </PremiumGate>
-        </ScrollView>
+        </KeyboardAwareScrollView>
       </SafeAreaView>
     );
   }
