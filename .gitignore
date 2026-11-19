@@ -44,3 +44,7 @@ scripts/generate-apple-jwt.js
 apple-secret.txt
 supabase/.temp/
 social/out/
+
+# Python bytecode
+__pycache__/
+*.pyc
