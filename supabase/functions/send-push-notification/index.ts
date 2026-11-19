@@ -52,6 +52,8 @@ interface ExpoMessage {
   title: string;
   body: string;
   data: Record<string, string>;
+  /** Notification category registered in the app (adds action buttons). */
+  categoryId?: string;
 }
 
 interface ExpoPushTicket {
@@ -175,6 +177,8 @@ serve(async (req) => {
       sound: "default",
       title,
       body,
+      // Shows Join / Decline buttons (category registered in useNotifications.ts).
+      ...(notification.type === "session_invite" ? { categoryId: "session_invite" } : {}),
       data: {
         type: notification.type,
         notification_id: notification.id,

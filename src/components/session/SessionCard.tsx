@@ -1,7 +1,7 @@
 import * as Haptics from "expo-haptics";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Platform, Pressable, Text, View } from "react-native";
 import { Avatar } from "@/components/common/Avatar";
 import { PressableCard } from "@/components/common/Card";
@@ -14,6 +14,8 @@ import { useSessionMembers } from "@/hooks/useSessionMembers";
 import { AvatarStack } from "@/components/social/AvatarStack";
 import { LikersModal } from "@/components/social/LikersModal";
 import { DRINK_TYPE_MAP } from "@/lib/constants";
+import { groupDrinks } from "@/lib/drinkGroups";
+import { drinkTotal } from "@/lib/drinkCounts";
 import { shareLink } from "@/lib/share";
 import { DrinkType, FeedItem, SessionFeedGroup } from "@/types/models";
 import { formatDateTime, formatDuration } from "@/utils/dateHelpers";
@@ -64,16 +66,16 @@ export const SessionCard = React.memo(function SessionCard({ group, currentUserI
     }
   }
 
-  async function handleQuickLog(e: { stopPropagation: () => void }, item: FeedItem) {
+  async function handleQuickLog(e: { stopPropagation: () => void }, groupKey: string, item: FeedItem) {
     e.stopPropagation();
     if (!onQuickLog || loggingId) return;
-    setLoggingId(item.id);
+    setLoggingId(groupKey);
     try {
       await onQuickLog(item);
       if (Platform.OS !== "web") {
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       }
-      setLoggedId(item.id);
+      setLoggedId(groupKey);
       setTimeout(() => setLoggedId(null), 1500);
     } finally {
       setLoggingId(null);
@@ -87,7 +89,10 @@ export const SessionCard = React.memo(function SessionCard({ group, currentUserI
   );
   const coMembers = (members ?? []).filter((m) => m.user_id !== group.profile.id);
 
-  const totalQuantity = group.items.reduce((s, i) => s + i.quantity, 0);
+  // Alcoholic drinks by quantity — the same count as the profile and BAC.
+  const totalQuantity = drinkTotal(group.items);
+  // Same drink logged more than once (by anyone) shows as one line with a count.
+  const drinkGroups = useMemo(() => (isActive ? groupDrinks(group.items) : []), [group.items, isActive]);
   const locations = [...new Set(group.items.map((i) => i.location_name).filter(Boolean))];
   const drinkTypes = [...new Set(group.items.map((i) => i.drink_type))];
 
@@ -201,10 +206,6 @@ export const SessionCard = React.memo(function SessionCard({ group, currentUserI
           <Text className="text-xs text-muted-foreground">drinks</Text>
         </View>
         <View className="items-center">
-          <Text className="text-xl font-bold text-primary">{group.items.length}</Text>
-          <Text className="text-xs text-muted-foreground">rounds</Text>
-        </View>
-        <View className="items-center">
           <Text className="text-xl font-bold text-primary">{duration}</Text>
           <Text className="text-xs text-muted-foreground">duration</Text>
         </View>
@@ -258,28 +259,34 @@ export const SessionCard = React.memo(function SessionCard({ group, currentUserI
       {/* Expanded drink-by-drink list — active sessions only */}
       {isActive && (
         <View className="mt-3 border-t border-border pt-3 gap-2">
-          {group.items.map((item) => {
+          {drinkGroups.map((dg) => {
+            const item = dg.latest;
             const info = DRINK_TYPE_MAP[item.drink_type as DrinkType] ?? DRINK_TYPE_MAP["other"];
-            const isLogging = loggingId === item.id;
-            const didLog = loggedId === item.id;
+            const isLogging = loggingId === dg.key;
+            const didLog = loggedId === dg.key;
+            const sharedByOthers = dg.drinkers.some((p) => p.id !== currentUserId);
             return (
               <Pressable
-                key={item.id}
+                key={dg.key}
                 className="flex-row items-center gap-2"
-                onPress={(e) => { e.stopPropagation(); router.push(`/drink/${item.id}`); }}
+                onPress={(e) => {
+                  e.stopPropagation();
+                  // One log: open it. Several: the night out lists each one.
+                  router.push(dg.items.length === 1 ? `/drink/${item.id}` : `/session/${group.session_id}`);
+                }}
               >
                 <DrinkIcon type={item.drink_type as DrinkType} size={20} color={info.color} />
                 <View className="flex-1">
                   <View className="flex-row items-center gap-2 flex-wrap">
                     <Text className="text-foreground text-sm font-medium">
                       {item.drink_name || info.label}
-                      {item.quantity !== 1 && (
-                        <Text className="text-muted-foreground font-normal"> ×{item.quantity}</Text>
+                      {dg.total !== 1 && (
+                        <Text className="text-muted-foreground font-normal"> ×{dg.total}</Text>
                       )}
                     </Text>
                     {onQuickLog && (
                       <Pressable
-                        onPress={(e) => handleQuickLog(e, item)}
+                        onPress={(e) => handleQuickLog(e, dg.key, item)}
                         disabled={!!loggingId}
                         className="flex-row items-center gap-1 bg-primary/10 border border-primary/25 rounded-full px-2 py-0.5"
                       >
@@ -294,13 +301,30 @@ export const SessionCard = React.memo(function SessionCard({ group, currentUserI
                       </Pressable>
                     )}
                   </View>
+                  {sharedByOthers && (
+                    <View className="flex-row items-center gap-1 mt-0.5">
+                      {dg.drinkers.slice(0, 4).map((p, i) => (
+                        <View key={p.id} style={{ marginLeft: i > 0 ? -4 : 0 }}>
+                          <Avatar uri={p.avatar_url} name={getDisplayName(p)} size={14} />
+                        </View>
+                      ))}
+                      <Text className="text-muted-foreground text-[11px]" numberOfLines={1}>
+                        {dg.drinkers
+                          .map((p) => (p.id === currentUserId ? "You" : getDisplayName(p)))
+                          .join(", ")}
+                      </Text>
+                    </View>
+                  )}
                   {item.location_name && (
                     <View className="flex-row items-center gap-1">
                       <Ionicons name="location-outline" size={11} color="hsl(var(--muted-foreground))" />
                       <Text className="text-muted-foreground text-xs">{item.location_name}</Text>
                     </View>
                   )}
-                  <Text className="text-muted-foreground text-xs mt-0.5">{formatDateTime(item.logged_at)}</Text>
+                  <Text className="text-muted-foreground text-xs mt-0.5">
+                    {dg.items.length > 1 ? "Last " : ""}
+                    {formatDateTime(item.logged_at)}
+                  </Text>
                 </View>
               </Pressable>
             );

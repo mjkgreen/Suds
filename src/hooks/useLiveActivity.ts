@@ -5,7 +5,8 @@ import { supabase } from '@/lib/supabase';
 import { adoptNewerSharedTokens } from '@/lib/sharedAuth';
 import { queryClient } from '@/lib/queryClient';
 import * as LiveActivityBridge from 'suds-live-activity-bridge';
-import { SessionMember, SessionWithRole } from '@/types/models';
+import { DrinkType, SessionMember, SessionWithRole } from '@/types/models';
+import { sessionDrinkCounts } from '@/lib/drinkCounts';
 import { formatMemberNames } from '@/utils/profileHelpers';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 
@@ -42,25 +43,24 @@ async function _refresh(): Promise<void> {
     if (activeSession?.id) {
       const currentUserId = useAuthStore.getState().session?.user?.id;
       // Personal count (drives BAC and pace) counts only this user's drinks;
-      // the group count spans everyone in the session.
-      const [myDrinkRes, groupDrinkRes, membersRes] = await Promise.all([
-        currentUserId
-          ? supabase.from('drink_logs').select('*', { count: 'exact', head: true })
-              .eq('session_id', activeSession.id).eq('user_id', currentUserId)
-          : Promise.resolve({ count: null }),
-        supabase.from('drink_logs').select('*', { count: 'exact', head: true }).eq('session_id', activeSession.id),
+      // the group count spans everyone in the session. Both count alcoholic
+      // drinks by quantity — the same rule as the in-app BAC and profile
+      // stats — not rows (water used to raise the widget's BAC, and a
+      // pitcher logged as 3 counted as 1).
+      const [drinksRes, membersRes] = await Promise.all([
+        supabase.from('drink_logs').select('user_id, drink_type, quantity').eq('session_id', activeSession.id),
         (supabase.rpc as any)('get_session_members_with_profiles', { p_session_id: activeSession.id }),
       ]);
 
       // Re-check after await — endActivity may have run while we were waiting
       if (!useSessionStore.getState().liveActivityId) return;
 
-      if (myDrinkRes.count !== null && myDrinkRes.count !== undefined) {
-        drinkCount = myDrinkRes.count;
+      if (!drinksRes.error && drinksRes.data) {
+        const rows = drinksRes.data as { user_id: string; drink_type: DrinkType; quantity: number }[];
+        const counts = sessionDrinkCounts(rows, currentUserId);
+        drinkCount = counts.mine;
+        groupDrinkCount = counts.group;
         useSessionStore.getState().setLiveActivityDrinkCount(drinkCount);
-      }
-      if (groupDrinkRes.count !== null) {
-        groupDrinkCount = groupDrinkRes.count;
         useSessionStore.getState().setLiveActivityGroupDrinkCount(groupDrinkCount);
       }
       const coMembers = ((membersRes.data ?? []) as SessionMember[])
@@ -213,6 +213,15 @@ const _quickLogSub = Platform.OS === 'ios'
 // Called by useMyOpenSession when the app opens and finds an existing active session.
 // Restores the module-level timer state without touching the native activity, and
 // recovers liveActivityId from the native ActivityKit state (wiped by a force-kill).
+/**
+ * Recount the Live Activity now (e.g. after a drink is deleted or removed
+ * from the night out — the realtime channel only hears new drinks). No-op
+ * without a running Live Activity.
+ */
+export function refreshLiveActivityCounts(): Promise<void> {
+  return _refresh();
+}
+
 export function resumeActivity(session: SessionWithRole): void {
   if (Platform.OS !== 'ios') return;
   _sessionStartMs = session.started_at

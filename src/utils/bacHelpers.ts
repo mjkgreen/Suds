@@ -256,3 +256,17 @@ export function getSoberTime(
 
   return lastActiveAlcoholTime ? new Date(lastActiveAlcoholTime) : null;
 }
+
+/**
+ * The drinks that count toward one person's BAC: only their own (not the rest
+ * of the night out's) and only alcoholic ones. Every BAC display (profile
+ * estimator, session banner, night-out page) goes through this so they agree.
+ */
+export function personalBACDrinks<
+  T extends { user_id: string; drink_type: string; quantity: number; logged_at: string; ended_at?: string | null },
+>(drinks: T[] | null | undefined, userId: string | undefined, isAlcoholic: (type: T['drink_type']) => boolean): DrinkInput[] {
+  if (!drinks || !userId) return [];
+  return drinks
+    .filter((d) => d.user_id === userId && isAlcoholic(d.drink_type))
+    .map((d) => ({ quantity: d.quantity, loggedAt: d.logged_at, endedAt: d.ended_at }));
+}

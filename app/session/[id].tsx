@@ -25,9 +25,10 @@ import { DrinkIcon } from "@/components/icons/DrinkIcon";
 import { NightOutBACProfile } from "@/components/session/NightOutBACProfile";
 import { useAddComment, useComments, useDeleteComment } from "@/hooks/useComments";
 import { useDeleteSession, useEndSession, useLeaveSession } from "@/hooks/useSession";
-import { useRemoveDrinkFromSession } from "@/hooks/useDrinkLog";
+import { useDeleteDrinkLog, useRemoveDrinkFromSession } from "@/hooks/useDrinkLog";
 import { useSessionMembers } from "@/hooks/useSessionMembers";
 import { supabase } from "@/lib/supabase";
+import { drinkTotal } from "@/lib/drinkCounts";
 import { DRINK_TYPE_MAP } from "@/lib/constants";
 import { useAuthStore } from "@/stores/authStore";
 import {
@@ -97,6 +98,7 @@ export default function SessionDetailScreen() {
   const { mutateAsync: leaveSession, isPending: isLeaving } = useLeaveSession();
   const { mutateAsync: deleteSession, isPending: isDeleting } = useDeleteSession();
   const { mutateAsync: removeDrinkFromSession } = useRemoveDrinkFromSession();
+  const { mutate: deleteDrink } = useDeleteDrinkLog();
   const [confirmAction, setConfirmAction] = useState(false);
 
   const myMembership = useMemo(
@@ -121,8 +123,8 @@ export default function SessionDetailScreen() {
   function handleDeleteSession() {
     if (!data) return;
     const message = isActive
-      ? "This will end the night out for all members and permanently delete it. This cannot be undone."
-      : "This will permanently delete this night out. Your drinks will remain in your history. This cannot be undone.";
+      ? "This will end the night out for all members and permanently delete it. Everyone's drinks stay in their own history. This cannot be undone."
+      : "This will permanently delete this night out. Everyone's drinks stay in their own history. This cannot be undone.";
     Alert.alert("Delete Night Out?", message, [
       { text: "Cancel", style: "cancel" },
       {
@@ -136,17 +138,30 @@ export default function SessionDetailScreen() {
     ]);
   }
 
+  // Web can't show a multi-button Alert, so the choice opens inline there.
+  const [drinkActionsFor, setDrinkActionsFor] = useState<string | null>(null);
+
   function handleRemoveDrink(drink: DrinkLog) {
     if (!user || !id) return;
+    if (Platform.OS === "web") {
+      setDrinkActionsFor((cur) => (cur === drink.id ? null : drink.id));
+      return;
+    }
+    // "Remove" only unlinks the drink, so it shows up again as its own entry
+    // in the feed. Offer a real delete alongside it.
     Alert.alert(
-      "Remove from Night Out?",
-      "The drink will stay in your history but won't be part of this night out.",
+      "Remove this drink?",
+      "Remove it from this night out (it stays in your history as a separate drink), or delete it entirely.",
       [
         { text: "Cancel", style: "cancel" },
         {
-          text: "Remove",
-          style: "destructive",
+          text: "Remove from Night Out",
           onPress: () => removeDrinkFromSession({ id: drink.id, sessionId: id, userId: user.id }),
+        },
+        {
+          text: "Delete Drink",
+          style: "destructive",
+          onPress: () => deleteDrink({ id: drink.id, userId: user.id, sessionId: id }),
         },
       ]
     );
@@ -178,7 +193,7 @@ export default function SessionDetailScreen() {
     if (!members || members.length <= 1 || !data) return [];
     return members.map((m) => {
       const mDrinks = data.drinks.filter((d) => d.user_id === m.user_id);
-      const mTotal = mDrinks.reduce((s, d) => s + d.quantity, 0);
+      const mTotal = drinkTotal(mDrinks);
       const mTypes = [...new Set(mDrinks.map((d) => d.drink_type))];
       return { member: m, drinkCount: mTotal, drinkTypes: mTypes };
     });
@@ -211,7 +226,8 @@ export default function SessionDetailScreen() {
   const { session, drinks, profile } = data;
   const isMultiMember = (members?.length ?? 1) > 1;
 
-  const totalQuantity = drinks.reduce((s, d) => s + d.quantity, 0);
+  // Alcoholic drinks by quantity — the same count as the profile and BAC.
+  const totalQuantity = drinkTotal(drinks);
   const locations = [
     ...new Set(drinks.map((d) => d.location_name).filter(Boolean)),
   ] as string[];
@@ -485,7 +501,8 @@ export default function SessionDetailScreen() {
                 const showAuthor = isMultiMember && !!author;
                 const isOwnDrink = drink.user_id === user?.id;
                 return (
-                  <View key={drink.id} className="flex-row items-center gap-2">
+                  <View key={drink.id} className="gap-2">
+                  <View className="flex-row items-center gap-2">
                     <Pressable
                       className="flex-row items-center gap-3 flex-1"
                       onPress={() => router.push(`/drink/${drink.id}`)}
@@ -546,10 +563,37 @@ export default function SessionDetailScreen() {
                         onPress={() => handleRemoveDrink(drink)}
                         hitSlop={8}
                         className="p-1"
+                        accessibilityLabel="Remove or delete drink"
                       >
                         <Ionicons name="close-circle-outline" size={18} color="#6b7280" />
                       </Pressable>
                     )}
+                  </View>
+                  {drinkActionsFor === drink.id && user && (
+                    <View className="flex-row flex-wrap items-center gap-2 pl-[52px]">
+                      <Pressable
+                        onPress={() => {
+                          setDrinkActionsFor(null);
+                          removeDrinkFromSession({ id: drink.id, sessionId: id!, userId: user.id });
+                        }}
+                        className="bg-accent border border-border rounded-full px-3 py-1.5"
+                      >
+                        <Text className="text-foreground text-xs font-semibold">Remove from Night Out</Text>
+                      </Pressable>
+                      <Pressable
+                        onPress={() => {
+                          setDrinkActionsFor(null);
+                          deleteDrink({ id: drink.id, userId: user.id, sessionId: id });
+                        }}
+                        className="border border-red-500/40 rounded-full px-3 py-1.5"
+                      >
+                        <Text className="text-red-500 text-xs font-semibold">Delete Drink</Text>
+                      </Pressable>
+                      <Pressable onPress={() => setDrinkActionsFor(null)} className="px-2 py-1.5">
+                        <Text className="text-muted-foreground text-xs">Cancel</Text>
+                      </Pressable>
+                    </View>
+                  )}
                   </View>
                 );
               })}

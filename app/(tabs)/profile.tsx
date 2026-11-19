@@ -3,6 +3,7 @@ import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useCallback, useMemo, useState } from "react";
 import { ActivityIndicator, FlatList, Platform, Pressable, RefreshControl, ScrollView, Text, View, useWindowDimensions } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Avatar } from "@/components/common/Avatar";
 import { DrinkBadge } from "@/components/drink/DrinkBadge";
@@ -30,7 +31,7 @@ import { SyncStatusPill } from "@/components/common/SyncStatusPill";
 import { useVisibleItems, VisibleItemsProvider } from "@/components/media/VisibleItems";
 import { SessionCard } from "@/components/session/SessionCard";
 import { DrinkIcon } from "@/components/icons/DrinkIcon";
-import { TrendLine } from "@/components/profile/TrendLine";
+import { ProgressTrend } from "@/components/profile/ProgressTrend";
 import { DRINK_TYPE_MAP, MILESTONE_EMOJI } from "@/lib/constants";
 import { useThemeStore } from "@/stores/themeStore";
 import { usePrefsStore } from "@/stores/prefsStore";
@@ -421,17 +422,12 @@ export default function ProfileScreen() {
                       <StatBlock label="This Month" value={stats.drinks_this_month} />
                     </View>
 
-                    {stats.activity_by_day?.length > 0 && (
-                      <View className="pt-2">
-                        <Text className="text-xs text-muted-foreground mb-2 font-medium uppercase tracking-wide">
-                          Last 14 Days
-                        </Text>
-                        <TrendLine data={stats.activity_by_day.slice(-14)} isDark={colorScheme === "dark"} />
-                      </View>
-                    )}
+                    <View className="pt-2">
+                      <ProgressTrend activityByDay={stats.activity_by_day ?? []} isDark={colorScheme === "dark"} />
+                    </View>
 
                     <View className="pt-2">
-                      {stats.activity_by_day?.length > 0 && <ActivityCalendar activityByDay={stats.activity_by_day} />}
+                      <ActivityCalendar activityByDay={stats.activity_by_day ?? []} />
                     </View>
                   </View>
                 )}
@@ -502,8 +498,13 @@ export default function ProfileScreen() {
         {syncPill}
         {badgePicker}
         <TabBar active={activeTab} onChange={setActiveTab} />
-        <ScrollView
+        {/* Keyboard-aware so the BAC estimator's inputs (at the bottom) scroll
+            above the keyboard instead of being hidden behind it. */}
+        <KeyboardAwareScrollView
           contentContainerStyle={{ paddingBottom: 24 }}
+          bottomOffset={24}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
           refreshControl={<RefreshControl refreshing={false} onRefresh={onRefresh} tintColor="#f59e0b" />}
         >
           {stats && user?.id && <GoalCard userId={user.id} stats={stats} />}
@@ -518,17 +519,12 @@ export default function ProfileScreen() {
                 <StatBlock label="This Month" value={stats.drinks_this_month} />
               </View>
 
-              {stats.activity_by_day?.length > 0 && (
-                <View className="pt-2">
-                  <Text className="text-xs text-muted-foreground mb-2 font-medium uppercase tracking-wide">
-                    Last 14 Days
-                  </Text>
-                  <TrendLine data={stats.activity_by_day.slice(-14)} isDark={colorScheme === "dark"} />
-                </View>
-              )}
+              <View className="pt-2">
+                <ProgressTrend activityByDay={stats.activity_by_day ?? []} isDark={colorScheme === "dark"} />
+              </View>
 
               <View className="pt-2">
-                {stats.activity_by_day?.length > 0 && <ActivityCalendar activityByDay={stats.activity_by_day} />}
+                <ActivityCalendar activityByDay={stats.activity_by_day ?? []} />
               </View>
             </View>
           )}
@@ -584,7 +580,7 @@ export default function ProfileScreen() {
           <PremiumGate featureName="BAC Estimator" preview={<BACEstimatorPreview />}>
             <BACEstimator />
           </PremiumGate>
-        </ScrollView>
+        </KeyboardAwareScrollView>
       </SafeAreaView>
     );
   }

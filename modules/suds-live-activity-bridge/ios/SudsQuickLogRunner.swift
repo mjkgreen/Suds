@@ -53,12 +53,16 @@ public enum SudsQuickLogRunner {
     let rawDrinkName = d.string(forKey: "lastDrinkName") ?? ""
     let drinkType = rawDrinkType.isEmpty ? "beer" : rawDrinkType
     let drinkName = rawDrinkName.isEmpty ? "Beer" : rawDrinkName
+    // Count it like the app does: non-alcoholic drinks (water etc.) don't add to
+    // the drink count, which also drives the widget's BAC. Keep in sync with
+    // NON_ALCOHOLIC_DRINK_TYPES in src/types/models.ts.
+    let added = ["water", "soft_drink", "mocktail", "non_alcoholic"].contains(drinkType) ? 0 : 1
 
     // Optimistic update — count+1 and spinner appear immediately. The +1 logs the
     // user's own drink, so both the personal and group counts bump.
     await updateAll { s in
       SudsSessionAttributes.ContentState(
-        drinkCount: s.drinkCount + 1, groupDrinkCount: s.groupDrinkCount + 1, lastDrinkName: drinkName,
+        drinkCount: s.drinkCount + added, groupDrinkCount: s.groupDrinkCount + added, lastDrinkName: drinkName,
         memberCount: s.memberCount, memberNames: s.memberNames, isLogging: true
       )
     }
@@ -78,7 +82,7 @@ public enum SudsQuickLogRunner {
         d.set(false, forKey: "intentIsLogging")
         await updateAll { s in
           SudsSessionAttributes.ContentState(
-            drinkCount: max(0, s.drinkCount - 1), groupDrinkCount: max(0, s.groupDrinkCount - 1),
+            drinkCount: max(0, s.drinkCount - added), groupDrinkCount: max(0, s.groupDrinkCount - added),
             lastDrinkName: s.lastDrinkName,
             memberCount: s.memberCount, memberNames: s.memberNames, isLogging: false
           )
@@ -116,7 +120,7 @@ public enum SudsQuickLogRunner {
       d.set(false, forKey: "intentIsLogging")
       await updateAll { s in
         SudsSessionAttributes.ContentState(
-          drinkCount: max(0, s.drinkCount - 1), groupDrinkCount: max(0, s.groupDrinkCount - 1),
+          drinkCount: max(0, s.drinkCount - added), groupDrinkCount: max(0, s.groupDrinkCount - added),
           lastDrinkName: s.lastDrinkName,
           memberCount: s.memberCount, memberNames: s.memberNames, isLogging: false
         )

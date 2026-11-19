@@ -16,7 +16,7 @@ import { Text, TextInput, View, ActivityIndicator, Pressable } from "react-nativ
 import { useAuthStore } from "@/stores/authStore";
 import { usePrefsStore } from "@/stores/prefsStore";
 import { useActiveSession, useSessionDrinks } from "@/hooks/useSession";
-import { calculateBAC, getSoberTime, ProfileInput, DrinkInput } from "@/utils/bacHelpers";
+import { calculateBAC, getSoberTime, personalBACDrinks, ProfileInput, DrinkInput } from "@/utils/bacHelpers";
 import { DrinkLog, isAlcoholicDrink } from "@/types/models";
 import { Ionicons } from "@expo/vector-icons";
 
@@ -80,17 +80,12 @@ export function BACEstimator() {
     return () => clearInterval(interval);
   }, [activeSession?.id]);
 
-  // Map session drinks to DrinkInput — exclude non-alcoholic drinks from BAC calculation
-  const drinkInputs = useMemo<DrinkInput[]>(() => {
-    if (!sessionDrinks) return [];
-    return (sessionDrinks as DrinkLog[])
-      .filter((d) => isAlcoholicDrink(d.drink_type))
-      .map((d) => ({
-        quantity: d.quantity,
-        loggedAt: d.logged_at,
-        endedAt: d.ended_at,
-      }));
-  }, [sessionDrinks]);
+  // Only this user's own alcoholic drinks — not everyone's in the night out.
+  const drinkInputs = useMemo<DrinkInput[]>(
+    () => personalBACDrinks(sessionDrinks as DrinkLog[] | undefined, profile?.id, isAlcoholicDrink),
+    [sessionDrinks, profile?.id],
+  );
+  const myDrinkCount = drinkInputs.reduce((sum, d) => sum + d.quantity, 0);
 
   // Live BAC Calculation
   const liveBAC = useMemo(() => {
@@ -288,7 +283,7 @@ export function BACEstimator() {
                 </Text>
               </View>
               <Text className="text-[10px] text-amber-700 dark:text-amber-500 font-medium">
-                {drinkInputs.length} Drink{drinkInputs.length !== 1 ? "s" : ""}
+                {myDrinkCount} Drink{myDrinkCount !== 1 ? "s" : ""}
               </Text>
             </View>
 

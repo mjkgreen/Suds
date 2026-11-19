@@ -1,7 +1,7 @@
 import React from "react";
 import { ScrollView, Text, View } from "react-native";
 import { useColorScheme } from "nativewind";
-import { TrendLine } from "@/components/profile/TrendLine";
+import { ProgressTrend } from "@/components/profile/ProgressTrend";
 import { DrinkIcon } from "@/components/icons/DrinkIcon";
 import { ActivityCalendar } from "@/components/profile/ActivityCalendar";
 import { useUserStats } from "@/hooks/useProfile";
@@ -91,10 +91,7 @@ export function WebLeftPanel() {
             marginBottom: 12,
           }}
         >
-          <Text style={{ fontSize: 10, color: labelColor, fontWeight: "600", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 10 }}>
-            Last 14 Days
-          </Text>
-          <TrendLine data={stats.activity_by_day.slice(-14)} isDark={isDark} />
+          <ProgressTrend activityByDay={stats.activity_by_day} isDark={isDark} />
         </View>
       )}
 

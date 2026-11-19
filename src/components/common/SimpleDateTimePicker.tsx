@@ -10,6 +10,7 @@ import {
   NativeScrollEvent,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useColorScheme } from 'nativewind';
 import {
   format,
   parseISO,
@@ -37,6 +38,12 @@ interface DrumPickerProps {
 
 function DrumPicker({ data, selectedIndex, onSelect, width = 80, formatItem }: DrumPickerProps) {
   const scrollRef = useRef<ScrollView>(null);
+  const { colorScheme } = useColorScheme();
+  const isDark = colorScheme === 'dark';
+  // Hard-coded white text was unreadable on the light card background.
+  const textColor = isDark ? '#f8fafc' : '#111827';
+  const highlightBg = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)';
+  const highlightBorder = isDark ? 'rgba(255,255,255,0.14)' : 'rgba(0,0,0,0.12)';
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ y: selectedIndex * ITEM_H, animated: false });
@@ -63,10 +70,10 @@ function DrumPicker({ data, selectedIndex, onSelect, width = 80, formatItem }: D
           right: 4,
           height: ITEM_H,
           borderRadius: 8,
-          backgroundColor: 'rgba(255,255,255,0.06)',
+          backgroundColor: highlightBg,
           borderTopWidth: 1,
           borderBottomWidth: 1,
-          borderColor: 'rgba(255,255,255,0.14)',
+          borderColor: highlightBorder,
           zIndex: 10,
         }}
       />
@@ -90,7 +97,7 @@ function DrumPicker({ data, selectedIndex, onSelect, width = 80, formatItem }: D
             >
               <Text
                 style={{
-                  color: '#f8fafc',
+                  color: textColor,
                   opacity,
                   fontSize,
                   fontWeight: dist === 0 ? '600' : '400',
@@ -414,7 +421,7 @@ export function SimpleDateTimePicker({
                   <Ionicons
                     name={tab === 'date' ? 'calendar-outline' : 'time-outline'}
                     size={16}
-                    color={activeTab === tab ? '#6366f1' : '#9ca3af'}
+                    color={activeTab === tab ? '#f59e0b' : '#9ca3af'}
                   />
                   <Text
                     className={

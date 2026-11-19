@@ -15,6 +15,7 @@ import { useColorScheme } from 'nativewind';
 import { useThemeStore } from '@/stores/themeStore';
 import { useNotifications } from '@/hooks/useNotifications';
 import { useNotificationRealtime } from '@/hooks/useInAppNotifications';
+import { useSessionRealtime } from '@/hooks/useSessionRealtime';
 import { useLegalAgeGate } from '@/hooks/useLegalAgeGate';
 import { AgeRestrictedScreen } from '@/components/common/AgeRestrictedScreen';
 
@@ -56,8 +57,14 @@ function AuthGuard() {
   const segments = useSegments();
   const router = useRouter();
 
-  useNotifications({ userId: user?.id });
+  // Notification taps can navigate once a signed-in screen is showing (not
+  // the launch spinner at the root, which is about to be replaced by the feed).
+  const segs = segments as string[];
+  const canNavigate =
+    !!session && !!profile?.onboarded && segs.length > 0 && segs[0] !== '(auth)';
+  useNotifications({ userId: user?.id, ready: canNavigate });
   useNotificationRealtime();
+  useSessionRealtime(user?.id);
 
   // Deep link handler: suds://session/join?token=xxx and suds://log
   const url = Linking.useURL();
