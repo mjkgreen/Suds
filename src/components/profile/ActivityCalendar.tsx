@@ -6,6 +6,9 @@ import { ActivityDay } from '@/types/models';
 
 const DOW_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+/** Circle diameter for the lightest and the busiest day. */
+const MIN_DOT = 14;
+const MAX_DOT = 30;
 
 interface ActivityCalendarProps {
   activityByDay: ActivityDay[];
@@ -24,13 +27,19 @@ export function ActivityCalendar({ activityByDay }: ActivityCalendarProps) {
   const [offset, setOffset] = useState(0); // 0 = this month, -1 = last month, …
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
 
-  const { activityMap, earliestOffset } = useMemo(() => {
+  const { activityMap, earliestOffset, personalMax } = useMemo(() => {
     const map = new Map<string, number>();
     let earliest: string | null = null;
+    let max = 0;
+    let recentMax = 0;
+    const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 6, now.getDate());
+    const recentFrom = dateKey(sixMonthsAgo.getFullYear(), sixMonthsAgo.getMonth(), sixMonthsAgo.getDate());
     for (const d of activityByDay) {
       const v = Number(d.count) || 0;
       if (!v) continue;
       map.set(d.date, v);
+      max = Math.max(max, v);
+      if (d.date >= recentFrom) recentMax = Math.max(recentMax, v);
       if (!earliest || d.date < earliest) earliest = d.date;
     }
     let minOffset = 0;
@@ -38,7 +47,15 @@ export function ActivityCalendar({ activityByDay }: ActivityCalendarProps) {
       const [y, m] = earliest.split('-').map(Number);
       minOffset = (y - now.getFullYear()) * 12 + (m - 1 - now.getMonth());
     }
-    return { activityMap: map, earliestOffset: Math.min(minOffset, 0) };
+    // Shading and size are relative to this person's busiest day in the last
+    // 6 months (all time if they haven't drunk since), so a quiet month looks
+    // quiet and one huge day years ago doesn't flatten the scale. Older days
+    // above it just show at full size.
+    return {
+      activityMap: map,
+      earliestOffset: Math.min(minOffset, 0),
+      personalMax: Math.max(recentMax || max, 1),
+    };
   }, [activityByDay]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const firstDay = new Date(now.getFullYear(), now.getMonth() + offset, 1);
@@ -50,11 +67,8 @@ export function ActivityCalendar({ activityByDay }: ActivityCalendarProps) {
   const isCurrentMonth = offset === 0;
 
   let monthTotal = 0;
-  let maxCount = 1;
   for (let d = 1; d <= daysInMonth; d++) {
-    const c = activityMap.get(dateKey(year, month, d)) ?? 0;
-    monthTotal += c;
-    maxCount = Math.max(maxCount, c);
+    monthTotal += activityMap.get(dateKey(year, month, d)) ?? 0;
   }
 
   const cells: (number | null)[] = [
@@ -118,7 +132,10 @@ export function ActivityCalendar({ activityByDay }: ActivityCalendarProps) {
             const isToday = isCurrentMonth && now.getDate() === day;
             const isFuture = isCurrentMonth && day > now.getDate();
             const isSelected = selectedDay === day;
-            const alpha = count > 0 ? Math.max(count / maxCount, 0.25) : 0;
+            // 0..1 of their busiest day: deeper orange and a bigger circle.
+            const ratio = count > 0 ? Math.min(count / personalMax, 1) : 0;
+            const size = count > 0 ? MIN_DOT + (MAX_DOT - MIN_DOT) * ratio : 0;
+            const alpha = 0.2 + 0.8 * ratio;
             return (
               <Pressable
                 key={idx}
@@ -130,21 +147,31 @@ export function ActivityCalendar({ activityByDay }: ActivityCalendarProps) {
               >
                 <View
                   style={{
-                    width: 30,
-                    height: 30,
-                    borderRadius: 15,
-                    backgroundColor: count > 0 ? `rgba(245, 158, 11, ${alpha})` : 'transparent',
+                    width: MAX_DOT,
+                    height: MAX_DOT,
+                    borderRadius: MAX_DOT / 2,
                     borderWidth: isSelected ? 2 : isToday ? 1.5 : 0,
                     borderColor: isSelected ? '#b45309' : '#f59e0b',
                     alignItems: 'center',
                     justifyContent: 'center',
                   }}
                 >
+                  {count > 0 && (
+                    <View
+                      style={{
+                        position: 'absolute',
+                        width: size,
+                        height: size,
+                        borderRadius: size / 2,
+                        backgroundColor: `rgba(245, 158, 11, ${alpha})`,
+                      }}
+                    />
+                  )}
                   <Text
                     style={{
                       fontSize: 11,
-                      color: count > 0 ? '#92400e' : isFuture ? '#d1d5db' : '#6b7280',
-                      fontWeight: isToday || isSelected ? '700' : '400',
+                      color: ratio > 0.6 ? '#ffffff' : count > 0 ? '#92400e' : isFuture ? '#d1d5db' : '#6b7280',
+                      fontWeight: isToday || isSelected || ratio > 0.6 ? '700' : '400',
                     }}
                   >
                     {day}
