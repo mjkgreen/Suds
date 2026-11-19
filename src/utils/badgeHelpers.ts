@@ -1,6 +1,27 @@
 import { MilestoneData, StreakData, UserStats, DrinkType } from '@/types/models';
 import { MILESTONE_EMOJI, DRINK_TYPE_MAP } from '@/lib/constants';
 
+/** YYYY-MM-DD of a date in the device's time zone (toISOString would give the UTC date). */
+export function localDateKey(d: Date): string {
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${d.getFullYear()}-${m}-${day}`;
+}
+
+/**
+ * Midday on the Monday starting d's week. Weeks run Monday–Sunday, matching
+ * the database stats ("This Week", weekly goal), so a weekend isn't split.
+ */
+export function weekStart(d: Date): Date {
+  const x = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 12);
+  x.setDate(x.getDate() - ((x.getDay() + 6) % 7));
+  return x;
+}
+
+export function weekKeyOf(d: Date): string {
+  return localDateKey(weekStart(d));
+}
+
 export type BadgeCategory = 'milestone' | 'sober_streak' | 'drink_streak' | 'session_count' | 'under_limit_streak' | 'drink_type' | 'global_entry' | 'happy_hour' | 'last_call' | 'early_bird' | 'weekend_warrior' | 'school_night' | 'keeping_pace' | 'hydrated' | 'consistency_king';
 
 export type BadgeTier = 1 | 2 | 3 | 4 | 5 | 6 | 7;
@@ -214,10 +235,10 @@ export function getEarnedBadges(
   if (stats?.activity_by_day && stats.activity_by_day.length > 0) {
     const weeks: Record<string, { days: Set<number>; total: number }> = {};
     stats.activity_by_day.forEach((d) => {
+      // Water-only days are listed with a count of 0; they aren't drinking days.
+      if (!d.count) return;
       const dt = new Date(d.date + 'T12:00:00'); // Midday to avoid TZ issues
-      const startOfWeek = new Date(dt);
-      startOfWeek.setDate(dt.getDate() - dt.getDay());
-      const weekKey = startOfWeek.toISOString().split('T')[0];
+      const weekKey = weekKeyOf(dt);
 
       if (!weeks[weekKey]) weeks[weekKey] = { days: new Set(), total: 0 };
       weeks[weekKey].days.add(dt.getDay());
@@ -233,9 +254,10 @@ export function getEarnedBadges(
 
     // Check last 52 weeks
     for (let i = 0; i < 52; i++) {
-      const checkDate = new Date();
-      checkDate.setDate(checkDate.getDate() - (i * 7 + checkDate.getDay()));
-      const weekKey = checkDate.toISOString().split('T')[0];
+      // Monday of the week i weeks ago (same weeks as the stats).
+      const checkDate = weekStart(new Date());
+      checkDate.setDate(checkDate.getDate() - i * 7);
+      const weekKey = localDateKey(checkDate);
       const weekData = weeks[weekKey];
 
       // Don't count weeks before account creation
@@ -302,9 +324,7 @@ export function getEarnedBadges(
     const weeklyTotals: Record<string, number> = {};
     stats.activity_by_day.forEach((d) => {
       const dt = new Date(d.date + 'T12:00:00');
-      const startOfWeek = new Date(dt);
-      startOfWeek.setDate(dt.getDate() - dt.getDay());
-      const weekKey = startOfWeek.toISOString().split('T')[0];
+      const weekKey = weekKeyOf(dt);
       weeklyTotals[weekKey] = (weeklyTotals[weekKey] || 0) + d.count;
     });
 
@@ -312,9 +332,10 @@ export function getEarnedBadges(
     let currentUnderLimitStreak = 0;
 
     for (let i = 0; i < 52; i++) {
-      const checkDate = new Date();
-      checkDate.setDate(checkDate.getDate() - (i * 7 + checkDate.getDay()));
-      const weekKey = checkDate.toISOString().split('T')[0];
+      // Monday of the week i weeks ago (same weeks as the stats).
+      const checkDate = weekStart(new Date());
+      checkDate.setDate(checkDate.getDate() - i * 7);
+      const weekKey = localDateKey(checkDate);
       const weekTotal = weeklyTotals[weekKey] || 0;
 
       if (weekTotal <= stats.weekly_limit) {
@@ -398,9 +419,7 @@ export function getEarnedBadges(
     const weeklyTotals: Record<string, number> = {};
     stats.activity_by_day.forEach((d) => {
       const dt = new Date(d.date + 'T12:00:00');
-      const startOfWeek = new Date(dt);
-      startOfWeek.setDate(dt.getDate() - dt.getDay());
-      const weekKey = startOfWeek.toISOString().split('T')[0];
+      const weekKey = weekKeyOf(dt);
       weeklyTotals[weekKey] = (weeklyTotals[weekKey] || 0) + d.count;
     });
 
@@ -409,13 +428,14 @@ export function getEarnedBadges(
     const goalUpdatedDate = stats.goal_updated_at ? new Date(stats.goal_updated_at) : new Date(0);
 
     for (let i = 0; i < 52; i++) {
-      const checkDate = new Date();
-      checkDate.setDate(checkDate.getDate() - (i * 7 + checkDate.getDay()));
+      // Monday of the week i weeks ago (same weeks as the stats).
+      const checkDate = weekStart(new Date());
+      checkDate.setDate(checkDate.getDate() - i * 7);
       
       // Streak resets if we go before the last goal update
       if (checkDate < goalUpdatedDate) break;
 
-      const weekKey = checkDate.toISOString().split('T')[0];
+      const weekKey = localDateKey(checkDate);
       const weekTotal = weeklyTotals[weekKey] || 0;
 
       if (weekTotal <= stats.weekly_limit) {

@@ -138,8 +138,15 @@ export default function SessionDetailScreen() {
     ]);
   }
 
+  // Web can't show a multi-button Alert, so the choice opens inline there.
+  const [drinkActionsFor, setDrinkActionsFor] = useState<string | null>(null);
+
   function handleRemoveDrink(drink: DrinkLog) {
     if (!user || !id) return;
+    if (Platform.OS === "web") {
+      setDrinkActionsFor((cur) => (cur === drink.id ? null : drink.id));
+      return;
+    }
     // "Remove" only unlinks the drink, so it shows up again as its own entry
     // in the feed. Offer a real delete alongside it.
     Alert.alert(
@@ -494,7 +501,8 @@ export default function SessionDetailScreen() {
                 const showAuthor = isMultiMember && !!author;
                 const isOwnDrink = drink.user_id === user?.id;
                 return (
-                  <View key={drink.id} className="flex-row items-center gap-2">
+                  <View key={drink.id} className="gap-2">
+                  <View className="flex-row items-center gap-2">
                     <Pressable
                       className="flex-row items-center gap-3 flex-1"
                       onPress={() => router.push(`/drink/${drink.id}`)}
@@ -555,10 +563,37 @@ export default function SessionDetailScreen() {
                         onPress={() => handleRemoveDrink(drink)}
                         hitSlop={8}
                         className="p-1"
+                        accessibilityLabel="Remove or delete drink"
                       >
                         <Ionicons name="close-circle-outline" size={18} color="#6b7280" />
                       </Pressable>
                     )}
+                  </View>
+                  {drinkActionsFor === drink.id && user && (
+                    <View className="flex-row flex-wrap items-center gap-2 pl-[52px]">
+                      <Pressable
+                        onPress={() => {
+                          setDrinkActionsFor(null);
+                          removeDrinkFromSession({ id: drink.id, sessionId: id!, userId: user.id });
+                        }}
+                        className="bg-accent border border-border rounded-full px-3 py-1.5"
+                      >
+                        <Text className="text-foreground text-xs font-semibold">Remove from Night Out</Text>
+                      </Pressable>
+                      <Pressable
+                        onPress={() => {
+                          setDrinkActionsFor(null);
+                          deleteDrink({ id: drink.id, userId: user.id, sessionId: id });
+                        }}
+                        className="border border-red-500/40 rounded-full px-3 py-1.5"
+                      >
+                        <Text className="text-red-500 text-xs font-semibold">Delete Drink</Text>
+                      </Pressable>
+                      <Pressable onPress={() => setDrinkActionsFor(null)} className="px-2 py-1.5">
+                        <Text className="text-muted-foreground text-xs">Cancel</Text>
+                      </Pressable>
+                    </View>
+                  )}
                   </View>
                 );
               })}

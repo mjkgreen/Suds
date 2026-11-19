@@ -421,7 +421,7 @@ export function SimpleDateTimePicker({
                   <Ionicons
                     name={tab === 'date' ? 'calendar-outline' : 'time-outline'}
                     size={16}
-                    color={activeTab === tab ? '#6366f1' : '#9ca3af'}
+                    color={activeTab === tab ? '#f59e0b' : '#9ca3af'}
                   />
                   <Text
                     className={

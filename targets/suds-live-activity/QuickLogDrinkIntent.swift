@@ -60,13 +60,17 @@ struct QuickLogDrinkIntent: LiveActivityIntent {
         let rawDrinkName = d.string(forKey: "lastDrinkName") ?? ""
         let drinkType = rawDrinkType.isEmpty ? "beer" : rawDrinkType
         let drinkName = rawDrinkName.isEmpty ? "Beer" : rawDrinkName
+        // Count it like the app does: non-alcoholic drinks (water etc.) don't add to
+        // the drink count, which also drives the widget's BAC. Keep in sync with
+        // NON_ALCOHOLIC_DRINK_TYPES in src/types/models.ts.
+        let added = ["water", "soft_drink", "mocktail", "non_alcoholic"].contains(drinkType) ? 0 : 1
 
         // Optimistic update — count+1 and spinner appear immediately.
         for activity in Activity<SudsSessionAttributes>.activities {
             let s = activity.contentState
             await activity.update(using: SudsSessionAttributes.ContentState(
-                drinkCount: s.drinkCount + 1,
-                groupDrinkCount: s.groupDrinkCount + 1,
+                drinkCount: s.drinkCount + added,
+                groupDrinkCount: s.groupDrinkCount + added,
                 lastDrinkName: drinkName,
                 memberCount: s.memberCount,
                 memberNames: s.memberNames,
@@ -133,7 +137,7 @@ struct QuickLogDrinkIntent: LiveActivityIntent {
             for activity in Activity<SudsSessionAttributes>.activities {
                 let s = activity.contentState
                 await activity.update(using: SudsSessionAttributes.ContentState(
-                    drinkCount: max(0, s.drinkCount - 1), groupDrinkCount: max(0, s.groupDrinkCount - 1),
+                    drinkCount: max(0, s.drinkCount - added), groupDrinkCount: max(0, s.groupDrinkCount - added),
                     lastDrinkName: s.lastDrinkName,
                     memberCount: s.memberCount, memberNames: s.memberNames, isLogging: false
                 ))
