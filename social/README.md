@@ -16,6 +16,10 @@ runs it 4 days a week by following [`TASK.md`](TASK.md).
 3. `render/compose.py` adds an eased camera, touch rings, the hook and
    captions, an end card and an original music bed. The result is
    1080×1920, ≤ 2.8 MB. `render/still.py` makes 1080×1350 feed stills.
+   Every full-frame orange background (the still and the reel's end card)
+   gets soap bubbles from `render/bubbles.py`, matching the App Store art.
+   They're kept clear of text, logos and buttons. Don't ship a flat orange
+   background.
 4. `planner.py` decides what's due and refuses repeats. Its `check` must say
    `OK` before anything is uploaded.
 

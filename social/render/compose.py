@@ -12,6 +12,9 @@ import argparse, json, math, os, shutil, subprocess, sys, tempfile
 import numpy as np
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from bubbles import Bubbles
+
 W, H, FPS = 1080, 1920, 30
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.abspath(os.path.join(HERE, '..', '..'))
@@ -130,8 +133,30 @@ def draw_taps(img, taps):
             d.ellipse((x - 30, y - 30, x + 30, y + 30), fill=(17, 24, 39, int(90 * (1 - age / 7))))
 
 
+_END_BUBBLES = {}
+
+
+def end_bubbles(n, title, cta, url):
+    """Bubbles for the end card, kept clear of the logo, wordmark, title, button and URL."""
+    key = (n, title, cta, url)
+    if key not in _END_BUBBLES:
+        d = ImageDraw.Draw(Image.new('RGBA', (1, 1)))
+        cx = W / 2 - 30
+        def box(width, y0, y1):  # y ranges include the 40px slide-in
+            return (cx - width / 2, y0, cx + width / 2, y1 + 40)
+        avoid = [box(360, 330, 690),
+                 box(d.textlength('Suds', font=font('Black', 120)), 730, 880)]
+        lines = title.split('\n')
+        avoid.append(box(max(d.textlength(l, font=font('Bold', 64)) for l in lines), 900, 900 + 80 * len(lines)))
+        avoid.append(box(d.textlength(cta, font=font('ExtraBold', 54)) + 110, 1130, 1130 + 120))
+        avoid.append(box(d.textlength(url, font=font('SemiBold', 44)), 1130 + 120 + 40, 1130 + 120 + 40 + 60))
+        _END_BUBBLES[key] = Bubbles(W, H, avoid=avoid, seed=11, rise=1.0, frames=n)
+    return _END_BUBBLES[key]
+
+
 def end_card(i, n, title, cta, url):
     img = Image.new('RGBA', (W, H), AMBER + (255,))
+    img.alpha_composite(end_bubbles(n, title, cta, url).render(frame=i))
     d = ImageDraw.Draw(img)
     logo = Image.open(os.path.join(ROOT, 'assets', 'Suds.png')).convert('RGBA').resize((360, 360), Image.LANCZOS)
     mask = Image.new('L', logo.size, 0)
