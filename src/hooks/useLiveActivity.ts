@@ -213,6 +213,15 @@ const _quickLogSub = Platform.OS === 'ios'
 // Called by useMyOpenSession when the app opens and finds an existing active session.
 // Restores the module-level timer state without touching the native activity, and
 // recovers liveActivityId from the native ActivityKit state (wiped by a force-kill).
+/**
+ * Recount the Live Activity now (e.g. after a drink is deleted or removed
+ * from the night out — the realtime channel only hears new drinks). No-op
+ * without a running Live Activity.
+ */
+export function refreshLiveActivityCounts(): Promise<void> {
+  return _refresh();
+}
+
 export function resumeActivity(session: SessionWithRole): void {
   if (Platform.OS !== 'ios') return;
   _sessionStartMs = session.started_at

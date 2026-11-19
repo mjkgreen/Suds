@@ -25,7 +25,7 @@ import { DrinkIcon } from "@/components/icons/DrinkIcon";
 import { NightOutBACProfile } from "@/components/session/NightOutBACProfile";
 import { useAddComment, useComments, useDeleteComment } from "@/hooks/useComments";
 import { useDeleteSession, useEndSession, useLeaveSession } from "@/hooks/useSession";
-import { useRemoveDrinkFromSession } from "@/hooks/useDrinkLog";
+import { useDeleteDrinkLog, useRemoveDrinkFromSession } from "@/hooks/useDrinkLog";
 import { useSessionMembers } from "@/hooks/useSessionMembers";
 import { supabase } from "@/lib/supabase";
 import { drinkTotal } from "@/lib/drinkCounts";
@@ -98,6 +98,7 @@ export default function SessionDetailScreen() {
   const { mutateAsync: leaveSession, isPending: isLeaving } = useLeaveSession();
   const { mutateAsync: deleteSession, isPending: isDeleting } = useDeleteSession();
   const { mutateAsync: removeDrinkFromSession } = useRemoveDrinkFromSession();
+  const { mutate: deleteDrink } = useDeleteDrinkLog();
   const [confirmAction, setConfirmAction] = useState(false);
 
   const myMembership = useMemo(
@@ -139,15 +140,21 @@ export default function SessionDetailScreen() {
 
   function handleRemoveDrink(drink: DrinkLog) {
     if (!user || !id) return;
+    // "Remove" only unlinks the drink, so it shows up again as its own entry
+    // in the feed. Offer a real delete alongside it.
     Alert.alert(
-      "Remove from Night Out?",
-      "The drink will stay in your history but won't be part of this night out.",
+      "Remove this drink?",
+      "Remove it from this night out (it stays in your history as a separate drink), or delete it entirely.",
       [
         { text: "Cancel", style: "cancel" },
         {
-          text: "Remove",
-          style: "destructive",
+          text: "Remove from Night Out",
           onPress: () => removeDrinkFromSession({ id: drink.id, sessionId: id, userId: user.id }),
+        },
+        {
+          text: "Delete Drink",
+          style: "destructive",
+          onPress: () => deleteDrink({ id: drink.id, userId: user.id, sessionId: id }),
         },
       ]
     );

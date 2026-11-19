@@ -9,6 +9,7 @@ import { supabase } from '@/lib/supabase';
 import { DrinkLog, DrinkType, LogDrinkFormData, isAlcoholicDrink } from '@/types/models';
 import { useSessionStore } from '@/stores/sessionStore';
 import * as LiveActivityBridge from 'suds-live-activity-bridge';
+import { refreshLiveActivityCounts } from '@/hooks/useLiveActivity';
 
 function capitalise(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1);
@@ -103,6 +104,27 @@ function refreshAfterDrinkChange(queryClient: QueryClient, userId: string, sessi
   queryClient.invalidateQueries({ queryKey: ['milestones', userId] });
   queryClient.invalidateQueries({ queryKey: ['streaks', userId] });
   queryClient.invalidateQueries({ queryKey: ['advancedStats', userId] });
+}
+
+/**
+ * Takes a drink off any open night-out page / drink list straight away.
+ * Returns a rollback.
+ */
+function dropFromSessionCaches(queryClient: QueryClient, drinkId: string): () => void {
+  const snapshots: [readonly unknown[], unknown][] = [];
+  for (const [key, data] of queryClient.getQueriesData<{ drinks: DrinkLog[] }>({ queryKey: ['sessionDetail'] })) {
+    if (!data?.drinks?.some((d) => d.id === drinkId)) continue;
+    snapshots.push([key, data]);
+    queryClient.setQueryData(key, { ...data, drinks: data.drinks.filter((d) => d.id !== drinkId) });
+  }
+  for (const [key, data] of queryClient.getQueriesData<DrinkLog[]>({ queryKey: ['sessionDrinks'] })) {
+    if (!Array.isArray(data) || !data.some((d) => d.id === drinkId)) continue;
+    snapshots.push([key, data]);
+    queryClient.setQueryData(key, data.filter((d) => d.id !== drinkId));
+  }
+  return () => {
+    for (const [key, data] of snapshots) queryClient.setQueryData(key, data);
+  };
 }
 
 export function useMyDrinkLogs(userId: string | undefined) {
@@ -346,7 +368,7 @@ export function useDeleteDrinkLog() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, userId }: { id: string; userId: string }) => {
+    mutationFn: async ({ id, userId }: { id: string; userId: string; sessionId?: string | null }) => {
       const { error } = await supabase
         .from('drink_logs')
         .delete()
@@ -354,16 +376,28 @@ export function useDeleteDrinkLog() {
       if (error) throw error;
       return { id, userId };
     },
-    onMutate: ({ id, userId }) => ({ rollback: removeDrinkFromFeedCaches(queryClient, userId, id) }),
+    onMutate: ({ id, userId }) => {
+      const rollbackFeeds = removeDrinkFromFeedCaches(queryClient, userId, id);
+      const rollbackSession = dropFromSessionCaches(queryClient, id);
+      return {
+        rollback: () => {
+          rollbackFeeds();
+          rollbackSession();
+        },
+      };
+    },
     onError: (_err, _vars, context) => {
       context?.rollback();
     },
-    onSettled: (_data, _err, { userId }) => {
-      refreshAfterDrinkChange(queryClient, userId);
+    onSettled: (_data, _err, { userId, sessionId }) => {
+      refreshAfterDrinkChange(queryClient, userId, sessionId);
       // Session drink lists no longer poll every few seconds, so refresh
       // whichever one this drink was in.
       queryClient.invalidateQueries({ queryKey: ['sessionDrinks'] });
       queryClient.invalidateQueries({ queryKey: ['sessionDetail'] });
+    },
+    onSuccess: () => {
+      void refreshLiveActivityCounts();
     },
   });
 }
@@ -379,9 +413,16 @@ export function useRemoveDrinkFromSession() {
       if (error) throw error;
       return { id, sessionId, userId };
     },
-    onSuccess: (_data, { sessionId, userId, id }) => {
+    onMutate: ({ id }) => ({ rollback: dropFromSessionCaches(queryClient, id) }),
+    onError: (_err, _vars, context) => {
+      context?.rollback();
+    },
+    onSettled: (_data, _err, { sessionId, userId, id }) => {
       refreshAfterDrinkChange(queryClient, userId, sessionId);
       queryClient.invalidateQueries({ queryKey: ['drinkDetail', id] });
+    },
+    onSuccess: () => {
+      void refreshLiveActivityCounts();
     },
   });
 }
