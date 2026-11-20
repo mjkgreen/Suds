@@ -2,6 +2,7 @@ import type * as Location from 'expo-location';
 import {
   extractGPSName,
   extractNominatimName,
+  placeToLocation,
   resolveLocationName,
   sanitizeGPSResult,
   sanitizeNominatimResult,
@@ -136,5 +137,31 @@ describe('resolveLocationName', () => {
   it('falls back to raw coords when nothing resolved', () => {
     const result = resolveLocationName({ lat: 43.1234567, lng: -79.7654321 }, false);
     expect(result.name).toBe('43.1235, -79.7654');
+  });
+});
+
+describe('placeToLocation', () => {
+  const venue = { id: 'v', name: 'Fairmont San Francisco', subtitle: '', lat: 37.79, lng: -122.41, isVenue: true, street: 'Mason Street', city: 'San Francisco' };
+  const home = { id: 'h', name: '45 Maple Street', subtitle: '', lat: 43.66, lng: -79.35, isVenue: false, street: 'Maple Street', neighbourhood: 'Riverdale', city: 'Toronto' };
+
+  it('keeps a venue with its coords, privacy on or off', () => {
+    expect(placeToLocation(venue, true)).toEqual({ name: 'Fairmont San Francisco', lat: 37.79, lng: -122.41 });
+    expect(placeToLocation(venue, false)).toEqual({ name: 'Fairmont San Francisco', lat: 37.79, lng: -122.41 });
+  });
+
+  it('keeps a street address as is when privacy is off', () => {
+    expect(placeToLocation(home, false)).toEqual({ name: '45 Maple Street', lat: 43.66, lng: -79.35 });
+  });
+
+  it('drops the house number and coords of a street address when privacy is on', () => {
+    expect(placeToLocation(home, true)).toEqual({ name: 'Maple Street, Riverdale', lat: undefined, lng: undefined });
+  });
+
+  it('prefers a venue found at the GPS fix over reverse geocoding', () => {
+    expect(resolveLocationName({ lat: 37.7925, lng: -122.4105, name: '950 Mason St', venue }, false)).toEqual({
+      name: 'Fairmont San Francisco',
+      lat: 37.79,
+      lng: -122.41,
+    });
   });
 });
