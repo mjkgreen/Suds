@@ -4,7 +4,8 @@ import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-nati
 import { Avatar } from '@/components/common/Avatar';
 import { DrinkIcon } from '@/components/icons/DrinkIcon';
 import { DRINK_TYPE_MAP } from '@/lib/constants';
-import { DrinkLogWithSessionAndProfile, DrinkType, Session, Profile } from '@/types/models';
+import { DrinkLogWithSessionAndProfile, DrinkType } from '@/types/models';
+import { groupMapLocation, MapLocationEntry } from '@/lib/mapData';
 import { formatDateTime } from '@/utils/dateHelpers';
 import { getDisplayName, getUsername } from '@/utils/profileHelpers';
 
@@ -15,46 +16,17 @@ interface MapLocationSheetProps {
   onViewDrink: (drinkId: string) => void;
 }
 
-interface LocationGroup {
-  sessionId: string | null;
-  items: DrinkLogWithSessionAndProfile[];
-  session: Session | null | undefined;
-  profile: Profile | undefined;
-}
-
 export function MapLocationSheet({ items, onClose, onViewSession, onViewDrink }: MapLocationSheetProps) {
-  const groups: LocationGroup[] = useMemo(() => {
-    const sessionMap = new Map<string, DrinkLogWithSessionAndProfile[]>();
-    const standaloneItems: DrinkLogWithSessionAndProfile[] = [];
-
-    for (const item of items) {
-      if (item.session_id) {
-        const existing = sessionMap.get(item.session_id) ?? [];
-        sessionMap.set(item.session_id, [...existing, item]);
-      } else {
-        standaloneItems.push(item);
-      }
-    }
-
-    const sessionGroups: LocationGroup[] = Array.from(sessionMap.entries()).map(
-      ([sessionId, groupItems]) => ({
-        sessionId,
-        items: groupItems,
-        session: groupItems[0]?.session,
-        profile: groupItems[0]?.profile,
-      }),
-    );
-
-    // Each standalone drink gets its own card so it's always visible with its own CTA
-    const standaloneGroups: LocationGroup[] = standaloneItems.map((item) => ({
-      sessionId: null,
-      items: [item],
-      session: null,
-      profile: item.profile,
-    }));
-
-    return [...sessionGroups, ...standaloneGroups];
-  }, [items]);
+  const groups = useMemo(
+    () =>
+      groupMapLocation(
+        items,
+        (type) => (DRINK_TYPE_MAP[type as DrinkType] ?? DRINK_TYPE_MAP['other']).label,
+        getDisplayName,
+        getUsername,
+      ),
+    [items],
+  );
 
   return (
     <Modal visible transparent animationType="slide" onRequestClose={onClose}>
@@ -106,35 +78,13 @@ function LocationGroupCard({
   onViewSession,
   onViewDrink,
 }: {
-  group: LocationGroup;
+  group: MapLocationEntry;
   onViewSession: (id: string) => void;
   onViewDrink: (id: string) => void;
 }) {
-  const { sessionId, items, session, profile } = group;
+  const { sessionId, items, title, who, drinkers, typeCounts, loggedAt, locationName } = group;
   const firstItem = items[0];
-
-  const typeCounts = items.reduce(
-    (acc, item) => ({ ...acc, [item.drink_type]: (acc[item.drink_type] ?? 0) + Number(item.quantity) }),
-    {} as Record<string, number>,
-  );
-
-  // Everyone who drank here in this night out, first drinker first.
-  const drinkers = useMemo(() => {
-    const seen = new Map<string, Profile>();
-    for (const i of items) if (i.profile && !seen.has(i.profile.id)) seen.set(i.profile.id, i.profile);
-    return [...seen.values()];
-  }, [items]);
-
-  const locationName = items.find((i) => i.location_name)?.location_name;
-  const title = session
-    ? session.title ?? 'Night Out'
-    : firstItem.drink_name || (DRINK_TYPE_MAP[firstItem.drink_type as DrinkType] ?? DRINK_TYPE_MAP['other']).label;
-  const who =
-    drinkers.length > 1
-      ? `${getDisplayName(drinkers[0])} +${drinkers.length - 1}`
-      : profile
-        ? `@${getUsername(profile)}`
-        : null;
+  const session = !!sessionId;
 
   return (
     <Pressable
@@ -145,7 +95,7 @@ function LocationGroupCard({
     >
       {/* Avatars: one for a drink, stacked for a shared night out */}
       <View className="flex-row" style={{ width: drinkers.length > 1 ? 50 : 38 }}>
-        {(drinkers.length ? drinkers.slice(0, 2) : profile ? [profile] : []).map((p, i) => (
+        {drinkers.slice(0, 2).map((p, i) => (
           <View key={p.id} style={{ marginLeft: i > 0 ? -26 : 0, marginTop: i > 0 ? 10 : 0 }}>
             <Avatar uri={p.avatar_url} name={getDisplayName(p)} size={i > 0 ? 28 : 38} />
           </View>
@@ -171,7 +121,7 @@ function LocationGroupCard({
               >
                 <DrinkIcon type={type as DrinkType} size={11} color={info.color} />
                 <Text className="text-[11px] font-semibold" style={{ color: info.color }}>
-                  ×{Math.round(count * 10) / 10}
+                  ×{count}
                 </Text>
               </View>
             );
@@ -179,7 +129,7 @@ function LocationGroupCard({
         </View>
 
         <Text className="text-muted-foreground text-xs" numberOfLines={1}>
-          {[who, formatDateTime(firstItem.logged_at), locationName].filter(Boolean).join(' · ')}
+          {[who, formatDateTime(loggedAt), locationName].filter(Boolean).join(' · ')}
         </Text>
       </View>
 

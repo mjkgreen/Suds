@@ -1,6 +1,6 @@
 jest.mock('@/lib/supabase', () => ({ supabase: {} }));
 
-import { buildMapClusters, isMyNightOut, MapLog, MapSession } from './mapData';
+import { buildMapClusters, groupMapLocation, isMyNightOut, MapLog, MapSession } from './mapData';
 
 const ME = 'me';
 
@@ -68,5 +68,31 @@ describe('isMyNightOut', () => {
 
   it("counts a friend's night out I'm not in as theirs", () => {
     expect(isMyNightOut(session('host', false), ME)).toBe(false);
+  });
+});
+
+describe('groupMapLocation', () => {
+  const label = (t: string) => t.toUpperCase();
+  const name = (p: { display_name?: string | null }) => p.display_name ?? '';
+  const username = (p: { username?: string | null }) => p.username ?? '';
+  const sam = { id: 'sam', display_name: 'Sam', username: 'sam' } as any;
+  const alex = { id: 'alex', display_name: 'Alex', username: 'alex' } as any;
+
+  it('lists a night out once, with everyone in it, then each lone drink', () => {
+    const entries = groupMapLocation(
+      [
+        log('a', 'sam', { session_id: 's1', session: { title: 'Pub crawl' } as any, profile: sam, drink_type: 'beer', quantity: 1.5 } as any),
+        log('b', 'alex', { session_id: 's1', session: { title: 'Pub crawl' } as any, profile: alex, drink_type: 'beer', quantity: 1 } as any),
+        log('c', 'sam', { profile: sam, drink_type: 'wine', drink_name: null, quantity: 1 } as any),
+      ],
+      label,
+      name,
+      username,
+    );
+    expect(entries.map((e) => [e.sessionId, e.title, e.who])).toEqual([
+      ['s1', 'Pub crawl', 'Sam +1'],
+      [null, 'WINE', '@sam'],
+    ]);
+    expect(entries[0].typeCounts).toEqual({ beer: 2.5 });
   });
 });

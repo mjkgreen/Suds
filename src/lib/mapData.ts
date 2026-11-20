@@ -185,3 +185,60 @@ export function buildMapClusters(logs: MapLog[] | undefined, userId: string | un
   }
   return [...groups.values()];
 }
+
+/** One entry when a map pin is opened: a night out, or a drink logged on its own. */
+export type MapLocationEntry = {
+  /** Set for a night out; the entry opens the night out. Otherwise it opens the drink. */
+  sessionId: string | null;
+  items: MapLog[];
+  title: string;
+  /** "@sam" for one person, "Sam +2" when several people drank here in the night out. */
+  who: string | null;
+  drinkers: NonNullable<MapLog['profile']>[];
+  /** Total per drink type, by quantity. */
+  typeCounts: Record<string, number>;
+  loggedAt: string;
+  locationName: string | null;
+};
+
+/**
+ * What a pin lists, shared by the app's sheet and the web map's popup: one
+ * entry per night out (all its drinks at this spot together), then one per
+ * drink logged outside a night out. `label` names a drink type, e.g. "Beer".
+ */
+export function groupMapLocation(
+  items: MapLog[],
+  label: (drinkType: string) => string,
+  name: (profile: NonNullable<MapLog['profile']>) => string,
+  username: (profile: NonNullable<MapLog['profile']>) => string,
+): MapLocationEntry[] {
+  const bySession = new Map<string, MapLog[]>();
+  const standalone: MapLog[] = [];
+  for (const item of items) {
+    if (item.session_id) bySession.set(item.session_id, [...(bySession.get(item.session_id) ?? []), item]);
+    else standalone.push(item);
+  }
+
+  const entry = (sessionId: string | null, group: MapLog[]): MapLocationEntry => {
+    const first = group[0];
+    const drinkers: NonNullable<MapLog['profile']>[] = [];
+    for (const i of group) if (i.profile && !drinkers.some((d) => d.id === i.profile!.id)) drinkers.push(i.profile);
+    const typeCounts: Record<string, number> = {};
+    for (const i of group) typeCounts[i.drink_type] = Math.round(((typeCounts[i.drink_type] ?? 0) + Number(i.quantity)) * 10) / 10;
+    return {
+      sessionId,
+      items: group,
+      title: sessionId ? first.session?.title || 'Night Out' : first.drink_name || label(first.drink_type),
+      who: drinkers.length > 1 ? `${name(drinkers[0])} +${drinkers.length - 1}` : drinkers[0] ? `@${username(drinkers[0])}` : null,
+      drinkers,
+      typeCounts,
+      loggedAt: first.logged_at,
+      locationName: group.find((i) => i.location_name)?.location_name ?? null,
+    };
+  };
+
+  return [
+    ...[...bySession.entries()].map(([id, group]) => entry(id, group)),
+    ...standalone.map((item) => entry(null, [item])),
+  ];
+}
