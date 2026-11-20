@@ -13,13 +13,14 @@ export function drinkTotal(logs: { drink_type: DrinkType | string; quantity: num
   );
 }
 
-/** Whole-number counts for the Live Activity: this user's and the group's. */
+/** Live Activity counts: this user's and the group's (fractional, e.g. 2.5). */
 export function sessionDrinkCounts(
   logs: { user_id: string; drink_type: DrinkType | string; quantity: number }[],
   userId: string | undefined,
 ): { mine: number; group: number } {
+  const tidy = (n: number) => Math.round(n * 10) / 10; // drop float noise like 2.4999999
   return {
-    mine: Math.round(drinkTotal(logs.filter((d) => d.user_id === userId))),
-    group: Math.round(drinkTotal(logs)),
+    mine: tidy(drinkTotal(logs.filter((d) => d.user_id === userId))),
+    group: tidy(drinkTotal(logs)),
   };
 }

@@ -22,7 +22,7 @@ struct SudsLiveActivityWidget: Widget {
             DynamicIsland {
                 DynamicIslandExpandedRegion(.leading) {
                     Label {
-                        Text("\(context.state.drinkCount)")
+                        Text(formatCount(context.state.drinkCount))
                             .font(.title2.bold())
                             .foregroundStyle(.orange)
                     } icon: {
@@ -57,8 +57,8 @@ struct SudsLiveActivityWidget: Widget {
                 }
                 DynamicIslandExpandedRegion(.bottom) {
                     HStack(spacing: 12) {
-                        let bac = computeBAC(
-                            drinkCount: context.state.drinkCount,
+                        let bac = estimatedBAC(
+                            context.state,
                             sessionStart: context.attributes.sessionStartDate,
                             weightLbs: context.attributes.weightLbs
                         )
@@ -73,7 +73,7 @@ struct SudsLiveActivityWidget: Widget {
                                 .foregroundStyle(bacColor(bac))
                         }
                         if context.state.memberCount > 1 {
-                            Text("\(context.state.groupDrinkCount) grp")
+                            Text("\(formatCount(context.state.groupDrinkCount)) grp")
                                 .font(.caption2)
                                 .foregroundStyle(.secondary)
                         }
@@ -86,7 +86,7 @@ struct SudsLiveActivityWidget: Widget {
                     SudsGlassShape()
                         .fill(Color.orange, style: FillStyle(eoFill: true))
                         .frame(width: 14, height: 14)
-                    Text("\(context.state.drinkCount)")
+                    Text(formatCount(context.state.drinkCount))
                         .font(.caption.bold())
                         .foregroundStyle(.orange)
                 }
@@ -142,21 +142,21 @@ struct LockScreenView: View {
             // Row 2: TimelineView triggers a rerender every 60s so pace and BAC
             // recompute from the current time without needing a ContentState push.
             TimelineView(.periodic(from: .now, by: 60)) { _ in
-                let bac = computeBAC(
-                    drinkCount: context.state.drinkCount,
+                let bac = estimatedBAC(
+                    context.state,
                     sessionStart: context.attributes.sessionStartDate,
                     weightLbs: context.attributes.weightLbs
                 )
                 HStack(spacing: 0) {
                     StatCell(
-                        value: "\(context.state.drinkCount)",
+                        value: formatCount(context.state.drinkCount),
                         label: "drinks",
                         color: .orange
                     )
                     .frame(maxWidth: .infinity)
                     if context.state.memberCount > 1 {
                         StatCell(
-                            value: "\(context.state.groupDrinkCount)",
+                            value: formatCount(context.state.groupDrinkCount),
                             label: "group",
                             color: .orange
                         )
@@ -267,18 +267,31 @@ struct PlusOneButton: View {
 
 // MARK: - Helpers
 
-private func computeBAC(drinkCount: Int, sessionStart: Date, weightLbs: Double) -> Double {
-    guard weightLbs > 0, drinkCount > 0 else { return 0 }
+/// "3" for whole numbers, "2.5" otherwise.
+private func formatCount(_ value: Double) -> String {
+    let rounded = (value * 10).rounded() / 10
+    return rounded == rounded.rounded() ? String(Int(rounded)) : String(format: "%.1f", rounded)
+}
+
+/// BAC now. Uses the app's model (each drink at its own time, spread over its end
+/// time if it has one, metabolised from then on) when the app has sent the drink
+/// timeline; otherwise the old rough estimate from the count and session start.
+private func estimatedBAC(_ state: SudsSessionAttributes.ContentState, sessionStart: Date, weightLbs: Double) -> Double {
+    if let bacState = state.bac {
+        let bac = bacState.bac(at: Date())
+        return (bac * 1000).rounded() / 1000
+    }
+    guard weightLbs > 0, state.drinkCount > 0 else { return 0 }
     let elapsedHours = -sessionStart.timeIntervalSinceNow / 3600
-    let bac = (Double(drinkCount) * 0.6 * 5.14) / (weightLbs * 0.70) - (0.015 * elapsedHours)
+    let bac = (state.drinkCount * 0.6 * 5.14) / (weightLbs * 0.70) - (0.015 * elapsedHours)
     return max(0, (bac * 1000).rounded() / 1000)
 }
 
-private func pacePerHour(drinkCount: Int, sessionStart: Date) -> Double? {
+private func pacePerHour(drinkCount: Double, sessionStart: Date) -> Double? {
     guard drinkCount > 0 else { return nil }
     let elapsedHours = -sessionStart.timeIntervalSinceNow / 3600
     guard elapsedHours >= 1.0 / 12.0 else { return nil } // suppress for first 5 min
-    return Double(drinkCount) / elapsedHours
+    return drinkCount / elapsedHours
 }
 
 private func bacColor(_ bac: Double) -> Color {

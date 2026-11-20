@@ -33,6 +33,7 @@ type LiveActivityBridge = {
     lastDrinkName: string,
     memberCount: number,
     memberNames: string,
+    bacJson: string,
   ): Promise<void>;
   endActivity(activityId: string): Promise<void>;
   endAllActivities(): Promise<void>;
@@ -89,6 +90,11 @@ export async function startActivity(
   return Bridge?.startActivity(sessionTitle, drinkCount, groupDrinkCount, memberCount, memberNames, sessionStartMs, weightLbs) ?? null;
 }
 
+/**
+ * Counts may be fractional (a log of 2.5 drinks). `bac` is the user's drink
+ * timeline and body constants (WidgetBACPayload in src/utils/bacHelpers.ts) so
+ * the widget can estimate BAC like the app; omit it to keep the current one.
+ */
 export async function updateActivity(
   activityId: string,
   drinkCount: number,
@@ -96,8 +102,12 @@ export async function updateActivity(
   lastDrinkName: string,
   memberCount: number,
   memberNames: string,
+  bac?: object | null,
 ): Promise<void> {
-  await Bridge?.updateActivity(activityId, drinkCount, groupDrinkCount, lastDrinkName, memberCount, memberNames);
+  await Bridge?.updateActivity(
+    activityId, drinkCount, groupDrinkCount, lastDrinkName, memberCount, memberNames,
+    bac ? JSON.stringify(bac) : '',
+  );
 }
 
 export async function endActivity(activityId: string): Promise<void> {

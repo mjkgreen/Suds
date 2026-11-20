@@ -22,8 +22,8 @@ function updateLiveActivity(
   quantity: number,
 ): void {
   if (!sessionId) return;
-  // Same rule as everywhere else: water etc. doesn't count, a quantity of 3 counts 3.
-  const added = isAlcoholicDrink(drinkType) ? Math.round(Number(quantity)) : 0;
+  // Same rule as everywhere else: water etc. doesn't count, 2.5 counts 2.5.
+  const added = isAlcoholicDrink(drinkType) ? Number(quantity) : 0;
   const {
     liveActivityId,
     liveActivityDrinkCount,
@@ -37,16 +37,18 @@ function updateLiveActivity(
   if (!liveActivityId) return;
 
   // The user just logged their own drink — bump both the personal and group counts.
-  const newCount = liveActivityDrinkCount + added;
-  const newGroupCount = liveActivityGroupDrinkCount + added;
+  const newCount = Math.round((liveActivityDrinkCount + added) * 10) / 10;
+  const newGroupCount = Math.round((liveActivityGroupDrinkCount + added) * 10) / 10;
 
   setLiveActivityDrinkCount(newCount);
   setLiveActivityGroupDrinkCount(newGroupCount);
   setLiveActivityLastDrinkName(drinkName);
   LiveActivityBridge.updateSharedLastDrink(drinkType, drinkName);
-  LiveActivityBridge.updateActivity(liveActivityId, newCount, newGroupCount, drinkName, liveActivityMemberCount, liveActivityMemberNames).catch(
-    (e) => { console.warn('[LiveActivity] updateActivity failed:', e); },
-  );
+  LiveActivityBridge.updateActivity(liveActivityId, newCount, newGroupCount, drinkName, liveActivityMemberCount, liveActivityMemberNames)
+    // The bump above keeps the widget's existing BAC timeline; recount from the
+    // database so the new drink (with its times) reaches the widget's BAC too.
+    .then(() => refreshLiveActivityCounts())
+    .catch((e) => { console.warn('[LiveActivity] updateActivity failed:', e); });
 }
 
 /**

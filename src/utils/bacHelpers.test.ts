@@ -154,3 +154,74 @@ describe('personalBACDrinks', () => {
     expect(personalBACDrinks(drinks, undefined, isAlcoholic)).toEqual([]);
   });
 });
+
+describe('buildWidgetBACPayload (Live Activity BAC)', () => {
+  const { buildWidgetBACPayload, calculateBAC } = require('./bacHelpers');
+  const profile = { weight: 180, weightUnit: 'lb', sex: 'male' };
+
+  // Line-for-line JS copy of BACState.bac(at:) in SudsSessionAttributes.swift,
+  // so the Swift port is checked against the app's own calculateBAC.
+  function swiftBAC(p: any, atSeconds: number): number {
+    const instant = new Map<number, number>();
+    const rateChange = new Map<number, number>();
+    for (const d of p.drinks) {
+      if (d.grams <= 0) continue;
+      if (d.end !== null && d.end > d.start) {
+        const rate = d.grams / ((d.end - d.start) / 3600);
+        rateChange.set(d.start, (rateChange.get(d.start) ?? 0) + rate);
+        rateChange.set(d.end, (rateChange.get(d.end) ?? 0) - rate);
+      } else {
+        instant.set(d.start, (instant.get(d.start) ?? 0) + d.grams);
+      }
+    }
+    const times = [...new Set([...instant.keys(), ...rateChange.keys()])].filter((t) => t <= atSeconds).sort((a, b) => a - b);
+    if (!times.length) return 0;
+    if (atSeconds > times[times.length - 1]) times.push(atSeconds);
+    let grams = 0;
+    let rate = 0;
+    for (let i = 0; i < times.length; i++) {
+      grams += instant.get(times[i]) ?? 0;
+      rate += rateChange.get(times[i]) ?? 0;
+      if (Math.abs(rate) < 1e-9) rate = 0;
+      if (i < times.length - 1) {
+        const hours = (times[i + 1] - times[i]) / 3600;
+        grams = Math.max(0, grams + (rate - p.eliminationGramsPerHour) * hours);
+      }
+    }
+    return Math.max(0, grams * p.bacPerGram);
+  }
+
+  const t0 = new Date('2026-11-20T20:00:00Z').getTime();
+  const at = (min: number) => new Date(t0 + min * 60_000).toISOString();
+  const drinks = [
+    { quantity: 2.5, loggedAt: at(0), endedAt: at(90) }, // spread over 90 min
+    { quantity: 1, loggedAt: at(30), endedAt: null },     // instant
+    { quantity: 0.5, loggedAt: at(120), endedAt: null },
+  ];
+
+  it.each([10, 45, 89, 91, 121, 180, 360, 600])('matches calculateBAC %i minutes in', (min) => {
+    const now = new Date(t0 + min * 60_000);
+    const payload = buildWidgetBACPayload(profile, drinks, now);
+    const expected = calculateBAC(profile, drinks, now);
+    expect(swiftBAC(payload, now.getTime() / 1000)).toBeCloseTo(expected, 4);
+  });
+
+  it('spreads a drink with an end time instead of counting it all at the start', () => {
+    const spread = [{ quantity: 3, loggedAt: at(0), endedAt: at(120) }];
+    const instant = [{ quantity: 3, loggedAt: at(0), endedAt: null }];
+    const now = new Date(t0 + 30 * 60_000);
+    const p1 = buildWidgetBACPayload(profile, spread, now);
+    const p2 = buildWidgetBACPayload(profile, instant, now);
+    expect(swiftBAC(p1, now.getTime() / 1000)).toBeLessThan(swiftBAC(p2, now.getTime() / 1000));
+    expect(p1.drinks[0]).toMatchObject({ grams: 42, end: Math.round((t0 + 120 * 60_000) / 1000) });
+  });
+
+  it('drops drinks from over a day ago and keeps the payload small', () => {
+    const old = [{ quantity: 1, loggedAt: at(-60 * 30), endedAt: null }];
+    const many = Array.from({ length: 60 }, (_, i) => ({ quantity: 1, loggedAt: at(i), endedAt: null }));
+    expect(buildWidgetBACPayload(profile, old, new Date(t0)).drinks).toHaveLength(0);
+    const payload = buildWidgetBACPayload(profile, many, new Date(t0 + 60 * 60_000));
+    expect(payload.drinks).toHaveLength(40);
+    expect(JSON.stringify(payload).length).toBeLessThan(3000);
+  });
+});
