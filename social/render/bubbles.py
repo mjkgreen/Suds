@@ -63,3 +63,64 @@ class Bubbles:
             else:  # partly off the top/left edge
                 layer.alpha_composite(sprite, (max(x, 0), max(yy, 0)), (max(-x, 0), max(-yy, 0)))
         return layer
+
+
+class RisingBubbles:
+    """Bubbles that float up through the frame and loop, for video.
+
+      rb = RisingBubbles(W, H, sizes=(30, 160), seed=3, fade=[(x0, y0, x1, y1), ...])
+      img.alpha_composite(rb.render(frame))
+
+    speed: pixels per frame for the biggest bubble (small ones rise slower).
+    fade: boxes (text, logos, buttons) a bubble fades out behind, down to
+    `behind` opacity, so the words stay readable.
+    opacity: overall strength (lower it on small cards with white text).
+    """
+
+    def __init__(self, w, h, sizes=(30, 170), count=None, seed=1, speed=9.0,
+                 fade=(), behind=0.12, opacity=1.0, wobble=6.0):
+        import math
+        self.w, self.h, self.fade, self.behind, self.opacity = w, h, list(fade), behind, opacity
+        rnd = random.Random(seed)
+        sprites = _sprites()
+        count = count or max(4, int(round(30 * (w * h) / (1080 * 1920))))
+        lo, hi = sizes
+        self.items = []
+        for k in range(count):
+            # more small bubbles than big ones
+            d = int(lo + (hi - lo) * rnd.random() ** 2.2)
+            x = rnd.uniform(-d * 0.3, w - d * 0.7)
+            y = rnd.uniform(-d, h)
+            sp = speed * (0.45 + 0.55 * (d - lo) / max(1, hi - lo)) * rnd.uniform(0.85, 1.15)
+            self.items.append(dict(s=rnd.choice(sprites).resize((d, d), Image.LANCZOS), d=d, x=x, y=y,
+                                   sp=sp, ph=rnd.uniform(0, 2 * math.pi), fr=rnd.uniform(0.04, 0.09),
+                                   amp=wobble * rnd.uniform(0.5, 1.0) * d / hi))
+        self._math = math
+
+    def _alpha(self, x, y, d):
+        a = self.opacity
+        for (x0, y0, x1, y1) in self.fade:
+            ox = max(0, min(x + d, x1) - max(x, x0)); oy = max(0, min(y + d, y1) - max(y, y0))
+            frac = (ox * oy) / (d * d)
+            if frac > 0:
+                a = min(a, self.opacity * (1 - (1 - self.behind) * min(1, frac * 1.6)))
+        return a
+
+    def render(self, frame):
+        layer = Image.new('RGBA', (self.w, self.h), (0, 0, 0, 0))
+        span = self.h + 2 * max(b['d'] for b in self.items)
+        for b in self.items:
+            d = b['d']
+            y = (b['y'] - b['sp'] * frame + d) % span - d   # loop back in below the bottom
+            x = b['x'] + b['amp'] * self._math.sin(b['ph'] + b['fr'] * frame)
+            xi, yi = int(round(x)), int(round(y))
+            if yi + d <= 0 or yi >= self.h or xi + d <= 0 or xi >= self.w:
+                continue
+            a = self._alpha(xi, yi, d)
+            if a <= 0.01:
+                continue
+            s = b['s']
+            if a < 0.999:
+                s = s.copy(); s.putalpha(s.getchannel('A').point(lambda v: int(v * a)))
+            layer.alpha_composite(s, (max(xi, 0), max(yi, 0)), (max(-xi, 0), max(-yi, 0)))
+        return layer

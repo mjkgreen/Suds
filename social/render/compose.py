@@ -15,7 +15,7 @@ import music
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from bubbles import Bubbles
+from bubbles import RisingBubbles
 
 W, H, FPS = 1080, 1920, 30
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -72,6 +72,23 @@ def wrap_lines(text):
     return text.split('\n')
 
 
+_HOOK_BUBBLES = {}
+
+
+def hook_bubbles(bw, bh, text, lines, f, pad_x, pad_y, lh):
+    key = (bw, bh, text)
+    if key not in _HOOK_BUBBLES:
+        d = ImageDraw.Draw(Image.new('RGBA', (1, 1)))
+        fade = []
+        for i, l in enumerate(lines):  # each text line's box, inside the card
+            lw = d.textlength(l, font=f)
+            y0 = pad_y + i * lh
+            fade.append(((bw - lw) / 2, y0, (bw + lw) / 2, y0 + f.size))
+        _HOOK_BUBBLES[key] = RisingBubbles(bw, bh, sizes=(18, max(30, int(bh * 0.5))), count=max(8, bw * bh // 8000),
+                                           seed=sum(map(ord, text)), speed=3.0, fade=fade, behind=0.35, opacity=0.9, wobble=3)
+    return _HOOK_BUBBLES[key]
+
+
 def draw_overlay(img, ov, age, life_left, band_y=None):
     """Hook: big amber card centred high. Caption: dark pill near the top."""
     if not ov:
@@ -107,6 +124,13 @@ def draw_overlay(img, ov, age, life_left, band_y=None):
     shadow = shadow.filter(ImageFilter.GaussianBlur(16))
     layer.alpha_composite(shadow)
     ld.rounded_rectangle((40, 40, 40 + bw, 40 + bh), radius=36, fill=bg)
+    if hook:  # small bubbles rising inside the amber card, faint behind the words
+        rb = hook_bubbles(int(bw), int(bh), ov['text'], lines, f, pad_x, pad_y, lh)
+        inner = rb.render(age)
+        m = Image.new('L', inner.size, 0)
+        ImageDraw.Draw(m).rounded_rectangle((0, 0, inner.width - 1, inner.height - 1), radius=36, fill=255)
+        inner.putalpha(Image.fromarray(np.minimum(np.array(inner.getchannel('A')), np.array(m))))
+        layer.alpha_composite(inner, (40, 40))
     color = (255, 255, 255, 255)
     for i, l in enumerate(lines):
         lw = ld.textlength(l, font=f)
@@ -139,7 +163,7 @@ _END_BUBBLES = {}
 
 
 def end_bubbles(n, title, cta, url):
-    """Bubbles for the end card, kept clear of the logo, wordmark, title, button and URL."""
+    """Bubbles rising through the end card; they fade behind the logo, wordmark, title, button and URL."""
     key = (n, title, cta, url)
     if key not in _END_BUBBLES:
         d = ImageDraw.Draw(Image.new('RGBA', (1, 1)))
@@ -152,13 +176,13 @@ def end_bubbles(n, title, cta, url):
         avoid.append(box(max(d.textlength(l, font=font('Bold', 64)) for l in lines), 900, 900 + 80 * len(lines)))
         avoid.append(box(d.textlength(cta, font=font('ExtraBold', 54)) + 110, 1130, 1130 + 120))
         avoid.append(box(d.textlength(url, font=font('SemiBold', 44)), 1130 + 120 + 40, 1130 + 120 + 40 + 60))
-        _END_BUBBLES[key] = Bubbles(W, H, avoid=avoid, seed=11, rise=1.0, frames=n)
+        _END_BUBBLES[key] = RisingBubbles(W, H, sizes=(32, 175), count=30, seed=11, speed=11, fade=avoid)
     return _END_BUBBLES[key]
 
 
 def end_card(i, n, title, cta, url):
     img = Image.new('RGBA', (W, H), AMBER + (255,))
-    img.alpha_composite(end_bubbles(n, title, cta, url).render(frame=i))
+    img.alpha_composite(end_bubbles(n, title, cta, url).render(i))
     d = ImageDraw.Draw(img)
     logo = Image.open(os.path.join(ROOT, 'assets', 'Suds.png')).convert('RGBA').resize((360, 360), Image.LANCZOS)
     mask = Image.new('L', logo.size, 0)
