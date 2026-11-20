@@ -32,7 +32,7 @@ interface DrinkCardProps {
 export const DrinkCard = React.memo(function DrinkCard({ item, currentUserId, onQuickLog }: DrinkCardProps) {
   const router = useRouter();
   const drinkInfo = DRINK_TYPE_MAP[item.drink_type] ?? DRINK_TYPE_MAP["other"];
-  const firstMedia = getDrinkMedia(item)[0];
+  const media = getDrinkMedia(item);
   const [isLogging, setIsLogging] = useState(false);
   const [didLog, setDidLog] = useState(false);
   // Optimistic like state
@@ -174,7 +174,7 @@ export const DrinkCard = React.memo(function DrinkCard({ item, currentUserId, on
       </View>
 
       {/* Photo */}
-      {firstMedia ? <MediaCarousel media={[firstMedia]} maxHeight={FEED_MEDIA_MAX_HEIGHT} borderRadius={12} visibilityKey={`drink-${item.id}`} /> : null}
+      {media.length > 0 ? <MediaCarousel media={media} maxHeight={FEED_MEDIA_MAX_HEIGHT} borderRadius={12} visibilityKey={`drink-${item.id}`} /> : null}
       <View className="flex-row items-center mt-2">
         {item.location_name && (
           <View className="flex-row items-center gap-1">
