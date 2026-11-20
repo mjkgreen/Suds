@@ -1,8 +1,7 @@
 import React, { useMemo, useState, useEffect } from "react";
 import { Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useAuthStore } from "@/stores/authStore";
-import { usePrefsStore } from "@/stores/prefsStore";
+import { useBACProfile } from "@/hooks/useBACProfile";
 import { calculateBAC, getSoberTime, ProfileInput, DrinkInput } from "@/utils/bacHelpers";
 import { DrinkLog, Session, isAlcoholicDrink } from "@/types/models";
 
@@ -31,10 +30,7 @@ function BACProgressCircle({ bac, isDark }: { bac: number; isDark: boolean }) {
 }
 
 export function NightOutBACProfile({ session, drinks }: NightOutBACProfileProps) {
-  const { sex } = usePrefsStore();
-  const { profile } = useAuthStore();
-  const weight = profile?.weight ?? 150;
-  const weightUnit = (profile?.weight_unit ?? 'lb') as 'lb' | 'kg';
+  const { sex, weight, weightUnit } = useBACProfile();
   const isActive = !session.ended_at;
 
   // Timer for active sessions (ticks every 30 seconds)

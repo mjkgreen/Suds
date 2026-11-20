@@ -34,7 +34,7 @@ struct QuickLogDrinkIntent: LiveActivityIntent {
                     lastDrinkName: "⚠️ no session",
                     memberCount: s.memberCount,
                     memberNames: s.memberNames,
-                    isLogging: false
+                    isLogging: false, bac: s.bac
                 ))
             }
             return .result()
@@ -63,7 +63,7 @@ struct QuickLogDrinkIntent: LiveActivityIntent {
         // Count it like the app does: non-alcoholic drinks (water etc.) don't add to
         // the drink count, which also drives the widget's BAC. Keep in sync with
         // NON_ALCOHOLIC_DRINK_TYPES in src/types/models.ts.
-        let added = ["water", "soft_drink", "mocktail", "non_alcoholic"].contains(drinkType) ? 0 : 1
+        let added: Double = ["water", "soft_drink", "mocktail", "non_alcoholic"].contains(drinkType) ? 0 : 1
 
         // Optimistic update — count+1 and spinner appear immediately.
         for activity in Activity<SudsSessionAttributes>.activities {
@@ -74,7 +74,7 @@ struct QuickLogDrinkIntent: LiveActivityIntent {
                 lastDrinkName: drinkName,
                 memberCount: s.memberCount,
                 memberNames: s.memberNames,
-                isLogging: true
+                isLogging: true, bac: added > 0 ? s.bac?.adding(drinks: added, at: Date()) : s.bac
             ))
         }
 
@@ -93,14 +93,15 @@ struct QuickLogDrinkIntent: LiveActivityIntent {
                 supabaseUrl: supabaseUrl,
                 anonKey: anonKey
             ) else {
-                // Token refresh failed — clear spinner before giving up.
+                // Token refresh failed — undo the optimistic +1 and clear the spinner.
                 d.set(false, forKey: "intentIsLogging")
                 for activity in Activity<SudsSessionAttributes>.activities {
                     let s = activity.contentState
                     await activity.update(using: SudsSessionAttributes.ContentState(
-                        drinkCount: s.drinkCount, groupDrinkCount: s.groupDrinkCount,
+                        drinkCount: max(0, s.drinkCount - added), groupDrinkCount: max(0, s.groupDrinkCount - added),
                         lastDrinkName: s.lastDrinkName,
-                        memberCount: s.memberCount, memberNames: s.memberNames, isLogging: false
+                        memberCount: s.memberCount, memberNames: s.memberNames, isLogging: false,
+                        bac: added > 0 ? s.bac?.removingLatestDrink() : s.bac
                     ))
                 }
                 return .result()
@@ -139,7 +140,7 @@ struct QuickLogDrinkIntent: LiveActivityIntent {
                 await activity.update(using: SudsSessionAttributes.ContentState(
                     drinkCount: max(0, s.drinkCount - added), groupDrinkCount: max(0, s.groupDrinkCount - added),
                     lastDrinkName: s.lastDrinkName,
-                    memberCount: s.memberCount, memberNames: s.memberNames, isLogging: false
+                    memberCount: s.memberCount, memberNames: s.memberNames, isLogging: false, bac: added > 0 ? s.bac?.removingLatestDrink() : s.bac
                 ))
             }
             return .result()
@@ -162,7 +163,7 @@ struct QuickLogDrinkIntent: LiveActivityIntent {
                 lastDrinkName: drinkName,
                 memberCount: s.memberCount,
                 memberNames: s.memberNames,
-                isLogging: false
+                isLogging: false, bac: s.bac
             ))
         }
 
