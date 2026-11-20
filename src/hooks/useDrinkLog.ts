@@ -33,6 +33,7 @@ function updateLiveActivity(
     setLiveActivityDrinkCount,
     setLiveActivityGroupDrinkCount,
     setLiveActivityLastDrinkName,
+    setLiveActivityLastDrinkQuantity,
   } = useSessionStore.getState();
   if (!liveActivityId) return;
 
@@ -42,9 +43,12 @@ function updateLiveActivity(
 
   setLiveActivityDrinkCount(newCount);
   setLiveActivityGroupDrinkCount(newGroupCount);
+  // The widget's +1 repeats this drink as logged, so 1.5 glasses shows and logs "+1.5".
+  const lastQuantity = Number(quantity) > 0 ? Number(quantity) : 1;
   setLiveActivityLastDrinkName(drinkName);
-  LiveActivityBridge.updateSharedLastDrink(drinkType, drinkName);
-  LiveActivityBridge.updateActivity(liveActivityId, newCount, newGroupCount, drinkName, liveActivityMemberCount, liveActivityMemberNames)
+  setLiveActivityLastDrinkQuantity(lastQuantity);
+  LiveActivityBridge.updateSharedLastDrink(drinkType, drinkName, lastQuantity);
+  LiveActivityBridge.updateActivity(liveActivityId, newCount, newGroupCount, drinkName, lastQuantity, liveActivityMemberCount, liveActivityMemberNames)
     // The bump above keeps the widget's existing BAC timeline; recount from the
     // database so the new drink (with its times) reaches the widget's BAC too.
     .then(() => refreshLiveActivityCounts())

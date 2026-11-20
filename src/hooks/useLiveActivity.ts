@@ -33,7 +33,7 @@ let _sessionStartMs: number | null = null; // authoritative epoch: activeSession
 // Pull fresh drink count + members from DB and push a ContentState update.
 async function _refresh(): Promise<void> {
   try {
-    const { liveActivityId, liveActivityLastDrinkName, activeSession } = useSessionStore.getState();
+    const { liveActivityId, liveActivityLastDrinkName, liveActivityLastDrinkQuantity, activeSession } = useSessionStore.getState();
     if (!liveActivityId || !_sessionStartMs) return;
 
     let drinkCount = useSessionStore.getState().liveActivityDrinkCount;
@@ -87,6 +87,7 @@ async function _refresh(): Promise<void> {
       drinkCount,
       groupDrinkCount,
       liveActivityLastDrinkName,
+      liveActivityLastDrinkQuantity,
       memberCount,
       memberNames,
       bacPayload,
@@ -275,7 +276,8 @@ export function resumeActivity(session: SessionWithRole): void {
 
 export function useLiveActivity() {
   const { setLiveActivityId, setLiveActivityDrinkCount, setLiveActivityGroupDrinkCount,
-          setLiveActivityLastDrinkName, setLiveActivityMemberCount, setLiveActivityMemberNames } = useSessionStore();
+          setLiveActivityLastDrinkName, setLiveActivityLastDrinkQuantity,
+          setLiveActivityMemberCount, setLiveActivityMemberNames } = useSessionStore();
 
   async function startActivity(state: SessionActivityState): Promise<void> {
     if (Platform.OS !== 'ios') return;
@@ -327,6 +329,7 @@ export function useLiveActivity() {
     setLiveActivityDrinkCount(state.drinkCount);
     setLiveActivityGroupDrinkCount(state.drinkCount);
     setLiveActivityLastDrinkName('');
+    setLiveActivityLastDrinkQuantity(1);
     setLiveActivityMemberCount(1);
     setLiveActivityMemberNames('');
 
@@ -339,7 +342,8 @@ export function useLiveActivity() {
   async function updateActivity(state: Partial<SessionActivityState>): Promise<void> {
     if (Platform.OS !== 'ios') return;
     const { liveActivityId, liveActivityDrinkCount, liveActivityGroupDrinkCount,
-            liveActivityLastDrinkName, liveActivityMemberCount, liveActivityMemberNames } = useSessionStore.getState();
+            liveActivityLastDrinkName, liveActivityLastDrinkQuantity,
+            liveActivityMemberCount, liveActivityMemberNames } = useSessionStore.getState();
     if (!liveActivityId) return;
     const count = state.drinkCount ?? liveActivityDrinkCount;
     setLiveActivityDrinkCount(count);
@@ -348,6 +352,7 @@ export function useLiveActivity() {
       count,
       liveActivityGroupDrinkCount,
       liveActivityLastDrinkName,
+      liveActivityLastDrinkQuantity,
       liveActivityMemberCount,
       liveActivityMemberNames,
     );
@@ -371,6 +376,7 @@ export function useLiveActivity() {
     setLiveActivityDrinkCount(0);
     setLiveActivityGroupDrinkCount(0);
     setLiveActivityLastDrinkName('');
+    setLiveActivityLastDrinkQuantity(1);
     setLiveActivityMemberCount(1);
     setLiveActivityMemberNames('');
   }

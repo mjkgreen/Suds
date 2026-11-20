@@ -15,7 +15,7 @@ import { AvatarStack } from "@/components/social/AvatarStack";
 import { LikersModal } from "@/components/social/LikersModal";
 import { DRINK_TYPE_MAP } from "@/lib/constants";
 import { groupDrinks } from "@/lib/drinkGroups";
-import { drinkTotal } from "@/lib/drinkCounts";
+import { drinkTotal, quickLogLabel } from "@/lib/drinkCounts";
 import { shareLink } from "@/lib/share";
 import { useShareInviteLink } from "@/hooks/useShareLinks";
 import { useSessionStore } from "@/stores/sessionStore";
@@ -333,7 +333,7 @@ export const SessionCard = React.memo(function SessionCard({ group, currentUserI
                         ) : (
                           <Ionicons name="add" size={11} color="#f59e0b" />
                         )}
-                        <Text className="text-primary text-xs font-semibold">{didLog ? "Added!" : "+1"}</Text>
+                        <Text className="text-primary text-xs font-semibold">{didLog ? "Added!" : quickLogLabel(item.quantity)}</Text>
                       </Pressable>
                     )}
                   </View>

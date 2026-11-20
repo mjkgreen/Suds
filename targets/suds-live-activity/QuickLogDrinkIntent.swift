@@ -31,7 +31,7 @@ struct QuickLogDrinkIntent: LiveActivityIntent {
                 await activity.update(using: SudsSessionAttributes.ContentState(
                     drinkCount: s.drinkCount,
                     groupDrinkCount: s.groupDrinkCount,
-                    lastDrinkName: "⚠️ no session",
+                    lastDrinkName: "⚠️ no session", lastDrinkQuantity: s.lastDrinkQuantity,
                     memberCount: s.memberCount,
                     memberNames: s.memberNames,
                     isLogging: false, bac: s.bac
@@ -63,15 +63,19 @@ struct QuickLogDrinkIntent: LiveActivityIntent {
         // Count it like the app does: non-alcoholic drinks (water etc.) don't add to
         // the drink count, which also drives the widget's BAC. Keep in sync with
         // NON_ALCOHOLIC_DRINK_TYPES in src/types/models.ts.
-        let added: Double = ["water", "soft_drink", "mocktail", "non_alcoholic"].contains(drinkType) ? 0 : 1
+        // The +1 repeats the last drink as logged, quantity included (a 1.5 glass of
+        // wine logs 1.5 again). Older app builds never stored it: fall back to 1.
+        let storedQuantity = d.double(forKey: "lastDrinkQuantity")
+        let quantity = storedQuantity > 0 ? storedQuantity : 1
+        let added: Double = ["water", "soft_drink", "mocktail", "non_alcoholic"].contains(drinkType) ? 0 : quantity
 
-        // Optimistic update — count+1 and spinner appear immediately.
+        // Optimistic update — count bump and spinner appear immediately.
         for activity in Activity<SudsSessionAttributes>.activities {
             let s = activity.contentState
             await activity.update(using: SudsSessionAttributes.ContentState(
                 drinkCount: s.drinkCount + added,
                 groupDrinkCount: s.groupDrinkCount + added,
-                lastDrinkName: drinkName,
+                lastDrinkName: drinkName, lastDrinkQuantity: quantity,
                 memberCount: s.memberCount,
                 memberNames: s.memberNames,
                 isLogging: true, bac: added > 0 ? s.bac?.adding(drinks: added, at: Date()) : s.bac
@@ -99,7 +103,7 @@ struct QuickLogDrinkIntent: LiveActivityIntent {
                     let s = activity.contentState
                     await activity.update(using: SudsSessionAttributes.ContentState(
                         drinkCount: max(0, s.drinkCount - added), groupDrinkCount: max(0, s.groupDrinkCount - added),
-                        lastDrinkName: s.lastDrinkName,
+                        lastDrinkName: s.lastDrinkName, lastDrinkQuantity: s.lastDrinkQuantity,
                         memberCount: s.memberCount, memberNames: s.memberNames, isLogging: false,
                         bac: added > 0 ? s.bac?.removingLatestDrink() : s.bac
                     ))
@@ -126,7 +130,7 @@ struct QuickLogDrinkIntent: LiveActivityIntent {
             "session_id": sessionId,
             "drink_type": drinkType,
             "drink_name": drinkName,
-            "quantity": 1,
+            "quantity": quantity,
             "logged_at": ISO8601DateFormatter().string(from: Date()),
         ]
         req.httpBody = try? JSONSerialization.data(withJSONObject: body)
@@ -139,7 +143,7 @@ struct QuickLogDrinkIntent: LiveActivityIntent {
                 let s = activity.contentState
                 await activity.update(using: SudsSessionAttributes.ContentState(
                     drinkCount: max(0, s.drinkCount - added), groupDrinkCount: max(0, s.groupDrinkCount - added),
-                    lastDrinkName: s.lastDrinkName,
+                    lastDrinkName: s.lastDrinkName, lastDrinkQuantity: s.lastDrinkQuantity,
                     memberCount: s.memberCount, memberNames: s.memberNames, isLogging: false, bac: added > 0 ? s.bac?.removingLatestDrink() : s.bac
                 ))
             }
@@ -160,7 +164,7 @@ struct QuickLogDrinkIntent: LiveActivityIntent {
             await activity.update(using: SudsSessionAttributes.ContentState(
                 drinkCount: s.drinkCount,
                 groupDrinkCount: s.groupDrinkCount,
-                lastDrinkName: drinkName,
+                lastDrinkName: drinkName, lastDrinkQuantity: quantity,
                 memberCount: s.memberCount,
                 memberNames: s.memberNames,
                 isLogging: false, bac: s.bac

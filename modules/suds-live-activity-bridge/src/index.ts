@@ -10,6 +10,8 @@ export type LiveActivityInfo = {
   groupDrinkCount: number;
   elapsedMinutes: number;
   lastDrinkName: string;
+  /** What the +1 button logs: the last drink's quantity (e.g. 1.5) */
+  lastDrinkQuantity: number;
   memberCount: number;
   memberNames: string;
 };
@@ -31,6 +33,7 @@ type LiveActivityBridge = {
     drinkCount: number,
     groupDrinkCount: number,
     lastDrinkName: string,
+    lastDrinkQuantity: number,
     memberCount: number,
     memberNames: string,
     bacJson: string,
@@ -48,7 +51,7 @@ type LiveActivityBridge = {
     lastDrinkType: string,
     lastDrinkName: string,
   ): void;
-  updateSharedLastDrink(drinkType: string, drinkName: string): void;
+  updateSharedLastDrink(drinkType: string, drinkName: string, quantity: number): void;
   updateSharedAuthTokens(accessToken: string, refreshToken: string, accessTokenExpiresAt: number): void;
   readSharedAuthTokens(): SharedAuthTokens | null;
   clearSharedSession(): void;
@@ -100,12 +103,13 @@ export async function updateActivity(
   drinkCount: number,
   groupDrinkCount: number,
   lastDrinkName: string,
+  lastDrinkQuantity: number,
   memberCount: number,
   memberNames: string,
   bac?: object | null,
 ): Promise<void> {
   await Bridge?.updateActivity(
-    activityId, drinkCount, groupDrinkCount, lastDrinkName, memberCount, memberNames,
+    activityId, drinkCount, groupDrinkCount, lastDrinkName, lastDrinkQuantity, memberCount, memberNames,
     bac ? JSON.stringify(bac) : '',
   );
 }
@@ -132,8 +136,9 @@ export function writeSharedSession(
   Bridge?.writeSharedSession(sessionId, userId, refreshToken, weightLbs, supabaseUrl, anonKey, sessionStartMs, lastDrinkType, lastDrinkName);
 }
 
-export function updateSharedLastDrink(drinkType: string, drinkName: string): void {
-  Bridge?.updateSharedLastDrink(drinkType, drinkName);
+/** What the +1 button repeats: the last drink logged, quantity included. */
+export function updateSharedLastDrink(drinkType: string, drinkName: string, quantity: number): void {
+  Bridge?.updateSharedLastDrink(drinkType, drinkName, quantity);
 }
 
 // Push the app's freshly-rotated refresh token to the widget extension's shared storage.

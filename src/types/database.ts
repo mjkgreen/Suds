@@ -511,7 +511,7 @@ export interface Database {
         };
       };
       delete_session_with_drinks: {
-        Args: { p_session_id: string };
+        Args: { p_session_id: string; p_delete_own_drinks?: boolean };
         Returns: undefined;
       };
       delete_account: {

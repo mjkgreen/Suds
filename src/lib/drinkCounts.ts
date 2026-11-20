@@ -24,3 +24,15 @@ export function sessionDrinkCounts(
     group: tidy(drinkTotal(logs)),
   };
 }
+
+/**
+ * Label for the quick-log button that repeats a drink: "+1" for a single
+ * drink, "+1.5" for a log of 1.5. The button copies the quantity, so the
+ * label says what it will actually add. Matches formatCount in the Live
+ * Activity widget (targets/suds-live-activity/SudsLiveActivityView.swift).
+ */
+export function quickLogLabel(quantity: number | null | undefined): string {
+  const q = Number(quantity);
+  const n = Number.isFinite(q) && q > 0 ? Math.round(q * 10) / 10 : 1;
+  return `+${n}`;
+}

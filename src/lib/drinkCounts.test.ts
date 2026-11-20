@@ -1,4 +1,4 @@
-import { drinkTotal, sessionDrinkCounts } from './drinkCounts';
+import { drinkTotal, quickLogLabel, sessionDrinkCounts } from './drinkCounts';
 
 describe('drink counts', () => {
   const logs = [
@@ -28,5 +28,20 @@ describe('drink counts', () => {
 
   it('handles quantities that arrive as strings from numeric columns', () => {
     expect(drinkTotal([{ drink_type: 'beer', quantity: '1.5' as unknown as number }])).toBe(1.5);
+  });
+});
+
+describe('quickLogLabel', () => {
+  it('shows the quantity the button will log', () => {
+    expect(quickLogLabel(1)).toBe('+1');
+    expect(quickLogLabel(1.5)).toBe('+1.5');
+    expect(quickLogLabel(3)).toBe('+3');
+    expect(quickLogLabel(0.5)).toBe('+0.5');
+  });
+
+  it('rounds float noise and falls back to +1', () => {
+    expect(quickLogLabel(1.4999999)).toBe('+1.5');
+    expect(quickLogLabel(null)).toBe('+1');
+    expect(quickLogLabel(0)).toBe('+1');
   });
 });

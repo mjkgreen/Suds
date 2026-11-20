@@ -17,19 +17,11 @@ import { MapLocationSheet } from '@/components/map/MapLocationSheet';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { DrinkIcon } from '@/components/icons/DrinkIcon';
-import { supabase } from '@/lib/supabase';
+import { buildMapClusters, fetchMapLogs, fetchSessionRoutes, isMyNightOut } from '@/lib/mapData';
 import { DRINK_TYPE_MAP } from '@/lib/constants';
 import { useAuthStore } from '@/stores/authStore';
 import { useActiveSession } from '@/hooks/useSession';
-import {
-  Coordinate,
-  DrinkLog,
-  DrinkType,
-  Session,
-  SessionWithLogs,
-  DrinkLogWithSessionAndProfile,
-  SessionWithLogsAndCoordinates,
-} from '@/types/models';
+import { DrinkType, DrinkLogWithSessionAndProfile } from '@/types/models';
 import { formatDateTime } from '@/utils/dateHelpers';
 
 async function reverseGeocode(lat: number, lng: number): Promise<string> {
@@ -125,25 +117,7 @@ export default function MapScreen() {
     queryKey: ['mapLogs', user?.id],
     queryFn: async () => {
       if (!user) return [];
-
-      const { data: follows } = await supabase
-        .from('follows')
-        .select('following_id')
-        .eq('follower_id', user.id);
-      const ids = (follows as { following_id: string }[] | null ?? []).map((f) => f.following_id);
-      const allIds = [user.id, ...ids];
-
-      const { data, error } = await supabase
-        .from('drink_logs')
-        .select('*, profile:profiles!drink_logs_user_id_fkey(id, username, display_name, avatar_url), session:sessions(id, title, started_at, ended_at, created_at, user_id)')
-        .not('location_lat', 'is', null)
-        .not('location_lng', 'is', null)
-        .in('user_id', allIds)
-        .order('logged_at', { ascending: false })
-        .limit(1000);
-
-      if (error) throw error;
-      return data as DrinkLogWithSessionAndProfile[];
+      return fetchMapLogs(user.id);
     },
     enabled: !!user,
   });
@@ -152,56 +126,7 @@ export default function MapScreen() {
     queryKey: ['sessionRoutes', user?.id],
     queryFn: async () => {
       if (!user) return [];
-
-      const { data: follows } = await supabase
-        .from('follows')
-        .select('following_id')
-        .eq('follower_id', user.id);
-      const ids = (follows as { following_id: string }[] | null ?? []).map((f) => f.following_id);
-      const allIds = [user.id, ...ids];
-
-      // Single database query fetching sessions along with their coordinates, joining the sessions table with drink_logs
-      const { data: sessionsData, error: sError } = await supabase
-        .from('sessions')
-        // Only what the route lines need, and only recent sessions: this used
-        // to pull every column of every drink in every session, unbounded.
-        .select('*, logs:drink_logs(id, location_lat, location_lng, location_name, logged_at)')
-        .in('user_id', allIds)
-        .order('started_at', { ascending: false })
-        .limit(200);
-
-      if (sError) throw sError;
-      if (!sessionsData || sessionsData.length === 0) return [];
-
-      const results: SessionWithLogs[] = sessionsData.map((session: any) => {
-        // Filter out logs that don't have coordinates and sort them chronologically
-        const sessionLogs = (session.logs as DrinkLog[] ?? [])
-          .filter((log) => log.location_lat !== null && log.location_lng !== null)
-          .sort((a, b) => new Date(a.logged_at).getTime() - new Date(b.logged_at).getTime());
-
-        const route: Coordinate[] = sessionLogs.map((log, index) => ({
-          latitude: log.location_lat!,
-          longitude: log.location_lng!,
-          timestamp: log.logged_at,
-          sequence_order: index + 1,
-          session_id: session.id,
-          location_name: log.location_name,
-          drink_log_id: log.id,
-        }));
-
-        return {
-          id: session.id,
-          user_id: session.user_id,
-          title: session.title,
-          started_at: session.started_at,
-          ended_at: session.ended_at,
-          created_at: session.created_at,
-          logs: sessionLogs,
-          route,
-        };
-      });
-
-      return results;
+      return fetchSessionRoutes(user.id);
     },
     enabled: !!user,
   });
@@ -209,28 +134,14 @@ export default function MapScreen() {
   const sessionsForRoutes = useMemo(() => {
     if (!sessionsWithRoutes) return [];
     return sessionsWithRoutes.map((session) => {
-      const isMine = session.user_id === user?.id;
+      const isMine = isMyNightOut(session, user?.id);
       const isVisible = filter === 'mine' ? isMine : !isMine;
       return { ...session, isVisible };
     });
   }, [sessionsWithRoutes, filter, user?.id]);
 
-  // Group nearby logs into clusters (~100m radius via 3-decimal rounding)
-  const clusters = useMemo(() => {
-    const groups = new Map<string, { items: DrinkLogWithSessionAndProfile[], isMine: boolean }>();
-    for (const log of logs ?? []) {
-      if (!log.location_lat || !log.location_lng) continue;
-      const isMine = log.user_id === user?.id;
-      const key = `${isMine ? 'mine' : 'friend'}-${log.location_lat.toFixed(3)},${log.location_lng.toFixed(3)}`;
-      const existing = groups.get(key) ?? { items: [], isMine };
-      groups.set(key, { ...existing, items: [...existing.items, log] });
-    }
-    return Array.from(groups.entries()).map(([key, data]) => {
-      const coordsPart = key.slice(key.indexOf('-') + 1);
-      const [lat, lng] = coordsPart.split(',').map(Number);
-      return { lat, lng, items: data.items, isMine: data.isMine };
-    });
-  }, [logs, user?.id]);
+  // Nearby drinks grouped into My Drinks / Friends pins (src/lib/mapData.ts)
+  const clusters = useMemo(() => buildMapClusters(logs, user?.id), [logs, user?.id]);
 
   // Pins are what the map is for: show them as soon as they're here (or
   // saved from last time) instead of waiting on the slower routes query.
