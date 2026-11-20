@@ -8,7 +8,7 @@ import * as LiveActivityBridge from 'suds-live-activity-bridge';
 import { DrinkType, SessionMember, SessionWithRole, isAlcoholicDrink } from '@/types/models';
 import { currentBACProfile } from '@/hooks/useBACProfile';
 import { buildWidgetBACPayload, personalBACDrinks, WidgetBACPayload } from '@/utils/bacHelpers';
-import { sessionDrinkCounts } from '@/lib/drinkCounts';
+import { lastDrinkForQuickLog, sessionDrinkCounts } from '@/lib/drinkCounts';
 import { formatMemberNames } from '@/utils/profileHelpers';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 
@@ -235,6 +235,36 @@ export function refreshLiveActivityCounts(): Promise<void> {
   return _refresh();
 }
 
+/**
+ * resumeActivity clears the widget's remembered last drink (writeSharedSession),
+ * and after a relaunch the app has forgotten it too, so the +1 would read
+ * "+1 Drink" and log a beer. Restore it from the user's latest drink in the
+ * night out ("+1.5 Wine"). The latest saved drink is always the one the +1
+ * should repeat, so this always wins.
+ */
+async function _restoreLastDrink(sessionId: string, userId: string): Promise<void> {
+  try {
+    const { data } = await supabase
+      .from('drink_logs')
+      .select('drink_type, drink_name, quantity')
+      .eq('session_id', sessionId)
+      .eq('user_id', userId)
+      .order('logged_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (!data) return;
+    const store = useSessionStore.getState();
+    const { drinkType, drinkName, quantity } = lastDrinkForQuickLog(
+      data as { drink_type: string; drink_name: string | null; quantity: number },
+    );
+    store.setLiveActivityLastDrinkName(drinkName);
+    store.setLiveActivityLastDrinkQuantity(quantity);
+    LiveActivityBridge.updateSharedLastDrink(drinkType, drinkName, quantity);
+  } catch {
+    // Keep the generic +1; the next drink logged sets it.
+  }
+}
+
 export function resumeActivity(session: SessionWithRole): void {
   if (Platform.OS !== 'ios') return;
   _sessionStartMs = session.started_at
@@ -267,6 +297,9 @@ export function resumeActivity(session: SessionWithRole): void {
       }
     } catch {
       // getActivities failed — _refresh will no-op until a drink log provides the ID
+    }
+    if (session.id && authSession?.user?.id) {
+      await _restoreLastDrink(session.id, authSession.user.id);
     }
     void _refresh();
     _ensureTimerRunning();

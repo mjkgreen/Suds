@@ -36,3 +36,21 @@ export function quickLogLabel(quantity: number | null | undefined): string {
   const n = Number.isFinite(q) && q > 0 ? Math.round(q * 10) / 10 : 1;
   return `+${n}`;
 }
+
+/**
+ * What the Live Activity's +1 repeats, from the user's latest drink in the
+ * night out: its type, display name ("Wine" when unnamed) and quantity.
+ */
+export function lastDrinkForQuickLog(drink: {
+  drink_type: DrinkType | string;
+  drink_name?: string | null;
+  quantity?: number | string | null;
+}): { drinkType: string; drinkName: string; quantity: number } {
+  const type = String(drink.drink_type);
+  const q = Number(drink.quantity);
+  return {
+    drinkType: type,
+    drinkName: drink.drink_name?.trim() || type.charAt(0).toUpperCase() + type.slice(1),
+    quantity: Number.isFinite(q) && q > 0 ? q : 1,
+  };
+}
