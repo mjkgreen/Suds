@@ -243,7 +243,7 @@ export default function FeedScreen() {
                 <View className="py-4 items-center">
                   <ActivityIndicator color="#f59e0b" />
                 </View>
-              ) : null
+              ) : undefined
             }
             onEndReached={handleEndReached}
             onEndReachedThreshold={0.4}

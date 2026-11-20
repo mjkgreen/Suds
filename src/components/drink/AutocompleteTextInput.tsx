@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
+import type { TextInputInstance } from 'react-native';
 import { DrinkSuggestion } from '@/lib/drinkSearch';
 import { DRINK_TYPE_MAP } from '@/lib/constants';
 
@@ -20,7 +21,7 @@ export function AutocompleteTextInput({
 }: AutocompleteTextInputProps) {
   const [focused, setFocused] = useState(false);
   const [inputValue, setInputValue] = useState(value);
-  const inputRef = useRef<TextInput>(null);
+  const inputRef = useRef<TextInputInstance>(null);
 
   // Sync with external value changes (e.g. form reset or async data load on edit screen)
   useEffect(() => {

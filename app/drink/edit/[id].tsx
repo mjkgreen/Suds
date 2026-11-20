@@ -170,7 +170,7 @@ export default function EditDrinkScreen() {
         <View className="px-6 py-4 bg-background border-t border-border">
           <Button
             label={newMedia.length > 0 && isPending ? 'Uploading media…' : 'Save Changes'}
-            onPress={handleSubmit(onSubmit)}
+            onPress={() => handleSubmit(onSubmit)()}
             loading={isPending}
             size="lg"
           />
