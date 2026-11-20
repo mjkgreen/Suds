@@ -5,7 +5,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { createPushRegistration } from '@/lib/pushRegistration';
 import { useSessionStore } from '@/stores/sessionStore';
-import type { SessionWithRole } from '@/types/models';
+import { joinedSessionFromRpc } from '@/hooks/useSessionInvite';
 
 // expo-notifications requires a native dev-client or production build.
 // We lazy-require inside effects so Expo Go doesn't crash at module load time.
@@ -169,6 +169,15 @@ export function useNotifications({
         case 'follow_request':
           navigate('/user/requests');
           break;
+        case 'share_link_join':
+          // Someone joined your night out through its link.
+          if (data.session_id) navigate(`/session/${data.session_id}`);
+          break;
+        case 'invite_accepted':
+          // Requests wait in the approval queue; follows go to their profile.
+          if (data.follow_status === 'requested') navigate('/user/requests');
+          else if (data.actor_id) navigate(`/user/${data.actor_id}`);
+          break;
         case 'session_invite': {
           const token = data.invite_token;
           if (!token) break;
@@ -201,7 +210,7 @@ export function useNotifications({
         if (error) throw error;
         const result = data as Record<string, unknown> | null;
         if (!result || result.error) throw new Error(String(result?.error ?? 'unknown'));
-        const session = result as unknown as SessionWithRole;
+        const session = joinedSessionFromRpc(result);
         useSessionStore.getState().setActiveSession(session);
         queryClient.invalidateQueries({ queryKey: ['openSession'] });
         queryClient.invalidateQueries({ queryKey: ['sessionMembers', session.id] });

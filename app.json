@@ -16,6 +16,7 @@
       "appleTeamId": "935735W5AA",
       "supportsTablet": false,
       "bundleIdentifier": "com.sudssocial.app",
+      "associatedDomains": ["applinks:drink-with-suds.com"],
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "Suds uses your location to tag where you had drinks.",
         "NSCameraUsageDescription": "Suds uses your camera to add photos to drink logs.",
@@ -35,6 +36,17 @@
         "monochromeImage": "./assets/Suds.png"
       },
       "package": "com.sudssocial.app",
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            { "scheme": "https", "host": "drink-with-suds.com", "pathPrefix": "/invite/" },
+            { "scheme": "https", "host": "drink-with-suds.com", "pathPrefix": "/session/" }
+          ],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
+      ],
       "permissions": [
         "android.permission.ACCESS_FINE_LOCATION",
         "android.permission.CAMERA",

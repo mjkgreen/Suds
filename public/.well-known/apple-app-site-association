@@ -1,0 +1,16 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appIDs": ["935735W5AA.com.sudssocial.app"],
+        "appID": "935735W5AA.com.sudssocial.app",
+        "components": [
+          { "/": "/invite/*", "comment": "Share links: night-out and personal invites" },
+          { "/": "/session/*", "comment": "Night outs, and direct invites at /session/join/*" }
+        ],
+        "paths": ["/invite/*", "/session/*"]
+      }
+    ]
+  }
+}

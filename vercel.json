@@ -1,9 +1,42 @@
 {
   "cleanUrls": true,
+  "headers": [
+    {
+      "source": "/.well-known/apple-app-site-association",
+      "headers": [{ "key": "Content-Type", "value": "application/json" }]
+    },
+    {
+      "source": "/.well-known/assetlinks.json",
+      "headers": [{ "key": "Content-Type", "value": "application/json" }]
+    }
+  ],
   "rewrites": [
     {
       "source": "/.well-known/apple-developer-domain-association.txt",
       "destination": "https://gbenibgytweskljxneup.supabase.co/.well-known/apple-developer-domain-association.txt"
+    },
+    {
+      "source": "/.well-known/apple-app-site-association",
+      "destination": "/.well-known/apple-app-site-association"
+    },
+    {
+      "source": "/.well-known/assetlinks.json",
+      "destination": "/.well-known/assetlinks.json"
+    },
+    {
+      "source": "/invite/:token",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": "(?i).*(facebookexternalhit|facebot|twitterbot|whatsapp|slackbot|slack-imgproxy|telegrambot|discordbot|linkedinbot|skypeuripreview|pinterest|redditbot|applebot|embedly|iframely|vkshare|snapchat|bluesky|mastodon|google-pagerenderer|googlebot|bingbot|signal).*"
+        }
+      ],
+      "destination": "/api/share-preview?token=:token"
+    },
+    {
+      "source": "/invite/:token",
+      "destination": "/invite/[token]"
     },
     {
       "source": "/(.*)",
