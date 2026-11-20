@@ -6,7 +6,7 @@ import { adoptNewerSharedTokens } from '@/lib/sharedAuth';
 import { queryClient } from '@/lib/queryClient';
 import * as LiveActivityBridge from 'suds-live-activity-bridge';
 import { DrinkType, SessionMember, SessionWithRole, isAlcoholicDrink } from '@/types/models';
-import { usePrefsStore } from '@/stores/prefsStore';
+import { currentBACProfile } from '@/hooks/useBACProfile';
 import { buildWidgetBACPayload, personalBACDrinks, WidgetBACPayload } from '@/utils/bacHelpers';
 import { sessionDrinkCounts } from '@/lib/drinkCounts';
 import { formatMemberNames } from '@/utils/profileHelpers';
@@ -65,13 +65,8 @@ async function _refresh(): Promise<void> {
         const counts = sessionDrinkCounts(rows, currentUserId);
         // The widget's BAC uses the same model as the app: the user's own
         // alcoholic drinks at their times, spread over an end time if set.
-        const { profile } = useAuthStore.getState();
         bacPayload = buildWidgetBACPayload(
-          {
-            weight: profile?.weight ?? 150,
-            weightUnit: (profile?.weight_unit ?? 'lb') as 'lb' | 'kg',
-            sex: usePrefsStore.getState().sex,
-          },
+          currentBACProfile(),
           personalBACDrinks(rows, currentUserId, isAlcoholicDrink),
         );
         drinkCount = counts.mine;
