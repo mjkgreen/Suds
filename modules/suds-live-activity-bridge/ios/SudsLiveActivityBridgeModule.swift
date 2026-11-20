@@ -71,7 +71,7 @@ public class SudsLiveActivityBridgeModule: Module {
       }
     }
 
-    AsyncFunction("startActivity") { (sessionTitle: String, drinkCount: Int, groupDrinkCount: Int, memberCount: Int, memberNames: String, sessionStartMs: Double, weightLbs: Double) throws -> String? in
+    AsyncFunction("startActivity") { (sessionTitle: String, drinkCount: Double, groupDrinkCount: Double, memberCount: Int, memberNames: String, sessionStartMs: Double, weightLbs: Double) throws -> String? in
       guard #available(iOS 16.1, *) else { return nil }
       let sessionStartDate = Date(timeIntervalSince1970: sessionStartMs / 1000.0)
       let attrs = SudsSessionAttributes(
@@ -84,7 +84,8 @@ public class SudsLiveActivityBridgeModule: Module {
         groupDrinkCount: groupDrinkCount,
         lastDrinkName: "",
         memberCount: memberCount,
-        memberNames: memberNames
+        memberNames: memberNames,
+        bac: nil // the app sends the drink timeline in its first updateActivity right after this
       )
       let activity = try Activity<SudsSessionAttributes>.request(
         attributes: attrs,
@@ -99,9 +100,12 @@ public class SudsLiveActivityBridgeModule: Module {
     // widget intent is in flight it sets intentIsLogging = true, so every _refresh() call from
     // the main app (triggered by realtime, Darwin, or the 60s timer) preserves the spinner
     // instead of killing it.
-    AsyncFunction("updateActivity") { (activityId: String, drinkCount: Int, groupDrinkCount: Int,
+    //
+    // bacJson: the user's drinks and body constants as JSON (BACState), so the widget can
+    // estimate BAC exactly like the app. Empty string = keep the activity's current value.
+    AsyncFunction("updateActivity") { (activityId: String, drinkCount: Double, groupDrinkCount: Double,
                                         lastDrinkName: String, memberCount: Int,
-                                        memberNames: String) async in
+                                        memberNames: String, bacJson: String) async in
       guard #available(iOS 16.1, *) else { return }
       let d = UserDefaults(suiteName: "group.com.sudssocial.app")
       let flag = d?.bool(forKey: "intentIsLogging") ?? false
@@ -109,15 +113,19 @@ public class SudsLiveActivityBridgeModule: Module {
       // A jetsam-killed intent can never clear its own flag, so treat anything older
       // than 30s as stale — otherwise the spinner would be preserved forever.
       let isLogging = flag && (Date().timeIntervalSince1970 - setAt) < 30
-      let state = SudsSessionAttributes.ContentState(
-        drinkCount: drinkCount,
-        groupDrinkCount: groupDrinkCount,
-        lastDrinkName: lastDrinkName,
-        memberCount: memberCount,
-        memberNames: memberNames,
-        isLogging: isLogging
-      )
+      let newBAC: BACState? = bacJson.isEmpty
+        ? nil
+        : try? JSONDecoder().decode(BACState.self, from: Data(bacJson.utf8))
       for activity in Activity<SudsSessionAttributes>.activities where activity.id == activityId {
+        let state = SudsSessionAttributes.ContentState(
+          drinkCount: drinkCount,
+          groupDrinkCount: groupDrinkCount,
+          lastDrinkName: lastDrinkName,
+          memberCount: memberCount,
+          memberNames: memberNames,
+          isLogging: isLogging,
+          bac: newBAC ?? activity.contentState.bac
+        )
         await activity.update(using: state)
         break
       }

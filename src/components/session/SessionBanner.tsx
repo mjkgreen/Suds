@@ -5,7 +5,7 @@ import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useActiveSession, useEndSession, useLeaveSession, useSessionDrinks } from "@/hooks/useSession";
 import { useSessionMembers } from "@/hooks/useSessionMembers";
-import { usePrefsStore } from "@/stores/prefsStore";
+import { useBACProfile } from "@/hooks/useBACProfile";
 import { useAuthStore } from "@/stores/authStore";
 import { calculateBAC, ProfileInput, DrinkInput } from "@/utils/bacHelpers";
 import { formatDuration } from "@/utils/dateHelpers";
@@ -27,7 +27,8 @@ export function SessionBanner() {
   const isHost = activeSession?.my_role === "host";
   const isPending = isEnding || isLeaving;
 
-  const { sex, weight, weightUnit } = usePrefsStore();
+  // Weight from the profile (this used to read an unused setting stuck at 150 lb).
+  const { sex, weight, weightUnit } = useBACProfile();
   const { data: sessionDrinks } = useSessionDrinks(activeSession?.id);
   const { data: members } = useSessionMembers(activeSession?.id);
   const { data: existingInvites } = useSessionInvites(isHost ? activeSession?.id : undefined);

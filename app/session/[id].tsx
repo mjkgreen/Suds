@@ -385,10 +385,6 @@ export default function SessionDetailScreen() {
                   <Text className="text-xs text-muted-foreground">drinks</Text>
                 </View>
                 <View className="items-center">
-                  <Text className="text-xl font-bold text-primary">{drinks.length}</Text>
-                  <Text className="text-xs text-muted-foreground">rounds</Text>
-                </View>
-                <View className="items-center">
                   <Text className="text-xl font-bold text-primary">{duration}</Text>
                   <Text className="text-xs text-muted-foreground">duration</Text>
                 </View>
@@ -454,7 +450,10 @@ export default function SessionDetailScreen() {
             <View className="flex-row gap-2 flex-wrap mb-4">
               {drinkTypes.map((type) => {
                 const info = DRINK_TYPE_MAP[type as DrinkType] ?? DRINK_TYPE_MAP["other"];
-                const count = drinks.filter((d) => d.drink_type === type).length;
+                // Sum quantities: one log of 2 beers is 2 beers, not 1.
+                const count = drinks
+                  .filter((d) => d.drink_type === type)
+                  .reduce((sum, d) => sum + Number(d.quantity), 0);
                 return (
                   <View
                     key={type}
@@ -491,7 +490,7 @@ export default function SessionDetailScreen() {
 
             {/* Drinks list */}
             <Text className="text-muted-foreground text-xs font-semibold uppercase tracking-wide mb-3">
-              Drinks ({drinks.length})
+              Drinks ({totalQuantity})
             </Text>
             <View className="bg-card rounded-2xl p-4 gap-3 mb-4">
               {drinks.map((drink) => {

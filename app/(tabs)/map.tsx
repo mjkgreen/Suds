@@ -372,7 +372,8 @@ export default function MapScreen() {
               >
                 <View className="items-center justify-center" pointerEvents={pointerEvents as any}>
                   <View className="w-11 h-11 rounded-full bg-primary items-center justify-center shadow border-2 border-card">
-                    <Text className="text-primary-foreground font-bold text-sm">{items.length}</Text>
+                    {/* Drinks by quantity: a log of 2 counts 2. */}
+                    <Text className="text-primary-foreground font-bold text-sm">{items.reduce((sum, i) => sum + Number(i.quantity), 0)}</Text>
                   </View>
                 </View>
               </Marker>

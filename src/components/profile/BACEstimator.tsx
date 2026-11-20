@@ -14,7 +14,7 @@
 import React, { useMemo, useState, useEffect, useRef } from "react";
 import { Text, TextInput, View, ActivityIndicator, Pressable } from "react-native";
 import { useAuthStore } from "@/stores/authStore";
-import { usePrefsStore } from "@/stores/prefsStore";
+import { useBACProfile } from "@/hooks/useBACProfile";
 import { useActiveSession, useSessionDrinks } from "@/hooks/useSession";
 import { calculateBAC, getSoberTime, personalBACDrinks, ProfileInput, DrinkInput } from "@/utils/bacHelpers";
 import { DrinkLog, isAlcoholicDrink } from "@/types/models";
@@ -40,10 +40,8 @@ function BACBar({ bac }: { bac: number }) {
 }
 
 export function BACEstimator() {
-  const { sex } = usePrefsStore();
   const { profile } = useAuthStore();
-  const weight = profile?.weight ?? 150;
-  const weightUnit = (profile?.weight_unit ?? 'lb') as 'lb' | 'kg';
+  const { sex, weight, weightUnit } = useBACProfile();
   const activeSession = useActiveSession();
   const { data: sessionDrinks, isLoading: isLoadingDrinks } = useSessionDrinks(activeSession?.id);
 

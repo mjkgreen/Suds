@@ -5,7 +5,9 @@ import { supabase } from '@/lib/supabase';
 import { adoptNewerSharedTokens } from '@/lib/sharedAuth';
 import { queryClient } from '@/lib/queryClient';
 import * as LiveActivityBridge from 'suds-live-activity-bridge';
-import { DrinkType, SessionMember, SessionWithRole } from '@/types/models';
+import { DrinkType, SessionMember, SessionWithRole, isAlcoholicDrink } from '@/types/models';
+import { currentBACProfile } from '@/hooks/useBACProfile';
+import { buildWidgetBACPayload, personalBACDrinks, WidgetBACPayload } from '@/utils/bacHelpers';
 import { sessionDrinkCounts } from '@/lib/drinkCounts';
 import { formatMemberNames } from '@/utils/profileHelpers';
 import type { RealtimeChannel } from '@supabase/supabase-js';
@@ -39,6 +41,7 @@ async function _refresh(): Promise<void> {
     const prevGroupDrinkCount = groupDrinkCount;
     let memberCount = 1;
     let memberNames = useSessionStore.getState().liveActivityMemberNames;
+    let bacPayload: WidgetBACPayload | null = null;
 
     if (activeSession?.id) {
       const currentUserId = useAuthStore.getState().session?.user?.id;
@@ -48,7 +51,7 @@ async function _refresh(): Promise<void> {
       // stats — not rows (water used to raise the widget's BAC, and a
       // pitcher logged as 3 counted as 1).
       const [drinksRes, membersRes] = await Promise.all([
-        supabase.from('drink_logs').select('user_id, drink_type, quantity').eq('session_id', activeSession.id),
+        supabase.from('drink_logs').select('user_id, drink_type, quantity, logged_at, ended_at').eq('session_id', activeSession.id),
         (supabase.rpc as any)('get_session_members_with_profiles', { p_session_id: activeSession.id }),
       ]);
 
@@ -56,8 +59,16 @@ async function _refresh(): Promise<void> {
       if (!useSessionStore.getState().liveActivityId) return;
 
       if (!drinksRes.error && drinksRes.data) {
-        const rows = drinksRes.data as { user_id: string; drink_type: DrinkType; quantity: number }[];
+        const rows = drinksRes.data as {
+          user_id: string; drink_type: DrinkType; quantity: number; logged_at: string; ended_at: string | null;
+        }[];
         const counts = sessionDrinkCounts(rows, currentUserId);
+        // The widget's BAC uses the same model as the app: the user's own
+        // alcoholic drinks at their times, spread over an end time if set.
+        bacPayload = buildWidgetBACPayload(
+          currentBACProfile(),
+          personalBACDrinks(rows, currentUserId, isAlcoholicDrink),
+        );
         drinkCount = counts.mine;
         groupDrinkCount = counts.group;
         useSessionStore.getState().setLiveActivityDrinkCount(drinkCount);
@@ -78,6 +89,7 @@ async function _refresh(): Promise<void> {
       liveActivityLastDrinkName,
       memberCount,
       memberNames,
+      bacPayload,
     );
     // This runs every minute while a session is live. Only refetch the feed
     // (every loaded page) when the session's drinks actually changed.
@@ -318,6 +330,8 @@ export function useLiveActivity() {
     setLiveActivityMemberCount(1);
     setLiveActivityMemberNames('');
 
+    // Send the drink timeline for the widget's BAC straight away.
+    void _refresh();
     _ensureTimerRunning();
     if (activeSession?.id) { _subscribeToSessionDrinks(activeSession.id); }
   }
