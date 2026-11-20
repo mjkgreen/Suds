@@ -4,7 +4,8 @@ import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-nati
 import { Avatar } from '@/components/common/Avatar';
 import { DrinkIcon } from '@/components/icons/DrinkIcon';
 import { DRINK_TYPE_MAP } from '@/lib/constants';
-import { DrinkLogWithSessionAndProfile, DrinkType, Session, Profile } from '@/types/models';
+import { DrinkLogWithSessionAndProfile, DrinkType } from '@/types/models';
+import { groupMapLocation, MapLocationEntry } from '@/lib/mapData';
 import { formatDateTime } from '@/utils/dateHelpers';
 import { getDisplayName, getUsername } from '@/utils/profileHelpers';
 
@@ -15,46 +16,17 @@ interface MapLocationSheetProps {
   onViewDrink: (drinkId: string) => void;
 }
 
-interface LocationGroup {
-  sessionId: string | null;
-  items: DrinkLogWithSessionAndProfile[];
-  session: Session | null | undefined;
-  profile: Profile | undefined;
-}
-
 export function MapLocationSheet({ items, onClose, onViewSession, onViewDrink }: MapLocationSheetProps) {
-  const groups: LocationGroup[] = useMemo(() => {
-    const sessionMap = new Map<string, DrinkLogWithSessionAndProfile[]>();
-    const standaloneItems: DrinkLogWithSessionAndProfile[] = [];
-
-    for (const item of items) {
-      if (item.session_id) {
-        const existing = sessionMap.get(item.session_id) ?? [];
-        sessionMap.set(item.session_id, [...existing, item]);
-      } else {
-        standaloneItems.push(item);
-      }
-    }
-
-    const sessionGroups: LocationGroup[] = Array.from(sessionMap.entries()).map(
-      ([sessionId, groupItems]) => ({
-        sessionId,
-        items: groupItems,
-        session: groupItems[0]?.session,
-        profile: groupItems[0]?.profile,
-      }),
-    );
-
-    // Each standalone drink gets its own card so it's always visible with its own CTA
-    const standaloneGroups: LocationGroup[] = standaloneItems.map((item) => ({
-      sessionId: null,
-      items: [item],
-      session: null,
-      profile: item.profile,
-    }));
-
-    return [...sessionGroups, ...standaloneGroups];
-  }, [items]);
+  const groups = useMemo(
+    () =>
+      groupMapLocation(
+        items,
+        (type) => (DRINK_TYPE_MAP[type as DrinkType] ?? DRINK_TYPE_MAP['other']).label,
+        getDisplayName,
+        getUsername,
+      ),
+    [items],
+  );
 
   return (
     <Modal visible transparent animationType="slide" onRequestClose={onClose}>
@@ -72,7 +44,7 @@ export function MapLocationSheet({ items, onClose, onViewSession, onViewDrink }:
           {/* Header */}
           <View className="flex-row items-center justify-between px-4 pb-3">
             <Text className="text-foreground font-bold text-base">
-              {items.length > 1 ? `${items.length} drinks at this spot` : 'At this spot'}
+              {items.length > 1 ? `${Math.round(items.reduce((sum, i) => sum + Number(i.quantity), 0) * 10) / 10} drinks at this spot` : 'At this spot'}
             </Text>
             <Pressable onPress={onClose} hitSlop={12}>
               <Ionicons name="close-circle" size={24} color="#9ca3af" />
@@ -81,8 +53,7 @@ export function MapLocationSheet({ items, onClose, onViewSession, onViewDrink }:
 
           <ScrollView showsVerticalScrollIndicator={false} bounces={false}>
             {groups.map((group, index) => (
-              <View key={group.sessionId ?? `standalone-${group.items[0]?.id ?? index}`}>
-                {index > 0 && <View className="h-px bg-border mx-4 my-3" />}
+              <View key={group.sessionId ?? `standalone-${group.items[0]?.id ?? index}`} style={{ marginTop: index > 0 ? 8 : 0 }}>
                 <LocationGroupCard
                   group={group}
                   onViewSession={onViewSession}
@@ -98,104 +69,72 @@ export function MapLocationSheet({ items, onClose, onViewSession, onViewDrink }:
   );
 }
 
+/**
+ * One entry in the sheet. The whole card is the button: a night out opens the
+ * night out, a single drink opens the drink.
+ */
 function LocationGroupCard({
   group,
   onViewSession,
   onViewDrink,
 }: {
-  group: LocationGroup;
+  group: MapLocationEntry;
   onViewSession: (id: string) => void;
   onViewDrink: (id: string) => void;
 }) {
-  const { sessionId, items, session, profile } = group;
+  const { sessionId, items, title, who, drinkers, typeCounts, loggedAt, locationName } = group;
   const firstItem = items[0];
-
-  const typeCounts = items.reduce(
-    (acc, item) => ({ ...acc, [item.drink_type]: (acc[item.drink_type] ?? 0) + item.quantity }),
-    {} as Record<string, number>,
-  );
-
-  const locationName = items.find((i) => i.location_name)?.location_name;
+  const session = !!sessionId;
 
   return (
-    <View className="px-4">
-      {/* Profile row */}
-      {profile && (
-        <View className="flex-row items-center gap-3 mb-3">
-          <Avatar uri={profile.avatar_url} name={getDisplayName(profile)} size={38} />
-          <View className="flex-1">
-            <Text className="text-foreground font-semibold text-sm" numberOfLines={1}>
-              {getDisplayName(profile)}
-            </Text>
-            <Text className="text-muted-foreground text-xs">
-              @{getUsername(profile)} · {formatDateTime(firstItem.logged_at)}
-            </Text>
+    <Pressable
+      onPress={() => (sessionId ? onViewSession(sessionId) : onViewDrink(firstItem.id))}
+      className="mx-4 flex-row items-center gap-3 rounded-2xl bg-accent/60 px-3 py-3 active:opacity-70"
+      accessibilityRole="button"
+      accessibilityLabel={sessionId ? `View night out ${title}` : `View drink ${title}`}
+    >
+      {/* Avatars: one for a drink, stacked for a shared night out */}
+      <View className="flex-row" style={{ width: drinkers.length > 1 ? 50 : 38 }}>
+        {drinkers.slice(0, 2).map((p, i) => (
+          <View key={p.id} style={{ marginLeft: i > 0 ? -26 : 0, marginTop: i > 0 ? 10 : 0 }}>
+            <Avatar uri={p.avatar_url} name={getDisplayName(p)} size={i > 0 ? 28 : 38} />
           </View>
-        </View>
-      )}
-
-      {/* Title: session name for nights out, drink name for standalone drinks */}
-      {session ? (
-        <View className="flex-row items-center gap-1.5 mb-2.5">
-          <Ionicons name="moon" size={14} color="#f59e0b" />
-          <Text className="text-foreground font-bold text-base flex-1" numberOfLines={1}>
-            {session.title ?? 'Night Out'}
-          </Text>
-        </View>
-      ) : firstItem.drink_name ? (
-        <Text className="text-foreground font-bold text-base mb-2.5" numberOfLines={1}>
-          {firstItem.drink_name}
-        </Text>
-      ) : null}
-
-      {/* Drink type pills */}
-      <View className="flex-row flex-wrap gap-1.5 mb-2.5">
-        {Object.entries(typeCounts).map(([type, count]) => {
-          const info = DRINK_TYPE_MAP[type as DrinkType] ?? DRINK_TYPE_MAP['other'];
-          return (
-            <View
-              key={type}
-              className="flex-row items-center gap-1 rounded-full px-2.5 py-1"
-              style={{ backgroundColor: info.color + '22' }}
-            >
-              <DrinkIcon type={type as DrinkType} size={13} color={info.color} />
-              <Text className="text-xs font-semibold" style={{ color: info.color }}>
-                ×{count}
-              </Text>
-            </View>
-          );
-        })}
+        ))}
       </View>
 
-      {/* Location */}
-      {locationName && (
-        <View className="flex-row items-center gap-1.5 mb-3">
-          <Ionicons name="location-sharp" size={13} color="#6b7280" />
-          <Text className="text-muted-foreground text-xs flex-1" numberOfLines={1}>
-            {locationName}
+      <View className="flex-1 gap-1">
+        <View className="flex-row items-center gap-1.5">
+          {session && <Ionicons name="moon" size={13} color="#f59e0b" />}
+          <Text className="text-foreground font-bold text-sm flex-1" numberOfLines={1}>
+            {title}
           </Text>
         </View>
-      )}
 
-      {/* CTA — always present: session drinks → View Session, standalone → View Drink */}
-      {sessionId ? (
-        <Pressable
-          onPress={() => onViewSession(sessionId)}
-          className="bg-primary rounded-xl py-3 items-center flex-row justify-center gap-2 mb-1"
-        >
-          <Text className="text-primary-foreground font-semibold text-sm">View Session</Text>
-          <Ionicons name="arrow-forward" size={15} color="white" />
-        </Pressable>
-      ) : (
-        <Pressable
-          onPress={() => onViewDrink(firstItem.id)}
-          className="bg-primary rounded-xl py-3 items-center flex-row justify-center gap-2 mb-1"
-        >
-          <Text className="text-primary-foreground font-semibold text-sm">View Drink</Text>
-          <Ionicons name="arrow-forward" size={15} color="white" />
-        </Pressable>
-      )}
-    </View>
+        <View className="flex-row flex-wrap items-center gap-1">
+          {Object.entries(typeCounts).map(([type, count]) => {
+            const info = DRINK_TYPE_MAP[type as DrinkType] ?? DRINK_TYPE_MAP['other'];
+            return (
+              <View
+                key={type}
+                className="flex-row items-center gap-0.5 rounded-full px-1.5 py-0.5"
+                style={{ backgroundColor: info.color + '22' }}
+              >
+                <DrinkIcon type={type as DrinkType} size={11} color={info.color} />
+                <Text className="text-[11px] font-semibold" style={{ color: info.color }}>
+                  ×{count}
+                </Text>
+              </View>
+            );
+          })}
+        </View>
+
+        <Text className="text-muted-foreground text-xs" numberOfLines={1}>
+          {[who, formatDateTime(loggedAt), locationName].filter(Boolean).join(' · ')}
+        </Text>
+      </View>
+
+      <Ionicons name="chevron-forward" size={18} color="#9ca3af" />
+    </Pressable>
   );
 }
 

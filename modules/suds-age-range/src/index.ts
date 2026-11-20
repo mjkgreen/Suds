@@ -1,5 +1,5 @@
 import { Platform } from 'react-native';
-import { requireOptionalNativeModule } from 'expo-modules-core';
+import { requireOptionalNativeModule } from 'expo';
 
 /**
  * Apple's Declared Age Range API (iOS 26+). Everywhere else (Android, web,

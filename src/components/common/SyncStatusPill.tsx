@@ -13,8 +13,12 @@ interface SyncStatusPillProps {
   style?: StyleProp<ViewStyle>;
 }
 
-/** After this long without an answer, say so instead of "Updating…" forever. */
-const SLOW_AFTER_MS = 6000;
+/**
+ * After this long without an answer, say so instead of "Updating…" forever.
+ * A slow first load routinely takes several seconds, so don't cry "Can't
+ * connect" until it's clearly stuck.
+ */
+const SLOW_AFTER_MS = 20_000;
 
 /**
  * Small status line for screens that open with saved content: "Updating…"

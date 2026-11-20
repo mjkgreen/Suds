@@ -1,4 +1,5 @@
 import type * as Location from 'expo-location';
+import type { PlaceSuggestion } from '@/lib/placeSearch';
 
 /**
  * Nominatim address object (subset of what's returned with addressdetails=1)
@@ -152,10 +153,32 @@ export function sanitizeGPSResult(
   return { name, lat: undefined, lng: undefined };
 }
 
+/**
+ * The stored location for a place picked from search (Apple Maps or Photon).
+ * Venues keep their name and coords. With hide-addresses on, a street address
+ * that isn't a venue keeps only the street and area, without coords — the
+ * same rule as sanitizeNominatimResult.
+ */
+export function placeToLocation(place: PlaceSuggestion, hideAddresses: boolean): SanitizedLocation {
+  const isPrivateAddress = !place.isVenue && !!place.street;
+  if (!hideAddresses || !isPrivateAddress) {
+    return { name: place.name, lat: place.lat, lng: place.lng };
+  }
+  const parts = [place.street, place.neighbourhood || place.city].filter(Boolean);
+  return { name: parts.slice(0, 2).join(', '), lat: undefined, lng: undefined };
+}
+
+/** Whether placeToLocation will hide this place's coords (shown as a shield). */
+export function placeWillBeSanitized(place: PlaceSuggestion, hideAddresses: boolean): boolean {
+  return hideAddresses && !place.isVenue && !!place.street;
+}
+
 interface GPSResolveInput {
   lat: number;
   lng: number;
   name?: string;
+  /** A venue right where the person is (Apple Maps / Photon); wins over reverse geocoding. */
+  venue?: PlaceSuggestion | null;
   address?: Location.LocationGeocodedAddress;
   nominatim?: {
     display_name: string;
@@ -170,6 +193,7 @@ interface GPSResolveInput {
  * results when the hide-addresses privacy preference is on.
  */
 export function resolveLocationName(result: GPSResolveInput, hideAddresses: boolean): SanitizedLocation {
+  if (result.venue) return placeToLocation(result.venue, hideAddresses);
   if (hideAddresses) {
     if (result.nominatim) {
       return sanitizeNominatimResult(

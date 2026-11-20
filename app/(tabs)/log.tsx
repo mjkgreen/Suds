@@ -198,7 +198,7 @@ export default function LogScreen() {
           >
             <Button
               label={photos.length > 0 && submitting ? "Uploading media…" : "Log It"}
-              onPress={handleSubmit(onSubmit)}
+              onPress={() => handleSubmit(onSubmit)()}
               loading={submitting}
               size="lg"
             />

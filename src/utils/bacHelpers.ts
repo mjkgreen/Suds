@@ -256,3 +256,70 @@ export function getSoberTime(
 
   return lastActiveAlcoholTime ? new Date(lastActiveAlcoholTime) : null;
 }
+
+/**
+ * The drinks that count toward one person's BAC: only their own (not the rest
+ * of the night out's) and only alcoholic ones. Every BAC display (profile
+ * estimator, session banner, night-out page) goes through this so they agree.
+ */
+export function personalBACDrinks<
+  T extends { user_id: string; drink_type: string; quantity: number; logged_at: string; ended_at?: string | null },
+>(drinks: T[] | null | undefined, userId: string | undefined, isAlcoholic: (type: T['drink_type']) => boolean): DrinkInput[] {
+  if (!drinks || !userId) return [];
+  return drinks
+    .filter((d) => d.user_id === userId && isAlcoholic(d.drink_type))
+    .map((d) => ({ quantity: d.quantity, loggedAt: d.logged_at, endedAt: d.ended_at }));
+}
+
+/** What the iOS Live Activity needs to estimate BAC (Swift `BACState`). */
+export interface WidgetBACPayload {
+  /** start/end in unix seconds; end set = absorbed evenly from start to end. */
+  drinks: { start: number; end: number | null; grams: number }[];
+  bacPerGram: number;
+  eliminationGramsPerHour: number;
+  gramsPerDrink: number;
+}
+
+/** Drinks older than this can't affect BAC any more (a heavy night is gone well within a day). */
+const WIDGET_DRINK_WINDOW_MS = 24 * 60 * 60 * 1000;
+/** Keeps the Live Activity payload well under ActivityKit's 4 KB limit. */
+const WIDGET_MAX_DRINKS = 40;
+
+/**
+ * The drink timeline and body constants for the Live Activity, so the widget's
+ * BAC (BACState.bac(at:) in SudsSessionAttributes.swift) matches calculateBAC.
+ */
+export function buildWidgetBACPayload(
+  profile: ProfileInput,
+  drinks: DrinkInput[],
+  now: Date = new Date(),
+  options?: BACCalculationOptions,
+): WidgetBACPayload {
+  const gramsPerDrink = options?.standardDrinkGrams ?? 14.0;
+  const cutoff = now.getTime() - WIDGET_DRINK_WINDOW_MS;
+  const timeline = drinks
+    .map((d) => {
+      const start = new Date(d.loggedAt).getTime();
+      const end = d.endedAt ? new Date(d.endedAt).getTime() : NaN;
+      return {
+        start,
+        end: !isNaN(end) && end > start ? end : null,
+        grams: Number(d.quantity) * gramsPerDrink,
+      };
+    })
+    .filter((d) => !isNaN(d.start) && d.grams > 0 && (d.end ?? d.start) >= cutoff)
+    .sort((a, b) => a.start - b.start)
+    .slice(-WIDGET_MAX_DRINKS)
+    .map((d) => ({
+      start: Math.round(d.start / 1000),
+      end: d.end === null ? null : Math.round(d.end / 1000),
+      grams: Math.round(d.grams * 100) / 100,
+    }));
+
+  return {
+    drinks: timeline,
+    bacPerGram: gramsToBAC(1, profile),
+    eliminationGramsPerHour: getMetabolismRateGramsPerHour(profile, options),
+    gramsPerDrink,
+  };
+}

@@ -27,6 +27,14 @@ function notificationText(n: InAppNotification): string {
         ? `${name} mentioned you in a comment: ${n.context.comment_preview ?? ""}`
         : `${name} mentioned you in a drink`;
     case "tag": return `${name} tagged you in a drink`;
+    case "share_link_join":
+      return n.context.follow_status === "requested"
+        ? `${name} joined your night out from your link and requested to follow you`
+        : `${name} joined your night out from your link`;
+    case "invite_accepted":
+      return n.context.follow_status === "requested"
+        ? `${name} accepted your invite and requested to follow you`
+        : `${name} accepted your invite and followed you`;
   }
 }
 
@@ -85,6 +93,13 @@ const NotificationRow = React.memo(function NotificationRow({
         break;
       case "session_invite":
         if (notification.context.invite_token) router.push(`/session/join/${notification.context.invite_token}` as never);
+        break;
+      case "share_link_join":
+        if (notification.context.session_id) router.push(`/session/${notification.context.session_id}` as never);
+        break;
+      case "invite_accepted":
+        if (notification.context.follow_status === "requested") router.push("/user/requests" as never);
+        else if (notification.actor_id) router.push(`/user/${notification.actor_id}` as never);
         break;
     }
   }
@@ -191,7 +206,7 @@ export default function NotificationsScreen() {
             <Text className="text-muted-foreground text-base mt-3">No notifications yet</Text>
           </View>
         }
-        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor="#f59e0b" />}
+        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={() => { refetch(); }} tintColor="#f59e0b" />}
       />
     </SafeAreaView>
   );

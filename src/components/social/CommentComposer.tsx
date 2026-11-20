@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import React, { forwardRef } from 'react';
 import { ActivityIndicator, Pressable, TextInput, View } from 'react-native';
+import type { TextInputInstance } from 'react-native';
 import { KeyboardStickyView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MentionInput } from '@/components/social/MentionInput';
@@ -20,7 +21,7 @@ interface CommentComposerProps {
  *
  * Render it after the screen's ScrollView, inside a bottom-edge SafeAreaView.
  */
-export const CommentComposer = forwardRef<TextInput, CommentComposerProps>(function CommentComposer(
+export const CommentComposer = forwardRef<TextInputInstance, CommentComposerProps>(function CommentComposer(
   { value, onChangeText, onSend, isSending, onFocus },
   ref,
 ) {

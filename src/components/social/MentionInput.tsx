@@ -1,5 +1,5 @@
 import React, { forwardRef, useState } from 'react';
-import { NativeSyntheticEvent, Pressable, StyleProp, Text, TextInput, TextInputProps, TextInputSelectionChangeEventData, View, ViewStyle } from 'react-native';
+import { Pressable, StyleProp, Text, TextInput, TextInputInstance, TextInputProps, TextInputSelectionChangeEvent, View, ViewStyle } from 'react-native';
 import { Avatar } from '@/components/common/Avatar';
 import { useUserSearch } from '@/hooks/useUserSearch';
 import { activeMentionQuery, insertMention } from '@/lib/mentions';
@@ -17,7 +17,7 @@ interface MentionInputProps extends Omit<TextInputProps, 'value' | 'onChangeText
  * TextInput with @mention autocomplete: typing "@" plus a letter or two shows
  * matching users; picking one completes "@username ".
  */
-export const MentionInput = forwardRef<TextInput, MentionInputProps>(function MentionInput(
+export const MentionInput = forwardRef<TextInputInstance, MentionInputProps>(function MentionInput(
   { value, onChangeText, suggestionsPosition = 'below', containerStyle, containerClassName, onSelectionChange, ...inputProps },
   ref,
 ) {
@@ -28,7 +28,7 @@ export const MentionInput = forwardRef<TextInput, MentionInputProps>(function Me
   const showing = !!mention && mention.query.length > 0 && dismissedAt !== mention.start;
   const { users } = useUserSearch(mention?.query ?? '', { enabled: showing, limit: 5 });
 
-  function handleSelectionChange(e: NativeSyntheticEvent<TextInputSelectionChangeEventData>) {
+  function handleSelectionChange(e: TextInputSelectionChangeEvent) {
     setCursor(e.nativeEvent.selection.end);
     onSelectionChange?.(e);
   }

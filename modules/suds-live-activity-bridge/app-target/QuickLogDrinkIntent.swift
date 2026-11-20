@@ -1,5 +1,8 @@
 import AppIntents
-import SudsLiveActivityBridge
+// `internal` must match the generated ExpoModulesProvider.swift (also in the app
+// target), which imports every Expo module as `internal import` since SDK 58.
+// Mixing a plain `import` with it fails the build as an ambiguous access level.
+internal import SudsLiveActivityBridge
 
 // Compiled into the MAIN APP target (injected by plugins/withLiveActivityBridge.js —
 // it is NOT part of the SudsLiveActivityBridge pod; the pod's podspec only builds ios/**).

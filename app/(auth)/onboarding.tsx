@@ -16,6 +16,7 @@ import { useAuthStore } from "@/stores/authStore";
 import { BirthdatePicker } from "@/components/profile/BirthdatePicker";
 import { checkLegalAge, underageMessage } from "@/lib/ageCheck";
 import { rememberAgeCheck } from "@/hooks/useLegalAgeGate";
+import { homeRoute } from "@/hooks/useShareLinks";
 
 // ─── Unit Toggle ─────────────────────────────────────────────────────────────
 
@@ -155,8 +156,8 @@ export default function OnboardingScreen() {
       if (metricsError) throw metricsError;
 
       setProfile({ ...(data as any), ...metrics });
-      // @ts-ignore
-      router.replace("/(tabs)/feed");
+      // The feed, or the invite link they signed up from.
+      router.replace(homeRoute() as never);
     } catch (err: any) {
       console.error(err);
       Alert.alert("Error", err.message || "Failed to complete onboarding");

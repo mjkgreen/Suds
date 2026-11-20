@@ -6,7 +6,7 @@ module.exports = {
     captions: ['Tap. Type. Done.', 'Your crew sees it\nright away', 'Know your limits'],
     headline: 'Log a drink\nin seconds',
   },
-  async reel({ rec, page, on, caption, copy, waitFor }) {
+  async reel({ rec, page, on, caption, copy, waitFor, scenario }) {
     rec.cut('feed');
     rec.setOverlay({ text: copy.hook, style: 'hook' });
     rec.setCamera({ cx: 270, cy: 560, z: 1.0 });
@@ -24,17 +24,18 @@ module.exports = {
     rec.setOverlay(caption(0));
     rec.setCamera({ cx: 270, cy: 420, z: 1.0 });
     await rec.shoot(10);
-    await rec.focus(await on('Cocktail'), 1.04);
+    const log = scenario.log;
+    await rec.focus(await on(log.type_label), 1.04);
     await rec.shoot(12);
-    await rec.tap(await on('Cocktail'));
+    await rec.tap(await on(log.type_label));
     await rec.shoot(12);
     const name = page.getByPlaceholder('e.g. IPA, Old Fashioned');
     await rec.focus(name, 1.04, -30);
     await rec.shoot(8);
-    await rec.type(name, 'Espr', 3);
+    await rec.type(name, log.prefix, 3);
     await rec.shoot(8);
-    const suggestion = await rec.onTop('Espresso Martini');
-    if (suggestion) await rec.tap(suggestion); else await rec.type(name, 'esso Martini', 2);
+    const suggestion = await rec.onTop(log.name);
+    if (suggestion) await rec.tap(suggestion); else await rec.type(name, log.name.slice(log.prefix.length), 2);
     await rec.shoot(14);
     await rec.focus(await on('Location (optional)'), 1.04, 40);
     await rec.shoot(24);
@@ -45,7 +46,7 @@ module.exports = {
 
     rec.setOverlay(caption(1, { at: 'above-focus' }));
     let mine = null;
-    await rec.shootUntil(async () => !!(mine = await rec.onTop('Jordan Reyes')), 90);
+    await rec.shootUntil(async () => !!(mine = await rec.onTop(scenario.people[0].name)), 90);
     rec.cut('posted');
     await rec.focus(mine, 1.04, 110);
     await rec.shoot(60);
@@ -62,12 +63,12 @@ module.exports = {
     await rec.scrollBy(380, 50);
     await rec.shoot(25);
   },
-  async still({ page, rec, on, waitFor }) {
+  async still({ page, rec, on, waitFor, scenario }) {
     await page.mouse.click(453, 30);
     await waitFor('Log a Drink');
     await rec.settle(1500);
-    const type = await rec.onTop('Cocktail'); if (type) await type.click();
-    await page.getByPlaceholder('e.g. IPA, Old Fashioned').fill('Espresso Martini');
+    const type = await rec.onTop(scenario.log.type_label); if (type) await type.click();
+    await page.getByPlaceholder('e.g. IPA, Old Fashioned').fill(scenario.log.name);
     await page.keyboard.press('Tab');
     await rec.settle(500);
   },

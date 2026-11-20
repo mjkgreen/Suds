@@ -58,8 +58,8 @@ jwt-secret = "$secret"
 server-port = 3000
 CONF
   step "starting PostgREST and gateway"
-  setsid nohup "$TOOLS/postgrest" "$LOGDIR/postgrest.conf" >"$LOGDIR/postgrest.log" 2>&1 </dev/null &
-  setsid nohup node "$B/gateway.js" >"$LOGDIR/gateway.log" 2>&1 </dev/null &
+  setsid -f "$TOOLS/postgrest" "$LOGDIR/postgrest.conf" >"$LOGDIR/postgrest.log" 2>&1 </dev/null
+  setsid -f node "$B/gateway.js" >"$LOGDIR/gateway.log" 2>&1 </dev/null
   wait_for http://127.0.0.1:3000/ 30
   wait_for http://127.0.0.1:54321/ 15
 
@@ -70,8 +70,10 @@ CONF
     step "starting Expo web (first bundle takes a minute)"
     pkill -f "expo start" 2>/dev/null || true; sleep 1
     local anon; anon=$(cd "$B" && node tokens.js anon)
+    # setsid -f: fully detached, so nothing holds this script's output open after it exits.
     (cd "$ROOT" && EXPO_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321 EXPO_PUBLIC_SUPABASE_ANON_KEY="$anon" CI=1 \
-      setsid nohup npx expo start --web --port 8081 >"$LOGDIR/expo.log" 2>&1 </dev/null & echo $! >"$pidf")
+      setsid -f npx expo start --web --port 8081 >"$LOGDIR/expo.log" 2>&1 </dev/null) >/dev/null 2>&1
+    sleep 2; pgrep -f "expo start --web --port 8081" | head -1 >"$pidf"
     wait_for http://localhost:8081 240
   fi
 

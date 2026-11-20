@@ -1,8 +1,8 @@
 import * as Haptics from "expo-haptics";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import React, { useState, useEffect } from "react";
-import { ActivityIndicator, Platform, Pressable, Text, View } from "react-native";
+import React, { useEffect, useMemo, useState } from "react";
+import { ActivityIndicator, Alert, Platform, Pressable, Text, View } from "react-native";
 import { Avatar } from "@/components/common/Avatar";
 import { PressableCard } from "@/components/common/Card";
 import { MediaCarousel } from "@/components/common/MediaCarousel";
@@ -14,11 +14,18 @@ import { useSessionMembers } from "@/hooks/useSessionMembers";
 import { AvatarStack } from "@/components/social/AvatarStack";
 import { LikersModal } from "@/components/social/LikersModal";
 import { DRINK_TYPE_MAP } from "@/lib/constants";
+import { groupDrinks } from "@/lib/drinkGroups";
+import { drinkTotal, quickLogLabel } from "@/lib/drinkCounts";
 import { shareLink } from "@/lib/share";
+import { useShareInviteLink } from "@/hooks/useShareLinks";
+import { useSessionStore } from "@/stores/sessionStore";
 import { DrinkType, FeedItem, SessionFeedGroup } from "@/types/models";
 import { formatDateTime, formatDuration } from "@/utils/dateHelpers";
 import { formatMemberNames, getDisplayName, getUsername } from "@/utils/profileHelpers";
 import { findBadgeById, TIER_COLORS } from "@/utils/badgeHelpers";
+
+/** Most photos/videos a night out shows in the feed carousel. */
+const FEED_SESSION_MEDIA_LIMIT = 12;
 
 interface SessionCardProps {
   group: SessionFeedGroup;
@@ -45,6 +52,37 @@ export const SessionCard = React.memo(function SessionCard({ group, currentUserI
   const likeCount = optimisticCount ?? representativeItem?.like_count ?? 0;
   const commentCount = representativeItem?.comment_count ?? 0;
   const { data: likers } = useLikers(likeCount > 0 ? representativeItem?.id : undefined);
+  const shareInvite = useShareInviteLink();
+  // True only for the host of this night out while it's live.
+  const hostsThisLive = useSessionStore(
+    (s) => s.activeSession?.id === group.session_id && s.activeSession.my_role === "host" && !s.activeSession.ended_at,
+  );
+
+  function shareNightOut() {
+    const plainShare = () =>
+      shareLink(
+        `/session/${group.session_id}`,
+        `Check out ${getDisplayName(group.profile)}'s ${group.session_title ?? "night out"} on Suds`,
+      );
+    const inviteShare = () =>
+      shareInvite.mutate({ kind: "session", sessionId: group.session_id, sessionTitle: group.session_title });
+
+    // The host of a live night out can open it to anyone with a link (opt-in,
+    // per share); everyone else shares the usual followers-only link.
+    if (!hostsThisLive) return void plainShare();
+    if (Platform.OS === "web") {
+      return void (window.confirm(
+        "Share an invite link?\n\nOK: anyone with the link can see this night out and join.\nCancel: share a link only your followers can open.",
+      )
+        ? inviteShare()
+        : plainShare());
+    }
+    Alert.alert("Share night out", undefined, [
+      { text: "Share invite link", onPress: inviteShare },
+      { text: "Share with followers", onPress: () => void plainShare() },
+      { text: "Cancel", style: "cancel" },
+    ]);
+  }
 
   async function handleLike(e: { stopPropagation: () => void }) {
     e.stopPropagation();
@@ -64,16 +102,16 @@ export const SessionCard = React.memo(function SessionCard({ group, currentUserI
     }
   }
 
-  async function handleQuickLog(e: { stopPropagation: () => void }, item: FeedItem) {
+  async function handleQuickLog(e: { stopPropagation: () => void }, groupKey: string, item: FeedItem) {
     e.stopPropagation();
     if (!onQuickLog || loggingId) return;
-    setLoggingId(item.id);
+    setLoggingId(groupKey);
     try {
       await onQuickLog(item);
       if (Platform.OS !== "web") {
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       }
-      setLoggedId(item.id);
+      setLoggedId(groupKey);
       setTimeout(() => setLoggedId(null), 1500);
     } finally {
       setLoggingId(null);
@@ -87,7 +125,10 @@ export const SessionCard = React.memo(function SessionCard({ group, currentUserI
   );
   const coMembers = (members ?? []).filter((m) => m.user_id !== group.profile.id);
 
-  const totalQuantity = group.items.reduce((s, i) => s + i.quantity, 0);
+  // Alcoholic drinks by quantity — the same count as the profile and BAC.
+  const totalQuantity = drinkTotal(group.items);
+  // Same drink logged more than once (by anyone) shows as one line with a count.
+  const drinkGroups = useMemo(() => (isActive ? groupDrinks(group.items) : []), [group.items, isActive]);
   const locations = [...new Set(group.items.map((i) => i.location_name).filter(Boolean))];
   const drinkTypes = [...new Set(group.items.map((i) => i.drink_type))];
 
@@ -111,7 +152,13 @@ export const SessionCard = React.memo(function SessionCard({ group, currentUserI
     (1000 * 60 * 60);
   const drinksPerHour = hoursElapsed >= 0.25 && totalQuantity > 0 ? (totalQuantity / hoursElapsed).toFixed(1) : "—";
 
-  const media = group.items.flatMap((i) => getDrinkMedia(i).slice(0, 1));
+  // Every photo/video from the night out's drinks, oldest drink first, so the
+  // carousel can be swiped through all of them. Capped to keep the feed light
+  // (the night out page shows everything).
+  const media = [...group.items]
+    .sort((a, b) => new Date(a.logged_at).getTime() - new Date(b.logged_at).getTime())
+    .flatMap((i) => getDrinkMedia(i))
+    .slice(0, FEED_SESSION_MEDIA_LIMIT);
 
   return (
     <PressableCard
@@ -201,10 +248,6 @@ export const SessionCard = React.memo(function SessionCard({ group, currentUserI
           <Text className="text-xs text-muted-foreground">drinks</Text>
         </View>
         <View className="items-center">
-          <Text className="text-xl font-bold text-primary">{group.items.length}</Text>
-          <Text className="text-xs text-muted-foreground">rounds</Text>
-        </View>
-        <View className="items-center">
           <Text className="text-xl font-bold text-primary">{duration}</Text>
           <Text className="text-xs text-muted-foreground">duration</Text>
         </View>
@@ -224,7 +267,10 @@ export const SessionCard = React.memo(function SessionCard({ group, currentUserI
       <View className="flex-row gap-1 mb-2">
         {drinkTypes.map((type) => {
           const info = DRINK_TYPE_MAP[type as DrinkType] ?? DRINK_TYPE_MAP["other"];
-          const count = group.items.filter((i) => i.drink_type === type).length;
+          // Sum quantities: one log of 2 beers is 2 beers, not 1.
+          const count = group.items
+            .filter((i) => i.drink_type === type)
+            .reduce((sum, i) => sum + Number(i.quantity), 0);
           return (
             <View key={type} className="flex-row items-center bg-accent rounded-full px-2 py-1 gap-1">
               <DrinkIcon type={type as DrinkType} size={16} color={info.color} />
@@ -258,28 +304,34 @@ export const SessionCard = React.memo(function SessionCard({ group, currentUserI
       {/* Expanded drink-by-drink list — active sessions only */}
       {isActive && (
         <View className="mt-3 border-t border-border pt-3 gap-2">
-          {group.items.map((item) => {
+          {drinkGroups.map((dg) => {
+            const item = dg.latest;
             const info = DRINK_TYPE_MAP[item.drink_type as DrinkType] ?? DRINK_TYPE_MAP["other"];
-            const isLogging = loggingId === item.id;
-            const didLog = loggedId === item.id;
+            const isLogging = loggingId === dg.key;
+            const didLog = loggedId === dg.key;
+            const sharedByOthers = dg.drinkers.some((p) => p.id !== currentUserId);
             return (
               <Pressable
-                key={item.id}
+                key={dg.key}
                 className="flex-row items-center gap-2"
-                onPress={(e) => { e.stopPropagation(); router.push(`/drink/${item.id}`); }}
+                onPress={(e) => {
+                  e.stopPropagation();
+                  // One log: open it. Several: the night out lists each one.
+                  router.push(dg.items.length === 1 ? `/drink/${item.id}` : `/session/${group.session_id}`);
+                }}
               >
                 <DrinkIcon type={item.drink_type as DrinkType} size={20} color={info.color} />
                 <View className="flex-1">
                   <View className="flex-row items-center gap-2 flex-wrap">
                     <Text className="text-foreground text-sm font-medium">
                       {item.drink_name || info.label}
-                      {item.quantity !== 1 && (
-                        <Text className="text-muted-foreground font-normal"> ×{item.quantity}</Text>
+                      {dg.total !== 1 && (
+                        <Text className="text-muted-foreground font-normal"> ×{dg.total}</Text>
                       )}
                     </Text>
                     {onQuickLog && (
                       <Pressable
-                        onPress={(e) => handleQuickLog(e, item)}
+                        onPress={(e) => handleQuickLog(e, dg.key, item)}
                         disabled={!!loggingId}
                         className="flex-row items-center gap-1 bg-primary/10 border border-primary/25 rounded-full px-2 py-0.5"
                       >
@@ -290,17 +342,34 @@ export const SessionCard = React.memo(function SessionCard({ group, currentUserI
                         ) : (
                           <Ionicons name="add" size={11} color="#f59e0b" />
                         )}
-                        <Text className="text-primary text-xs font-semibold">{didLog ? "Added!" : "+1"}</Text>
+                        <Text className="text-primary text-xs font-semibold">{didLog ? "Added!" : quickLogLabel(item.quantity)}</Text>
                       </Pressable>
                     )}
                   </View>
+                  {sharedByOthers && (
+                    <View className="flex-row items-center gap-1 mt-0.5">
+                      {dg.drinkers.slice(0, 4).map((p, i) => (
+                        <View key={p.id} style={{ marginLeft: i > 0 ? -4 : 0 }}>
+                          <Avatar uri={p.avatar_url} name={getDisplayName(p)} size={14} />
+                        </View>
+                      ))}
+                      <Text className="text-muted-foreground text-[11px]" numberOfLines={1}>
+                        {dg.drinkers
+                          .map((p) => (p.id === currentUserId ? "You" : getDisplayName(p)))
+                          .join(", ")}
+                      </Text>
+                    </View>
+                  )}
                   {item.location_name && (
                     <View className="flex-row items-center gap-1">
                       <Ionicons name="location-outline" size={11} color="hsl(var(--muted-foreground))" />
                       <Text className="text-muted-foreground text-xs">{item.location_name}</Text>
                     </View>
                   )}
-                  <Text className="text-muted-foreground text-xs mt-0.5">{formatDateTime(item.logged_at)}</Text>
+                  <Text className="text-muted-foreground text-xs mt-0.5">
+                    {dg.items.length > 1 ? "Last " : ""}
+                    {formatDateTime(item.logged_at)}
+                  </Text>
                 </View>
               </Pressable>
             );
@@ -371,10 +440,7 @@ export const SessionCard = React.memo(function SessionCard({ group, currentUserI
             <Pressable
               onPress={(e) => {
                 e.stopPropagation();
-                shareLink(
-                  `/session/${group.session_id}`,
-                  `Check out ${getDisplayName(group.profile)}'s ${group.session_title ?? "night out"} on Suds`,
-                );
+                shareNightOut();
               }}
               hitSlop={8}
               accessibilityLabel="Share"

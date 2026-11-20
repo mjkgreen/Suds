@@ -3,6 +3,7 @@ import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useCallback, useMemo, useState } from "react";
 import { ActivityIndicator, FlatList, Platform, Pressable, RefreshControl, ScrollView, Text, View, useWindowDimensions } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Avatar } from "@/components/common/Avatar";
 import { DrinkBadge } from "@/components/drink/DrinkBadge";
@@ -15,6 +16,7 @@ import { MilestoneBanner } from "@/components/profile/MilestoneBanner";
 import { BadgePicker } from "@/components/profile/BadgePicker";
 import { ActivityCalendar } from "@/components/profile/ActivityCalendar";
 import { useAuth } from "@/hooks/useAuth";
+import { InviteFriendsButton } from "@/components/invite/InviteFriendsButton";
 import { useMyFeed } from "@/hooks/useFeed";
 import { useMilestones } from "@/hooks/useMilestones";
 import { useProfile, useUserStats, useUpdateProfile } from "@/hooks/useProfile";
@@ -30,7 +32,7 @@ import { SyncStatusPill } from "@/components/common/SyncStatusPill";
 import { useVisibleItems, VisibleItemsProvider } from "@/components/media/VisibleItems";
 import { SessionCard } from "@/components/session/SessionCard";
 import { DrinkIcon } from "@/components/icons/DrinkIcon";
-import { TrendLine } from "@/components/profile/TrendLine";
+import { ProgressTrend } from "@/components/profile/ProgressTrend";
 import { DRINK_TYPE_MAP, MILESTONE_EMOJI } from "@/lib/constants";
 import { useThemeStore } from "@/stores/themeStore";
 import { usePrefsStore } from "@/stores/prefsStore";
@@ -243,6 +245,7 @@ export default function ProfileScreen() {
 
             {/* Action buttons */}
             <View style={{ flexDirection: "row", gap: 8 }}>
+              <InviteFriendsButton size={16} />
               <Pressable className="bg-accent rounded-xl p-2" onPress={() => router.push("/user/edit")}>
                 <Ionicons name="pencil-sharp" size={16} color="#6b7280" />
               </Pressable>
@@ -265,6 +268,7 @@ export default function ProfileScreen() {
             <Avatar uri={profile?.avatar_url} name={profile ? getDisplayName(profile) : "User"} size={72} />
           </View>
           <View className="flex-row gap-2">
+            <InviteFriendsButton size={20} />
             <Pressable className="bg-accent rounded-xl p-2" onPress={() => router.push("/user/edit")}>
               <Ionicons name="pencil-sharp" size={20} color="#6b7280" />
             </Pressable>
@@ -389,7 +393,7 @@ export default function ProfileScreen() {
                       <View className="py-4 items-center">
                         <ActivityIndicator color="#f59e0b" />
                       </View>
-                    ) : null
+                    ) : undefined
                   }
                   onEndReached={handleEndReached}
                   onEndReachedThreshold={0.4}
@@ -421,17 +425,12 @@ export default function ProfileScreen() {
                       <StatBlock label="This Month" value={stats.drinks_this_month} />
                     </View>
 
-                    {stats.activity_by_day?.length > 0 && (
-                      <View className="pt-2">
-                        <Text className="text-xs text-muted-foreground mb-2 font-medium uppercase tracking-wide">
-                          Last 14 Days
-                        </Text>
-                        <TrendLine data={stats.activity_by_day.slice(-14)} isDark={colorScheme === "dark"} />
-                      </View>
-                    )}
+                    <View className="pt-2">
+                      <ProgressTrend activityByDay={stats.activity_by_day ?? []} isDark={colorScheme === "dark"} />
+                    </View>
 
                     <View className="pt-2">
-                      {stats.activity_by_day?.length > 0 && <ActivityCalendar activityByDay={stats.activity_by_day} />}
+                      <ActivityCalendar activityByDay={stats.activity_by_day ?? []} />
                     </View>
                   </View>
                 )}
@@ -502,8 +501,13 @@ export default function ProfileScreen() {
         {syncPill}
         {badgePicker}
         <TabBar active={activeTab} onChange={setActiveTab} />
-        <ScrollView
+        {/* Keyboard-aware so the BAC estimator's inputs (at the bottom) scroll
+            above the keyboard instead of being hidden behind it. */}
+        <KeyboardAwareScrollView
           contentContainerStyle={{ paddingBottom: 24 }}
+          bottomOffset={24}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
           refreshControl={<RefreshControl refreshing={false} onRefresh={onRefresh} tintColor="#f59e0b" />}
         >
           {stats && user?.id && <GoalCard userId={user.id} stats={stats} />}
@@ -518,17 +522,12 @@ export default function ProfileScreen() {
                 <StatBlock label="This Month" value={stats.drinks_this_month} />
               </View>
 
-              {stats.activity_by_day?.length > 0 && (
-                <View className="pt-2">
-                  <Text className="text-xs text-muted-foreground mb-2 font-medium uppercase tracking-wide">
-                    Last 14 Days
-                  </Text>
-                  <TrendLine data={stats.activity_by_day.slice(-14)} isDark={colorScheme === "dark"} />
-                </View>
-              )}
+              <View className="pt-2">
+                <ProgressTrend activityByDay={stats.activity_by_day ?? []} isDark={colorScheme === "dark"} />
+              </View>
 
               <View className="pt-2">
-                {stats.activity_by_day?.length > 0 && <ActivityCalendar activityByDay={stats.activity_by_day} />}
+                <ActivityCalendar activityByDay={stats.activity_by_day ?? []} />
               </View>
             </View>
           )}
@@ -584,7 +583,7 @@ export default function ProfileScreen() {
           <PremiumGate featureName="BAC Estimator" preview={<BACEstimatorPreview />}>
             <BACEstimator />
           </PremiumGate>
-        </ScrollView>
+        </KeyboardAwareScrollView>
       </SafeAreaView>
     );
   }
@@ -618,7 +617,7 @@ export default function ProfileScreen() {
                 <View className="py-4 items-center">
                   <ActivityIndicator color="#f59e0b" />
                 </View>
-              ) : null
+              ) : undefined
             }
             onEndReached={handleEndReached}
             onEndReachedThreshold={0.4}

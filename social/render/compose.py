@@ -10,6 +10,8 @@ audio) with soft taps, and encodes under the Drive upload cap.
 """
 import argparse, json, math, os, shutil, subprocess, sys, tempfile
 import numpy as np
+
+import music
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -183,67 +185,6 @@ def end_card(i, n, title, cta, url):
     return img
 
 
-def music(duration, taps_s, out_wav, seed=7):
-    """A gentle, original 100 bpm groove + tap ticks. Nothing licensed."""
-    sr = 44100
-    n = int(duration * sr)
-    t = np.arange(n) / sr
-    rng = np.random.default_rng(seed)
-    bpm = 100
-    beat = 60 / bpm
-    mix = np.zeros(n)
-    # chords: Fmaj7 - Dm7 - Bbmaj7 - C (in Hz roots), 2 beats... 4 beats each
-    prog = [[174.6, 220.0, 261.6, 329.6], [146.8, 174.6, 220.0, 261.6],
-            [116.5, 146.8, 174.6, 220.0], [130.8, 164.8, 196.0, 246.9]]
-    bar = beat * 4
-    for b in range(int(duration / bar) + 1):
-        notes = prog[b % 4]
-        s0 = int(b * bar * sr)
-        s1 = min(n, int((b + 1) * bar * sr))
-        if s0 >= n:
-            break
-        tt = t[s0:s1] - b * bar
-        env = np.minimum(1, tt / 0.08) * np.exp(-tt * 0.6)
-        pad = sum(np.sin(2 * np.pi * f * tt) + 0.3 * np.sin(4 * np.pi * f * tt) for f in notes)
-        mix[s0:s1] += 0.045 * pad * env
-        # plucked arpeggio on 8ths
-        for k in range(8):
-            a0 = s0 + int(k * beat / 2 * sr)
-            if a0 >= n:
-                break
-            f = notes[[0, 2, 1, 3, 2, 1, 3, 2][k]] * 2
-            L = min(int(0.35 * sr), n - a0)
-            ta = np.arange(L) / sr
-            mix[a0:a0 + L] += 0.06 * np.sin(2 * np.pi * f * ta) * np.exp(-ta * 9)
-    for k in range(int(duration / beat) + 1):
-        s = int(k * beat * sr)
-        if s >= n:
-            break
-        L = min(int(0.25 * sr), n - s)
-        tk = np.arange(L) / sr
-        kick = np.sin(2 * np.pi * (50 + 90 * np.exp(-tk * 30)) * tk) * np.exp(-tk * 12)
-        mix[s:s + L] += 0.35 * kick
-        h = s + int(beat / 2 * sr)
-        if h < n:
-            L2 = min(int(0.05 * sr), n - h)
-            mix[h:h + L2] += 0.05 * rng.standard_normal(L2) * np.exp(-np.arange(L2) / sr * 80)
-    for ts in taps_s:
-        s = int(ts * sr)
-        if s >= n:
-            continue
-        L = min(int(0.06 * sr), n - s)
-        tk = np.arange(L) / sr
-        mix[s:s + L] += 0.18 * np.sin(2 * np.pi * 1900 * tk) * np.exp(-tk * 90)
-    fade = int(1.2 * sr)
-    mix[-fade:] *= np.linspace(1, 0, fade)
-    mix[:int(0.05 * sr)] *= np.linspace(0, 1, int(0.05 * sr))
-    mix = mix / (np.abs(mix).max() + 1e-9) * 0.7
-    import wave
-    with wave.open(out_wav, 'wb') as w:
-        w.setnchannels(1); w.setsampwidth(2); w.setframerate(sr)
-        w.writeframes((mix * 32767).astype(np.int16).tobytes())
-
-
 def encode(frames_dir, wav, out, max_mb, duration):
     audio_k = 96
     base = ['ffmpeg', '-y', '-loglevel', 'error', '-framerate', str(FPS), '-i', os.path.join(frames_dir, '%05d.jpg'),
@@ -274,6 +215,8 @@ def main():
     ap.add_argument('--url', default='drink-with-suds.com')
     ap.add_argument('--max-mb', type=float, default=2.8)
     ap.add_argument('--keep', action='store_true', help='keep rendered frames next to the output')
+    ap.add_argument('--music', default='random', help='music style (see music.STYLES) or random')
+    ap.add_argument('--music-seed', type=int, default=None, help='seed for key/tempo/progression (default: random)')
     a = ap.parse_args()
 
     tl = json.load(open(os.path.join(a.capture, 'timeline.json')))
@@ -368,10 +311,12 @@ def main():
     total = n + END_FRAMES
     duration = total / FPS
     wav = os.path.join(work, 'music.wav')
-    music(duration, tap_times, wav)
+    seed = a.music_seed if a.music_seed is not None else int(np.random.default_rng().integers(1, 2**31))
+    sig = music.make(a.music, duration, tap_times, wav, seed)
+    json.dump(sig, open(os.path.splitext(a.out)[0] + '.music.json', 'w'))
     how = encode(out_frames, wav, a.out, a.max_mb, duration)
     size = os.path.getsize(a.out) / 1e6
-    print(json.dumps({'out': a.out, 'seconds': round(duration, 2), 'frames': total, 'mb': round(size, 2), 'encode': how}))
+    print(json.dumps({'out': a.out, 'seconds': round(duration, 2), 'frames': total, 'mb': round(size, 2), 'encode': how, 'music': sig}))
     if a.keep:
         shutil.copytree(out_frames, a.out + '.frames', dirs_exist_ok=True)
     shutil.rmtree(work, ignore_errors=True)

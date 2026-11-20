@@ -28,7 +28,7 @@ Built with **Expo**, **Supabase**, and **RevenueCat**, Suds combines habit track
 
 | Layer | Technology |
 |---|---|
-| **Framework** | [Expo](https://expo.dev) (SDK 54+) / React Native |
+| **Framework** | [Expo](https://expo.dev) (SDK 58) / React Native |
 | **Routing** | Expo Router v3 |
 | **Backend** | [Supabase](https://supabase.com/) (PostgreSQL + PostGIS, Auth, Storage) |
 | **Data Fetching** | [TanStack Query v5](https://tanstack.com/query/latest) |

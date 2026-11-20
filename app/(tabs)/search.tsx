@@ -8,6 +8,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Avatar } from "@/components/common/Avatar";
 import { DrinkIcon } from "@/components/icons/DrinkIcon";
 import { FollowButton } from "@/components/social/FollowButton";
+import { InviteFriendsButton } from "@/components/invite/InviteFriendsButton";
 import { useBlockedIds } from "@/hooks/useBlocks";
 import { useDebounce } from "@/hooks/useDebounce";
 import {
@@ -176,23 +177,26 @@ export default function SearchScreen() {
         {/* Search bar */}
         <View className="px-4 pt-6 pb-3 bg-card border-b border-border">
           <Text className="text-2xl font-bold text-foreground mb-3">Search</Text>
-          <View className="flex-row items-center bg-accent rounded-xl px-4 py-2.5">
-            <Ionicons name="search" size={18} color="#9ca3af" style={{ marginRight: 8 }} />
-            <TextInput
-              className="flex-1 text-base text-foreground"
-              placeholder="People, places, drinks"
-              placeholderTextColor="#9ca3af"
-              value={query}
-              onChangeText={onChangeQuery}
-              autoCapitalize="none"
-              autoCorrect={false}
-              returnKeyType="search"
-            />
-            {query.length > 0 && (
-              <Pressable onPress={() => onChangeQuery("")} hitSlop={8} accessibilityLabel="Clear search">
-                <Ionicons name="close-circle" size={18} color="#9ca3af" />
-              </Pressable>
-            )}
+          <View className="flex-row items-center gap-2">
+            <View className="flex-1 flex-row items-center bg-accent rounded-xl px-4 py-2.5">
+              <Ionicons name="search" size={18} color="#9ca3af" style={{ marginRight: 8 }} />
+              <TextInput
+                className="flex-1 text-base text-foreground"
+                placeholder="People, places, drinks"
+                placeholderTextColor="#9ca3af"
+                value={query}
+                onChangeText={onChangeQuery}
+                autoCapitalize="none"
+                autoCorrect={false}
+                returnKeyType="search"
+              />
+              {query.length > 0 && (
+                <Pressable onPress={() => onChangeQuery("")} hitSlop={8} accessibilityLabel="Clear search">
+                  <Ionicons name="close-circle" size={18} color="#9ca3af" />
+                </Pressable>
+              )}
+            </View>
+            <InviteFriendsButton size={24} />
           </View>
         </View>
 

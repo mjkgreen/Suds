@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Builds a throwaway local Postgres with the app's real schema (all of
-# supabase/migrations), then loads the demo seed. Idempotent: wipes and
+# supabase/migrations), then loads the scenario's demo data. Idempotent: wipes and
 # recreates the cluster each time. Never connects to production.
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -21,7 +21,8 @@ for f in $(ls "$ROOT"/supabase/migrations/*.sql | grep -v combined.sql | sort); 
   # pg_cron / pg_net are Supabase-hosted extensions; the shim provides no-op stand-ins.
   sed -E '/CREATE EXTENSION IF NOT EXISTS (pg_cron|pg_net)/d' "$f" | $PSQL -o /dev/null -f - 2>&1 | grep -v -E "NOTICE|WARNING|HINT|DETAIL|^$" || true
 done
-{ python3 "$ROOT/social/backend/media_lib.py"; cat "$ROOT/social/backend/seed.sql"; } | $PSQL -o /dev/null -f -
+# Demo data: this run's scenario (social/out/scenario.json, from scenario.py new), else the default one.
+{ python3 "$ROOT/social/backend/media_lib.py"; python3 "$ROOT/social/backend/scenario.py" sql; } | $PSQL -o /dev/null -f -
 # Tell a running PostgREST to re-read the rebuilt schema.
 $PSQL -c "NOTIFY pgrst, 'reload schema'"
 echo "db ready on 127.0.0.1:$PORT"
