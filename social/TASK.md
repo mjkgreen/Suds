@@ -43,10 +43,15 @@ repository checkout (`mjkgreen/Suds`, branch `main`). Everything you need is in
    - If `already_posted_today` is true, stop: report "already posted today" with the folder link.
    - Take the first entry in `plan` (its `type`), and pick its first subject
      unless a later one clearly has a fresher angle given `recent_hooks`.
+   - If `event` is set, today's post carries that event (Friendsgiving, St. Patrick's Day…).
+     Prefer the first subject in `plan` that is also in the event's `subjects`, and write
+     the words around its `angle` and `tone`. (`events_coming_up` is just for context.)
    - For a reel, choose the music style: the first of `music_styles` (the least recently
      used ones come first), unless a later one clearly suits the subject's mood better.
 
-3b. **Make fresh demo data.** `python3 social/backend/scenario.py new social/out/history.json social/out/scenario.json`.
+3b. **Make fresh demo data.** `python3 social/backend/scenario.py new social/out/history.json social/out/scenario.json`
+   (add `--event <event id>` when step 3 gave an event: the night started on camera becomes the
+   event's, and its drinks are featured).
    It picks a new city, cast, venues, nights out and drinks, avoiding everything the recent
    posts used, and prints a summary. Keep that summary for `post.json`'s `scenario`. Every
    later step (the database, photo slots, captures) uses this scenario automatically.
@@ -81,10 +86,12 @@ repository checkout (`mjkgreen/Suds`, branch `main`). Everything you need is in
     "hook": "<the hook for a reel, the headline for a still, on one line>",
     "caption": "<the caption from step 7>", "created_at": "<ISO timestamp>",
     "music": {"style": "<style from step 3>"},
-    "scenario": <the summary printed in step 3b>}
+    "scenario": <the summary printed in step 3b>,
+    "event": "<event id from step 3, or null>"}
    ```
    (`music` only for a reel. A still has no music, so leave it out.) The planner refuses a
-   post that reuses a person, night out, venue, city (back to back), scenario or photo from earlier posts.
+   post that reuses a person, night out, venue, city (back to back), scenario or photo from earlier posts,
+   and an event outside its window or already posted this year.
    Run `python3 social/planner.py check social/out/history.json social/out/post.json`.
    If it prints `REFUSED`, fix what it names (usually reword the hook) and check
    again. Make at most 3 attempts. If it still refuses, stop and report why.

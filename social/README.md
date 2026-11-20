@@ -39,6 +39,15 @@ and the planner refuses a post that reuses people, nights, venues, its seed, the
 previous post's city, or any earlier photo. The video on the feed's first post is a
 slow push-in made from that post's picked photo.
 
+## Events
+
+`events.py` lists ~22 drink-relevant dates (US and Canada: Friendsgiving, St. Patrick's,
+Super Bowl, Canada Day, Fourth of July, Sober October, New Year's Eve…) with date rules.
+Each event claims the last free posting day (plan.json `post_days`) on or before it,
+and the planner offers it that day. The scenario then makes the night started on
+camera the event's and features its drinks. Each event is posted once a year.
+`python3 social/events.py 2026-11-21` shows what's due and coming up.
+
 ## Photos per post
 
 Seeded posts have photo **slots** (from the scenario): which post, what drink, which

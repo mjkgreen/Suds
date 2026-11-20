@@ -154,5 +154,45 @@ class ScenarioRules(unittest.TestCase):
         self.assertEqual(planner.check(self.h, post('2026-11-10', 'reel', 'profile', 'Know your numbers', city='Chicago')), [])
 
 
+import events
+
+
+class EventRules(unittest.TestCase):
+    def test_dates(self):
+        self.assertEqual(events.occurrence(events.BY_ID['thanksgiving-us'], 2026), dt.date(2026, 11, 26))
+        self.assertEqual(events.occurrence(events.BY_ID['thanksgiving-ca'], 2026), dt.date(2026, 10, 12))
+        self.assertEqual(events.occurrence(events.BY_ID['mardi-gras'], 2027), dt.date(2027, 2, 9))
+        self.assertEqual(events.occurrence(events.BY_ID['super-bowl'], 2027), dt.date(2027, 2, 14))
+
+    def test_sunday_event_posts_on_saturday(self):
+        days = {3, 4, 5, 6}
+        now, _ = events.due(dt.date(2027, 2, 13), [], days)
+        self.assertEqual(now[0]['id'], 'super-bowl')
+
+    def test_two_events_one_weekend_get_different_days(self):
+        days = {3, 4, 5, 6}
+        s = events.schedule(2027, days)
+        self.assertNotEqual(s['super-bowl'][1], s['valentines'][1])
+        self.assertEqual(len({b for _, b in s.values()}), len(s))
+
+    def test_not_due_outside_window(self):
+        self.assertEqual(events.due(dt.date(2026, 11, 20), [], {3, 4, 5, 6})[0], [])
+
+    def test_once_a_year(self):
+        h = [dict(post('2026-11-21', 'reel', 'night-out', 'friends first'), event='friendsgiving')]
+        self.assertEqual([e['id'] for e in events.due(dt.date(2026, 11, 21), h, {3, 4, 5, 6})[0]], [])
+        p = post('2026-11-22', 'still', 'feed', 'grateful crew'); p['event'] = 'friendsgiving'
+        e = ' | '.join(planner.check(h, p))
+        self.assertTrue('already posted this year' in e or 'not due' in e, e)
+
+    def test_event_outside_window_refused(self):
+        p = post('2026-11-20', 'still', 'feed', 'grateful crew'); p['event'] = 'thanksgiving-us'
+        self.assertTrue(any('not due' in x for x in planner.check([], p)))
+
+    def test_event_in_window_ok(self):
+        p = post('2026-11-26', 'still', 'feed', 'hometown spots'); p['event'] = 'thanksgiving-us'
+        self.assertEqual(planner.check([], p), [])
+
+
 if __name__ == '__main__':
     unittest.main()

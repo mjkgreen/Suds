@@ -20,6 +20,8 @@ Rules (check refuses with exit 1 and prints why):
      new, its city differs from the previous post's, and no person, night out or venue
      from the last SCENARIO_GAP posts appears again
   8. no photo (post.json "photos") from any earlier post is used again
+  9. a post may carry an "event" (events.py) only inside that event's window, and
+     each event only once a year
   6. a reel must record its music (render/compose.py writes it); its style may
      not match the previous MUSIC_GAP reels, and the exact track (style, key,
      tempo, progression) may never repeat
@@ -29,6 +31,9 @@ import json
 import os
 import re
 import sys
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import events  # noqa: E402
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 with open(os.path.join(HERE, 'plan.json')) as _f:
@@ -162,6 +167,14 @@ def check(history, post):
     again = used_photos & set(post.get('photos', []))
     if again:
         errs.append(f'photos used in an earlier post: {", ".join(sorted(again))}')
+    ev = post.get('event')
+    if ev:
+        if ev not in events.BY_ID:
+            errs.append(f'unknown event {ev!r}')
+        elif not events.window_ok(ev, today):
+            errs.append(f'event {ev!r} is not due on {post["date"]}')
+        elif events.posted([r for r in history if r['date'] != post['date']], ev, today.year):
+            errs.append(f'event {ev!r} was already posted this year')
     mine = words(post['hook'])
     for r in history:
         shared = mine & words(r.get('hook', ''))
@@ -190,6 +203,7 @@ def suggest(history, today):
                      'subjects': [s for _, s in sorted(options)]})
     posted_today = any(r['date'] == today.isoformat() for r in history)
     recent_hooks = [r['hook'] for r in history[-12:]]
+    due_now, coming = events.due(today, history)
     blocked = set(recent_music(history, MUSIC_GAP))
     last_used = {}
     for i, r in enumerate(history):
@@ -198,7 +212,7 @@ def suggest(history, today):
     music = sorted((s for s in MUSIC_STYLES if s not in blocked), key=lambda s: last_used.get(s, -1))
     return {'date': today.isoformat(), 'already_posted_today': posted_today,
             'plan': [p for p in plan if p['subjects']], 'recent_hooks': recent_hooks,
-            'music_styles': music}
+            'music_styles': music, 'event': due_now[0] if due_now else None, 'events_coming_up': coming}
 
 
 def main(argv):

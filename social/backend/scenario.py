@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 """Demo-data scenarios: a fresh cast, city, venues, nights out and drinks per post.
 
-  scenario.py new <history.json> <out.json> [seed]   pick a scenario that avoids recent posts'
+  scenario.py new <history.json> <out.json> [seed] [--event <id>]
+                                                    pick a scenario that avoids recent posts';
+                                                    with an event (events.py), the night started on
+                                                    camera is the event's and its drinks are featured
   scenario.py sql [scenario.json]                    the seed SQL for it (setup-db.sh runs this)
   scenario.py json [scenario.json]                   print it (lib.js / pick.py read this)
   scenario.py summary [scenario.json]                the part recorded in post.json's "scenario"
@@ -85,6 +88,24 @@ LIBRARY = {  # fallback photos per drink type (social/media/library)
     'mocktail': ['mocktail-mint', 'mocktail-purple', 'mocktail-lavender'], 'water': ['bar-hands'],
     'crowd': ['cheers-patio', 'string-lights-crowd', 'patio-crowd-night', 'rooftop-night', 'bar-counter-night', 'bar-silhouettes'],
 }
+# Library photos that actually show a given drink (by name); anything else falls back to a
+# neutral bar/crowd shot rather than a photo of the wrong drink.
+BY_NAME = {
+    'Espresso Martini': ['espresso-martini-1', 'espresso-martini-2'], 'Margarita': ['margarita-1', 'margarita-2', 'margarita-night'],
+    'Old Fashioned': ['old-fashioned-1', 'old-fashioned-2'], 'Bourbon': ['old-fashioned-2'],
+    'Pinot Noir': ['red-wine-1', 'red-wine-2', 'red-wine-pour'], 'Prosecco': ['champagne'],
+    'Hazy IPA': ['pint-pale', 'two-pints'], 'Pilsner': ['pint-pale', 'beer-railing'], 'Lager': ['pint-pale', 'beer-railing'],
+    'Wheat Beer': ['beer-railing'], 'Sour': ['beer-trio', 'flight-hand'], 'Stout': ['beers-table'],
+    'Dry Apple Cider': ['cider'], 'Ginger Nojito': ['mocktail-mint'], 'Virgin Paloma': ['mocktail-lavender'],
+    'Mojito': ['mocktail-mint'], 'Negroni': ['cocktail-coupe'],
+}
+NEUTRAL = ['bar-hands', 'bar-counter-night', 'bar-silhouettes', 'wine-glasses-hand', 'cheers-patio', 'patio-crowd-night']
+
+
+def library_for(name, rng):
+    return rng.choice(BY_NAME.get(name) or NEUTRAL)
+
+
 U = lambda n: f'00000000-0000-4000-a000-{n:012d}'
 D = lambda n: f'00000000-0000-4000-b000-{n:012d}'
 S = lambda n: f'00000000-0000-4000-c000-{n:012d}'
@@ -98,7 +119,7 @@ def recent(history, key, n=AVOID_POSTS):
     return out
 
 
-def new(history, seed=None):
+def new(history, seed=None, event=None):
     seed = seed if seed is not None else random.SystemRandom().randrange(1, 2**31)
     rng = random.Random(seed)
     used_people, used_nights = recent(history, 'cast'), recent(history, 'nights')
@@ -126,19 +147,32 @@ def new(history, seed=None):
     rng.shuffle(titles)
     fmt = lambda t, i: t.format(f=friend_first(i))
     menu = list(MENU)
-    drink = lambda types=None: rng.choice([m for m in menu if types is None or m[0] in types])
+    ev_drinks = [m for m in menu if event and m[1] in event.get('drinks', [])]
+
+    def drink(types=None):
+        pool = [m for m in menu if types is None or m[0] in types]
+        themed = [m for m in ev_drinks if m in pool]
+        return rng.choice(themed if themed and rng.random() < 0.35 else pool)
     # featured feed posts by friends 1..5; the first is always a cocktail (it carries the video clip)
     posts = []
     for k, (fi, mins) in enumerate([(1, 35), (2, 80), (3, 160), (5, 240), (4, 360)]):
-        t, name, brand, q = drink(['cocktail']) if k == 0 else drink()
+        for _ in range(20):   # a different drink on every featured post
+            t, name, brand, q = drink(['cocktail']) if k == 0 else drink()
+            if name not in {p['name'] for p in posts}:
+                break
         posts.append({'id': D(k + 1), 'user': fi, 'type': t, 'name': name, 'brand': brand, 'qty': 2 if k == 1 else 1,
                       'venue': rng.randrange(len(venues)), 'minutes_ago': mins, 'rating': rng.randint(7, 10),
                       'note': rng.choice(NOTES[t]) if k == 0 or rng.random() < 0.7 else None, 'query': q})
 
-    def night(sid, user, title, hours_ago, length_h, n, venue_ids, first_id):
+    def night(sid, user, title, hours_ago, length_h, n, venue_ids, first_id, pace=False):
         ds = []
         for k in range(n):
-            t, name, brand, q = (('water', 'Water', None, 'glass of water bar') if k == n // 2 and n > 3 else drink())
+            if k == n // 2 and n > 3:
+                t, name, brand, q = ('water', 'Water', None, 'glass of water bar')
+            elif pace and k == n - 2:
+                t, name, brand, q = drink(['mocktail'])
+            else:
+                t, name, brand, q = drink()
             ds.append({'id': D(first_id + k), 'type': t, 'name': name, 'brand': brand, 'query': q,
                        'venue': venue_ids[min(k * len(venue_ids) // n, len(venue_ids) - 1)],
                        'offset_min': int(10 + k * (length_h * 60 - 20) / max(1, n - 1)),
@@ -148,15 +182,15 @@ def new(history, seed=None):
     vi = list(range(len(venues))); rng.shuffle(vi)
     friend_night = night(S(1), 4, fmt(titles[0], 2), 5.5, 3.5, 5, [vi[0]], 101)
     shared_night = night(S(2), 2, fmt(titles[1], 3), 26, 5, 4, [vi[1]], 201)
-    your_night = night(S(3), 0, fmt(titles[2], rng.randint(1, 5)), 9 * 24 + 1.5, 5.3, 6, [vi[2], vi[3], vi[4]], 301)
-    start_title = fmt(titles[3], rng.randint(1, 5))
+    your_night = night(S(3), 0, fmt(titles[2], rng.randint(1, 5)), 9 * 24 + 1.5, 5.3, 6, [vi[2], vi[3], vi[4]], 301, pace=True)
+    start_title = event['night'] if event else fmt(titles[3], rng.randint(1, 5))
     lt, ln, _, _ = drink(['cocktail', 'wine', 'cider'])
     log = {'type': lt, 'type_label': TYPE_LABEL[lt], 'name': ln, 'prefix': ln[:4], 'venue': vi[5]}
     scen = {
         'seed': seed, 'city': city, 'people': people, 'venues': venues, 'menu': [list(m) for m in menu],
         'you_bio': rng.choice(BIOS), 'weekly_limit': rng.choice([6, 7, 8, 10, 12]),
         'posts': posts, 'nights': {'friend': friend_night, 'shared': shared_night, 'yours': your_night},
-        'start_title': start_title, 'log': log,
+        'start_title': start_title, 'log': log, 'event': event['id'] if event else None,
         'comments': rng.sample(COMMENTS, 6), 'your_comment': rng.choice(['save me a seat!', 'on my way', 'cheers to that!', 'love this spot']),
     }
     scen['slots'] = slots(scen, rng)
@@ -167,7 +201,7 @@ def slots(sc, rng):
     """Photo slots (see media/pick.py): which seeded drinks show photos, and in which subjects."""
     out, n = [], sc['nights']
     def add(slot, d, subjects, count, extra='', crowd=False, video=False):
-        defaults = rng.sample(LIBRARY.get(d['type'], LIBRARY['cocktail']), 1) + (rng.sample(LIBRARY['crowd'], 1) if crowd else [])
+        defaults = [library_for(d['name'], rng)] + (rng.sample(LIBRARY['crowd'], 1) if crowd else [])
         out.append({'slot': slot, 'post': d['id'], 'shows': f"{d['name']}{extra}", 'query': d['query'],
                     'subjects': subjects, 'count': count, 'defaults': defaults[:count], 'video': video})
     p = sc['posts']
@@ -239,10 +273,10 @@ CROSS JOIN LATERAL (SELECT * FROM places OFFSET floor(random()*{len(V)})::int + 
     # media: slots (this run's picks, else library defaults)
     for s in sc['slots']:
         o.append(f"UPDATE drink_logs SET media = pg_temp.slot({q(s['slot'])}, {', '.join(q(x) for x in s['defaults'])}) WHERE id = '{s['post']}';")
-    o.append('CREATE TEMP TABLE type_photos(drink_type text, names text[]);')
-    o.append('INSERT INTO type_photos VALUES ' + ', '.join(f"({q(t)}, ARRAY[{', '.join(q(x) for x in v)}])" for t, v in LIBRARY.items() if t != 'crowd') + ';')
-    o.append("""UPDATE drink_logs l SET media = pg_temp.stock(tp.names[1 + floor(random() * array_length(tp.names, 1))::int])
-FROM type_photos tp WHERE tp.drink_type = l.drink_type AND l.media = '[]'::jsonb AND l.id::text NOT LIKE '00000000-%' AND random() < 0.25;""")
+    o.append('CREATE TEMP TABLE name_photos(drink_name text, names text[]);')
+    o.append('INSERT INTO name_photos VALUES ' + ', '.join(f"({q(n)}, ARRAY[{', '.join(q(x) for x in v)}])" for n, v in BY_NAME.items()) + ';')
+    o.append("""UPDATE drink_logs l SET media = pg_temp.stock(np.names[1 + floor(random() * array_length(np.names, 1))::int])
+FROM name_photos np WHERE np.drink_name = l.drink_name AND l.media = '[]'::jsonb AND l.id::text NOT LIKE '00000000-%' AND random() < 0.25;""")
     o.append("""INSERT INTO drink_likes (drink_log_id, user_id) SELECT l.id, p.id FROM drink_logs l JOIN profiles p ON p.id <> l.user_id
 WHERE l.id::text LIKE '00000000-0000-4000-b000-%' AND random() < 0.7;""")
     c = sc['comments']
@@ -259,7 +293,7 @@ WHERE l.id::text LIKE '00000000-0000-4000-b000-%' AND random() < 0.7;""")
 def summary(sc):
     return {'seed': sc['seed'], 'city': sc['city'], 'cast': [p['name'] for p in sc['people']],
             'you': sc['people'][0]['name'], 'nights': [n['title'] for n in sc['nights'].values()] + [sc['start_title']],
-            'venues': [v['name'] for v in sc['venues']]}
+            'venues': [v['name'] for v in sc['venues']], 'event': sc.get('event')}
 
 
 def load(path=None):
@@ -274,8 +308,14 @@ if __name__ == '__main__':
     if not a:
         print(__doc__); sys.exit(2)
     if a[0] == 'new':
+        ev = None
+        if '--event' in a:
+            i = a.index('--event'); ev_id = a[i + 1]; del a[i:i + 2]
+            sys.path.insert(0, os.path.join(HERE, '..'))
+            import events
+            ev = events.BY_ID[ev_id]
         h = json.load(open(a[1])) if os.path.exists(a[1]) and os.path.getsize(a[1]) else []
-        sc = new(h, int(a[3]) if len(a) > 3 else None)
+        sc = new(h, int(a[3]) if len(a) > 3 else None, ev)
         json.dump(sc, open(a[2], 'w'), indent=1, ensure_ascii=False)
         print(json.dumps(summary(sc), ensure_ascii=False))
     elif a[0] == 'sql':

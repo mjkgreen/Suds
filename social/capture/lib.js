@@ -49,6 +49,24 @@ async function openApp({ width = 540, height = 960, scale = 2, route = '/feed', 
     const q = (u.searchParams.get('q') || '').toLowerCase();
     return route.fulfill({ json: PLACES.filter((p) => p.name.toLowerCase().includes(q)).map(place) });
   });
+  // Since 1.7.x the web app searches and suggests venues with Photon (photon.komoot.io).
+  // Answer it from the same fictional venues, nearest first.
+  await context.route('https://photon.komoot.io/**', (route) => {
+    const u = new URL(route.request().url());
+    const lat = +u.searchParams.get('lat'), lng = +u.searchParams.get('lon');
+    const feature = (p) => ({ type: 'Feature', geometry: { type: 'Point', coordinates: [p.lng, p.lat] },
+      properties: { osm_id: PLACES.indexOf(p) + 1, osm_type: 'N', osm_key: 'amenity', osm_value: 'bar', type: 'house',
+        name: p.name, street: p.street, city: SCENARIO.city } });
+    const near = (a) => (Number.isFinite(lat) ? Math.hypot(a.lat - lat, a.lng - lng) : 0);
+    let hits = PLACES.slice().sort((a, b) => near(a) - near(b));
+    if (u.pathname.startsWith('/api')) {
+      const q = (u.searchParams.get('q') || '').toLowerCase();
+      hits = hits.filter((p) => p.name.toLowerCase().includes(q));
+    } else {
+      hits = hits.filter((p) => near(p) < 0.004);   // ~400 m: "where are you?"
+    }
+    return route.fulfill({ json: { type: 'FeatureCollection', features: hits.slice(0, 10).map(feature) } });
+  });
   const page = await context.newPage();
   page.on('pageerror', (e) => console.error('pageerror:', e.message.slice(0, 200)));
   if (beforeLoad) await beforeLoad(page);
