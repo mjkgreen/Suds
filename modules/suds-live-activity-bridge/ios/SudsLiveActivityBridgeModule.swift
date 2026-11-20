@@ -65,6 +65,7 @@ public class SudsLiveActivityBridgeModule: Module {
           "groupDrinkCount": activity.contentState.groupDrinkCount,
           "elapsedMinutes": elapsedMinutes,
           "lastDrinkName": activity.contentState.lastDrinkName,
+          "lastDrinkQuantity": activity.contentState.lastDrinkQuantity,
           "memberCount": activity.contentState.memberCount,
           "memberNames": activity.contentState.memberNames,
         ]
@@ -83,6 +84,7 @@ public class SudsLiveActivityBridgeModule: Module {
         drinkCount: drinkCount,
         groupDrinkCount: groupDrinkCount,
         lastDrinkName: "",
+        lastDrinkQuantity: 1,
         memberCount: memberCount,
         memberNames: memberNames,
         bac: nil // the app sends the drink timeline in its first updateActivity right after this
@@ -104,7 +106,7 @@ public class SudsLiveActivityBridgeModule: Module {
     // bacJson: the user's drinks and body constants as JSON (BACState), so the widget can
     // estimate BAC exactly like the app. Empty string = keep the activity's current value.
     AsyncFunction("updateActivity") { (activityId: String, drinkCount: Double, groupDrinkCount: Double,
-                                        lastDrinkName: String, memberCount: Int,
+                                        lastDrinkName: String, lastDrinkQuantity: Double, memberCount: Int,
                                         memberNames: String, bacJson: String) async in
       guard #available(iOS 16.1, *) else { return }
       let d = UserDefaults(suiteName: "group.com.sudssocial.app")
@@ -121,6 +123,7 @@ public class SudsLiveActivityBridgeModule: Module {
           drinkCount: drinkCount,
           groupDrinkCount: groupDrinkCount,
           lastDrinkName: lastDrinkName,
+          lastDrinkQuantity: lastDrinkQuantity > 0 ? lastDrinkQuantity : 1,
           memberCount: memberCount,
           memberNames: memberNames,
           isLogging: isLogging,
@@ -159,15 +162,17 @@ public class SudsLiveActivityBridgeModule: Module {
       d.set(sessionStartMs / 1000.0, forKey: "sessionStart") // JS ms → Swift seconds
       d.set(lastDrinkType, forKey: "lastDrinkType")
       d.set(lastDrinkName, forKey: "lastDrinkName")
+      d.removeObject(forKey: "lastDrinkQuantity") // the +1 falls back to 1 until a drink is logged
       // Clear any stale flag left by a jetsam-killed intent process — a new session
       // means no intent is in flight, so isLogging should never start as true.
       d.set(false, forKey: "intentIsLogging")
     }
 
-    Function("updateSharedLastDrink") { (drinkType: String, drinkName: String) in
+    Function("updateSharedLastDrink") { (drinkType: String, drinkName: String, quantity: Double) in
       guard let d = UserDefaults(suiteName: "group.com.sudssocial.app") else { return }
       d.set(drinkType, forKey: "lastDrinkType")
       d.set(drinkName, forKey: "lastDrinkName")
+      d.set(quantity > 0 ? quantity : 1, forKey: "lastDrinkQuantity")
     }
 
     // Called by the main app whenever its own Supabase client refreshes the session, so the
@@ -197,7 +202,7 @@ public class SudsLiveActivityBridgeModule: Module {
     Function("clearSharedSession") { () in
       guard let d = UserDefaults(suiteName: "group.com.sudssocial.app") else { return }
       ["sessionId", "userId", "refreshToken", "weightLbs", "supabaseUrl", "anonKey", "sessionStart",
-       "lastDrinkType", "lastDrinkName", "accessToken", "accessTokenExpiresAt",
+       "lastDrinkType", "lastDrinkName", "lastDrinkQuantity", "accessToken", "accessTokenExpiresAt",
        "lastQuickLogTapAt", "intentIsLogging", "intentIsLoggingAt"]
         .forEach { d.removeObject(forKey: $0) }
     }

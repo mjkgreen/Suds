@@ -9,6 +9,7 @@ import {
   NativeSyntheticEvent,
   NativeScrollEvent,
 } from 'react-native';
+import type { ScrollViewInstance } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useColorScheme } from 'nativewind';
 import {
@@ -37,7 +38,7 @@ interface DrumPickerProps {
 }
 
 function DrumPicker({ data, selectedIndex, onSelect, width = 80, formatItem }: DrumPickerProps) {
-  const scrollRef = useRef<ScrollView>(null);
+  const scrollRef = useRef<ScrollViewInstance>(null);
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
   // Hard-coded white text was unreadable on the light card background.

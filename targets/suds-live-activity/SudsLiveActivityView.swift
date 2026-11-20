@@ -78,7 +78,7 @@ struct SudsLiveActivityWidget: Widget {
                                 .foregroundStyle(.secondary)
                         }
                         Spacer()
-                        PlusOneButton(lastDrinkName: context.state.lastDrinkName, isLogging: context.state.isLogging)
+                        PlusOneButton(lastDrinkName: context.state.lastDrinkName, lastDrinkQuantity: context.state.lastDrinkQuantity, isLogging: context.state.isLogging)
                     }
                 }
             } compactLeading: {
@@ -136,7 +136,7 @@ struct LockScreenView: View {
 
                 Spacer()
 
-                PlusOneButton(lastDrinkName: context.state.lastDrinkName, isLogging: context.state.isLogging)
+                PlusOneButton(lastDrinkName: context.state.lastDrinkName, lastDrinkQuantity: context.state.lastDrinkQuantity, isLogging: context.state.isLogging)
             }
 
             // Row 2: TimelineView triggers a rerender every 60s so pace and BAC
@@ -225,7 +225,13 @@ struct StatCell: View {
 
 struct PlusOneButton: View {
     let lastDrinkName: String
+    let lastDrinkQuantity: Double
     var isLogging: Bool = false
+
+    /// "+1 Beer", "+1.5 Wine": the button repeats the last drink with its quantity.
+    private var label: String {
+        "+\(formatCount(lastDrinkQuantity > 0 ? lastDrinkQuantity : 1)) \(lastDrinkName.isEmpty ? "Drink" : lastDrinkName)"
+    }
 
     var body: some View {
         Group {
@@ -246,7 +252,7 @@ struct PlusOneButton: View {
                         Image(systemName: "plus.circle.fill")
                             .font(.title3)
                             .foregroundStyle(.orange)
-                        Text(lastDrinkName.isEmpty ? "Drink" : lastDrinkName)
+                        Text(label)
                             .font(.caption2)
                             .foregroundStyle(.secondary)
                             .multilineTextAlignment(.center)

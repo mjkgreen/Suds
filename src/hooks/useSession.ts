@@ -118,11 +118,18 @@ export function useDeleteSession() {
   const { endActivity } = useLiveActivity();
 
   return useMutation({
-    mutationFn: async (sessionId: string) => {
-      const { error } = await supabase.rpc('delete_session_with_drinks', { p_session_id: sessionId });
+    /**
+     * deleteOwnDrinks: also delete the caller's own drinks from the night out.
+     * Otherwise they (and everyone else's) stay in history as separate drinks.
+     */
+    mutationFn: async ({ sessionId, deleteOwnDrinks }: { sessionId: string; deleteOwnDrinks: boolean }) => {
+      const { error } = await supabase.rpc('delete_session_with_drinks', {
+        p_session_id: sessionId,
+        p_delete_own_drinks: deleteOwnDrinks,
+      });
       if (error) throw error;
     },
-    onSuccess: (_data, sessionId) => {
+    onSuccess: (_data, { sessionId }) => {
       if (activeSession?.id === sessionId) {
         setActiveSession(null);
         endActivity();
@@ -137,6 +144,8 @@ export function useDeleteSession() {
       queryClient.invalidateQueries({ queryKey: ['milestones'] });
       queryClient.invalidateQueries({ queryKey: ['streaks'] });
       queryClient.invalidateQueries({ queryKey: ['advancedStats'] });
+      queryClient.invalidateQueries({ queryKey: ['mapLogs'] });
+      queryClient.invalidateQueries({ queryKey: ['sessionRoutes'] });
     },
   });
 }

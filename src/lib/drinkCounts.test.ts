@@ -1,4 +1,4 @@
-import { drinkTotal, sessionDrinkCounts } from './drinkCounts';
+import { drinkTotal, lastDrinkForQuickLog, quickLogLabel, sessionDrinkCounts } from './drinkCounts';
 
 describe('drink counts', () => {
   const logs = [
@@ -28,5 +28,38 @@ describe('drink counts', () => {
 
   it('handles quantities that arrive as strings from numeric columns', () => {
     expect(drinkTotal([{ drink_type: 'beer', quantity: '1.5' as unknown as number }])).toBe(1.5);
+  });
+});
+
+describe('quickLogLabel', () => {
+  it('shows the quantity the button will log', () => {
+    expect(quickLogLabel(1)).toBe('+1');
+    expect(quickLogLabel(1.5)).toBe('+1.5');
+    expect(quickLogLabel(3)).toBe('+3');
+    expect(quickLogLabel(0.5)).toBe('+0.5');
+  });
+
+  it('rounds float noise and falls back to +1', () => {
+    expect(quickLogLabel(1.4999999)).toBe('+1.5');
+    expect(quickLogLabel(null)).toBe('+1');
+    expect(quickLogLabel(0)).toBe('+1');
+  });
+});
+
+describe('lastDrinkForQuickLog', () => {
+  it('repeats the drink with its name and quantity', () => {
+    expect(lastDrinkForQuickLog({ drink_type: 'wine', drink_name: 'Pinot', quantity: 1.5 })).toEqual({
+      drinkType: 'wine', drinkName: 'Pinot', quantity: 1.5,
+    });
+  });
+
+  it('names an unnamed drink by its type and defaults the quantity to 1', () => {
+    expect(lastDrinkForQuickLog({ drink_type: 'wine', drink_name: null, quantity: null })).toEqual({
+      drinkType: 'wine', drinkName: 'Wine', quantity: 1,
+    });
+  });
+
+  it('reads a numeric quantity sent as a string', () => {
+    expect(lastDrinkForQuickLog({ drink_type: 'beer', quantity: '2.5' }).quantity).toBe(2.5);
   });
 });

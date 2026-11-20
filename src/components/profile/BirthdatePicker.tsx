@@ -10,6 +10,7 @@ import {
   TouchableOpacity,
   useWindowDimensions,
 } from "react-native";
+import type { ScrollViewInstance } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useColorScheme } from "nativewind";
 
@@ -72,7 +73,7 @@ export function BirthdatePicker({
   const [viewDate, setViewDate] = useState<Date>(parsed || new Date(2000, 0, 1));
   const [mode, setMode] = useState<"days" | "months" | "years">("days");
 
-  const yearScrollRef = useRef<ScrollView>(null);
+  const yearScrollRef = useRef<ScrollViewInstance>(null);
 
   // Sync state when modal becomes visible
   useEffect(() => {

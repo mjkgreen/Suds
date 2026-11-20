@@ -41,14 +41,14 @@ function TabsLayoutInner() {
         name="feed"
         options={{
           title: "Feed",
-          tabBarIcon: ({ color, size }) => <Ionicons name="beer-outline" size={size} color={color} />,
+          tabBarIcon: ({ color, size }) => <Ionicons name="beer-outline" size={size} color={color as string} />,
         }}
       />
       <Tabs.Screen
         name="map"
         options={{
           title: "Map",
-          tabBarIcon: ({ color, size }) => <Ionicons name="map-outline" size={size} color={color} />,
+          tabBarIcon: ({ color, size }) => <Ionicons name="map-outline" size={size} color={color as string} />,
         }}
       />
       <Tabs.Screen
@@ -68,14 +68,14 @@ function TabsLayoutInner() {
         name="search"
         options={{
           title: "Search",
-          tabBarIcon: ({ color, size }) => <Ionicons name="search-outline" size={size} color={color} />,
+          tabBarIcon: ({ color, size }) => <Ionicons name="search-outline" size={size} color={color as string} />,
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
           title: "Profile",
-          tabBarIcon: ({ color, size }) => <Ionicons name="person-outline" size={size} color={color} />,
+          tabBarIcon: ({ color, size }) => <Ionicons name="person-outline" size={size} color={color as string} />,
         }}
       />
     </Tabs>

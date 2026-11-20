@@ -17,6 +17,7 @@ import { MentionText } from "@/components/social/MentionText";
 import { TaggedUsersLine } from "@/components/social/TaggedUsersLine";
 import { shareLink } from "@/lib/share";
 import { DRINK_TYPE_MAP } from "@/lib/constants";
+import { quickLogLabel } from "@/lib/drinkCounts";
 import { FeedItem } from "@/types/models";
 import { relativeTime, formatTime } from "@/utils/dateHelpers";
 import { getDisplayName, getUsername } from "@/utils/profileHelpers";
@@ -31,7 +32,7 @@ interface DrinkCardProps {
 export const DrinkCard = React.memo(function DrinkCard({ item, currentUserId, onQuickLog }: DrinkCardProps) {
   const router = useRouter();
   const drinkInfo = DRINK_TYPE_MAP[item.drink_type] ?? DRINK_TYPE_MAP["other"];
-  const firstMedia = getDrinkMedia(item)[0];
+  const media = getDrinkMedia(item);
   const [isLogging, setIsLogging] = useState(false);
   const [didLog, setDidLog] = useState(false);
   // Optimistic like state
@@ -150,7 +151,7 @@ export const DrinkCard = React.memo(function DrinkCard({ item, currentUserId, on
           {item.tagged_users?.length ? <TaggedUsersLine users={item.tagged_users} className="mb-2" /> : null}
 
           <View className="flex-row gap-4">
-            {item.quantity > 1 && (
+            {Number(item.quantity) > 0 && Number(item.quantity) !== 1 && (
               <View className="items-center mb-3">
                 <Text className="text-xl font-bold text-primary">{item.quantity}</Text>
                 <Text className="text-xs text-muted-foreground">drinks</Text>
@@ -173,7 +174,7 @@ export const DrinkCard = React.memo(function DrinkCard({ item, currentUserId, on
       </View>
 
       {/* Photo */}
-      {firstMedia ? <MediaCarousel media={[firstMedia]} maxHeight={FEED_MEDIA_MAX_HEIGHT} borderRadius={12} visibilityKey={`drink-${item.id}`} /> : null}
+      {media.length > 0 ? <MediaCarousel media={media} maxHeight={FEED_MEDIA_MAX_HEIGHT} borderRadius={12} visibilityKey={`drink-${item.id}`} /> : null}
       <View className="flex-row items-center mt-2">
         {item.location_name && (
           <View className="flex-row items-center gap-1">
@@ -234,7 +235,7 @@ export const DrinkCard = React.memo(function DrinkCard({ item, currentUserId, on
             ) : (
               <Ionicons name="add" size={14} color="#f59e0b" />
             )}
-            <Text className="text-primary text-xs font-semibold">{didLog ? "Added!" : "+1"}</Text>
+            <Text className="text-primary text-xs font-semibold">{didLog ? "Added!" : quickLogLabel(item.quantity)}</Text>
           </Pressable>
         )}
       </View>

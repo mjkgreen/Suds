@@ -14,6 +14,9 @@ interface SessionState {
   setLiveActivityGroupDrinkCount: (count: number) => void;
   liveActivityLastDrinkName: string;
   setLiveActivityLastDrinkName: (name: string) => void;
+  /** Quantity of the last drink logged — what the Live Activity's +1 button repeats */
+  liveActivityLastDrinkQuantity: number;
+  setLiveActivityLastDrinkQuantity: (quantity: number) => void;
   liveActivityMemberCount: number;
   setLiveActivityMemberCount: (count: number) => void;
   liveActivityMemberNames: string;
@@ -31,6 +34,8 @@ export const useSessionStore = create<SessionState>((set) => ({
   setLiveActivityGroupDrinkCount: (liveActivityGroupDrinkCount) => set({ liveActivityGroupDrinkCount }),
   liveActivityLastDrinkName: '',
   setLiveActivityLastDrinkName: (liveActivityLastDrinkName) => set({ liveActivityLastDrinkName }),
+  liveActivityLastDrinkQuantity: 1,
+  setLiveActivityLastDrinkQuantity: (liveActivityLastDrinkQuantity) => set({ liveActivityLastDrinkQuantity }),
   liveActivityMemberCount: 1,
   setLiveActivityMemberCount: (liveActivityMemberCount) => set({ liveActivityMemberCount }),
   liveActivityMemberNames: '',
