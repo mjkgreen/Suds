@@ -23,7 +23,9 @@ const PATCH_SCRIPT = [
   '[ -f "$PROVIDER" ] || exit 0',
   "grep -q 'SudsLiveActivityBridgeModule' \"$PROVIDER\" && exit 0",
   // perl -0777: slurp mode so \n matches actual newlines across lines
-  "perl -i -0777 -pe 's/import ExpoModulesCore\\n/import ExpoModulesCore\\nimport SudsLiveActivityBridge\\n/' \"$PROVIDER\"",
+  // Copies whatever access level the generated file uses ("internal import" on
+  // SDK 58+), so it matches QuickLogDrinkIntent.swift's import in the same target.
+  "perl -i -0777 -pe 's/^((?:internal |public )?)import ExpoModulesCore\\n/$1import ExpoModulesCore\\n$1import SudsLiveActivityBridge\\n/m' \"$PROVIDER\"",
   "perl -i -0777 -pe 's/return \\[\\n/return [\\n      SudsLiveActivityBridgeModule.self,\\n/' \"$PROVIDER\"",
   'echo "[Suds] Patched ExpoModulesProvider.swift to include SudsLiveActivityBridgeModule"',
 ].join('\n');
