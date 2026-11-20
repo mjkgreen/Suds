@@ -2,7 +2,7 @@ import * as Haptics from "expo-haptics";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, Platform, Pressable, Text, View } from "react-native";
+import { ActivityIndicator, Alert, Platform, Pressable, Text, View } from "react-native";
 import { Avatar } from "@/components/common/Avatar";
 import { PressableCard } from "@/components/common/Card";
 import { MediaCarousel } from "@/components/common/MediaCarousel";
@@ -17,6 +17,8 @@ import { DRINK_TYPE_MAP } from "@/lib/constants";
 import { groupDrinks } from "@/lib/drinkGroups";
 import { drinkTotal } from "@/lib/drinkCounts";
 import { shareLink } from "@/lib/share";
+import { useShareInviteLink } from "@/hooks/useShareLinks";
+import { useSessionStore } from "@/stores/sessionStore";
 import { DrinkType, FeedItem, SessionFeedGroup } from "@/types/models";
 import { formatDateTime, formatDuration } from "@/utils/dateHelpers";
 import { formatMemberNames, getDisplayName, getUsername } from "@/utils/profileHelpers";
@@ -47,6 +49,37 @@ export const SessionCard = React.memo(function SessionCard({ group, currentUserI
   const likeCount = optimisticCount ?? representativeItem?.like_count ?? 0;
   const commentCount = representativeItem?.comment_count ?? 0;
   const { data: likers } = useLikers(likeCount > 0 ? representativeItem?.id : undefined);
+  const shareInvite = useShareInviteLink();
+  // True only for the host of this night out while it's live.
+  const hostsThisLive = useSessionStore(
+    (s) => s.activeSession?.id === group.session_id && s.activeSession.my_role === "host" && !s.activeSession.ended_at,
+  );
+
+  function shareNightOut() {
+    const plainShare = () =>
+      shareLink(
+        `/session/${group.session_id}`,
+        `Check out ${getDisplayName(group.profile)}'s ${group.session_title ?? "night out"} on Suds`,
+      );
+    const inviteShare = () =>
+      shareInvite.mutate({ kind: "session", sessionId: group.session_id, sessionTitle: group.session_title });
+
+    // The host of a live night out can open it to anyone with a link (opt-in,
+    // per share); everyone else shares the usual followers-only link.
+    if (!hostsThisLive) return void plainShare();
+    if (Platform.OS === "web") {
+      return void (window.confirm(
+        "Share an invite link?\n\nOK: anyone with the link can see this night out and join.\nCancel: share a link only your followers can open.",
+      )
+        ? inviteShare()
+        : plainShare());
+    }
+    Alert.alert("Share night out", undefined, [
+      { text: "Share invite link", onPress: inviteShare },
+      { text: "Share with followers", onPress: () => void plainShare() },
+      { text: "Cancel", style: "cancel" },
+    ]);
+  }
 
   async function handleLike(e: { stopPropagation: () => void }) {
     e.stopPropagation();
@@ -395,10 +428,7 @@ export const SessionCard = React.memo(function SessionCard({ group, currentUserI
             <Pressable
               onPress={(e) => {
                 e.stopPropagation();
-                shareLink(
-                  `/session/${group.session_id}`,
-                  `Check out ${getDisplayName(group.profile)}'s ${group.session_title ?? "night out"} on Suds`,
-                );
+                shareNightOut();
               }}
               hitSlop={8}
               accessibilityLabel="Share"

@@ -199,6 +199,7 @@ export function SessionBanner() {
           visible={showInviteModal}
           onClose={() => setShowInviteModal(false)}
           sessionId={activeSession.id}
+          sessionTitle={activeSession.title}
           currentInvites={existingInvites ?? []}
           currentMembers={members ?? []}
         />

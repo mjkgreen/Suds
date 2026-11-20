@@ -1,7 +1,7 @@
 import { Platform, Share } from 'react-native';
+import { WEB_ORIGIN } from './shareLinks';
 
-/** Public web origin; matches the expo-router origin in app.json. */
-export const WEB_ORIGIN = 'https://drink-with-suds.com';
+export { WEB_ORIGIN };
 
 /**
  * Opens the system share sheet for a link. On web it uses the Web Share API

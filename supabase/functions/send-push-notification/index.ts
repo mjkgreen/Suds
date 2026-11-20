@@ -20,7 +20,9 @@ type NotificationType =
   | "follow_request"
   | "follow_request_accepted"
   | "mention"
-  | "tag";
+  | "tag"
+  | "share_link_join"
+  | "invite_accepted";
 
 interface NotificationRow {
   id: string;
@@ -35,6 +37,8 @@ interface NotificationRow {
     invite_token?: string;
     /** mention: where the mention was made */
     source?: "drink" | "comment";
+    /** share_link_join / invite_accepted */
+    follow_status?: "following" | "requested";
   };
 }
 
@@ -71,6 +75,8 @@ const PREF_BY_TYPE: Record<NotificationType, keyof NotificationPreferences> = {
   session_invite: "notify_session_invites",
   mention: "notify_mentions",
   tag: "notify_mentions",
+  share_link_join: "notify_session_invites",
+  invite_accepted: "notify_follows",
 };
 
 function buildNotification(n: NotificationRow): { title: string; body: string } {
@@ -100,6 +106,20 @@ function buildNotification(n: NotificationRow): { title: string; body: string } 
       };
     case "tag":
       return { title: "Tagged", body: `${name} tagged you in a drink` };
+    case "share_link_join":
+      return {
+        title: "Joined Your Night Out",
+        body: n.context.follow_status === "requested"
+          ? `${name} joined from your link and requested to follow you`
+          : `${name} joined from your link`,
+      };
+    case "invite_accepted":
+      return {
+        title: "Invite Accepted",
+        body: n.context.follow_status === "requested"
+          ? `${name} accepted your invite and requested to follow you`
+          : `${name} accepted your invite and followed you`,
+      };
   }
 }
 
@@ -186,6 +206,7 @@ serve(async (req) => {
         drink_log_id: ctx.drink_log_id ?? "",
         session_id: ctx.session_id ?? "",
         invite_token: ctx.invite_token ?? "",
+        follow_status: ctx.follow_status ?? "",
       },
     }));
 

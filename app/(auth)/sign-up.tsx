@@ -16,6 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '@/components/common/Button';
 import { useAuth } from '@/hooks/useAuth';
 import * as AppleAuthentication from 'expo-apple-authentication';
+import { PendingInviteBanner } from '@/components/invite/PendingInviteBanner';
 
 export default function SignUpScreen() {
   const { signUpWithEmail, signInWithApple, signInWithGoogle } = useAuth();
@@ -108,6 +109,8 @@ export default function SignUpScreen() {
               />
               <Text className="text-gray-500 text-sm mt-2">Track your drinks. Follow friends.</Text>
             </View>
+
+            <PendingInviteBanner />
 
             {/* Form */}
             <View className="gap-4">

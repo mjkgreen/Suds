@@ -200,7 +200,11 @@ export type NotificationType =
   | 'follow_request'
   | 'follow_request_accepted'
   | 'mention'
-  | 'tag';
+  | 'tag'
+  /** Someone joined your night out through its share link (migration 051). */
+  | 'share_link_join'
+  /** Someone accepted your invite link and followed / requested you. */
+  | 'invite_accepted';
 
 /** A user tagged in a drink. */
 export interface TaggedUser {
@@ -223,6 +227,8 @@ export interface InAppNotification {
     invite_token?: string;
     /** mention: whether it was in a drink's notes or a comment */
     source?: 'drink' | 'comment';
+    /** share_link_join / invite_accepted: whether they followed or requested to. */
+    follow_status?: 'following' | 'requested';
   };
   read: boolean;
   created_at: string;
