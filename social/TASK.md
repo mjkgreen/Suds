@@ -43,6 +43,8 @@ repository checkout (`mjkgreen/Suds`, branch `main`). Everything you need is in
    - If `already_posted_today` is true, stop: report "already posted today" with the folder link.
    - Take the first entry in `plan` (its `type`), and pick its first subject
      unless a later one clearly has a fresher angle given `recent_hooks`.
+   - For a reel, choose the music style: the first of `music_styles` (the least recently
+     used ones come first), unless a later one clearly suits the subject's mood better.
 
 4. **Write the words.** Read `social/capture/subjects/<subject>.js`: its
    `about` says what the subject shows, and `defaults` shows the shape.
@@ -72,13 +74,17 @@ repository checkout (`mjkgreen/Suds`, branch `main`). Everything you need is in
    ```json
    {"date": "<today, YYYY-MM-DD>", "type": "<reel|still>", "subject": "<subject>",
     "hook": "<the hook for a reel, the headline for a still, on one line>",
-    "caption": "<the caption from step 7>", "created_at": "<ISO timestamp>"}
+    "caption": "<the caption from step 7>", "created_at": "<ISO timestamp>",
+    "music": {"style": "<style from step 3>"}}
    ```
+   (`music` only for a reel. A still has no music, so leave it out.)
    Run `python3 social/planner.py check social/out/history.json social/out/post.json`.
    If it prints `REFUSED`, fix what it names (usually reword the hook) and check
    again. Make at most 3 attempts. If it still refuses, stop and report why.
 
-6. **Render.** `social/make_post.sh <type> <subject> social/out/copy.json social/out/post`.
+6. **Render.** `social/make_post.sh <type> <subject> social/out/copy.json social/out/post [<music style>]`.
+   For a reel, replace `post.json`'s `music` with the whole of `social/out/post/reel.music.json`
+   (style, key, tempo, progression: a fresh track every render).
    The output is `reel.mp4` (1080×1920, ≤ 2.8 MB) or `still.jpg` (1080×1350), plus `review.jpg`.
 
 7. **Look at it before uploading.** Open `social/out/post/review.jpg` (and

@@ -28,9 +28,12 @@ const STILL_VIEWPORT = { width: 540, height: 61 + 587 };
     caption: (i, extra = {}) => (copy.captions[i] ? { text: copy.captions[i], style: 'caption', ...extra } : null),
     // the copy of `text` that is actually on screen; throws if it isn't
     on: async (text, opts) => { const el = await rec.onTop(text, opts); if (!el) throw new Error(`"${text}" not on screen`); return el; },
+    // ready when any copy of `text` is visible: screens behind the current one are hidden,
+    // and it may be below the fold (unlike `on`, which needs it on screen to tap it)
     waitFor: async (text, ms = 60000) => {
       for (let t = 0; t < ms; t += 250) {
-        if (await rec.onTop(text, { exact: false })) return;
+        const all = page.getByText(text, { exact: false });
+        for (let i = 0; i < await all.count(); i++) if (await all.nth(i).isVisible().catch(() => false)) return;
         await page.clock.runFor(250); await page.waitForTimeout(250);
       }
       throw new Error(`timed out waiting for "${text}"`);

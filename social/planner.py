@@ -16,6 +16,9 @@ Rules (check refuses with exit 1 and prints why):
      has been used since its last use (a "cycle")
   4. the same subject (any type) not within SUBJECT_GAP_DAYS days
   5. a hook may not share 3+ meaningful words with any earlier hook
+  6. a reel must record its music (render/compose.py writes it); its style may
+     not match the previous MUSIC_GAP reels, and the exact track (style, key,
+     tempo, progression) may never repeat
 """
 import datetime as dt
 import json
@@ -27,6 +30,8 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 CONFIG = json.load(open(os.path.join(HERE, 'plan.json')))
 SUBJECT_GAP_DAYS = CONFIG.get('subject_gap_days', 6)
 HOOK_WORD_LIMIT = 3
+MUSIC_STYLES = CONFIG.get('music_styles', [])
+MUSIC_GAP = CONFIG.get('music_gap_reels', 2)
 
 STOPWORDS = set('''a an and are as at be but by can do does for from get got has have how i if in
 into is it its just me my no not of on or our out so than that the their them then there these
@@ -87,6 +92,15 @@ def days_since_subject(history, subject, today):
     return (today - dt.date.fromisoformat(max(last))).days
 
 
+def track_id(m):
+    return (m.get('style'), m.get('key'), m.get('bpm'), m.get('progression'))
+
+
+def recent_music(history, n):
+    reels = [r for r in history if r.get('music')]
+    return [r['music'].get('style') for r in reels[-n:]] if n else []
+
+
 def check(history, post):
     errs = []
     today = dt.date.fromisoformat(post['date'])
@@ -110,6 +124,16 @@ def check(history, post):
     gap = days_since_subject(history, post['subject'], today)
     if gap is not None and gap < SUBJECT_GAP_DAYS:
         errs.append(f'subject {post["subject"]!r} was used {gap} day(s) ago (minimum gap {SUBJECT_GAP_DAYS})')
+    if post['type'] == 'reel':
+        m = post.get('music')
+        if not m or not m.get('style'):
+            errs.append('reel has no "music" record (copy it from the render\'s reel.music.json)')
+        else:
+            earlier_reels = [r for r in history if r['date'] < post['date']]
+            if m['style'] in recent_music(earlier_reels, MUSIC_GAP):
+                errs.append(f'music style {m["style"]!r} was used in the last {MUSIC_GAP} reels')
+            if any(r.get('music') and track_id(r['music']) == track_id(m) for r in history):
+                errs.append('this exact music track was used before')
     mine = words(post['hook'])
     for r in history:
         shared = mine & words(r.get('hook', ''))
@@ -138,8 +162,15 @@ def suggest(history, today):
                      'subjects': [s for _, s in sorted(options)]})
     posted_today = any(r['date'] == today.isoformat() for r in history)
     recent_hooks = [r['hook'] for r in history[-12:]]
+    blocked = set(recent_music(history, MUSIC_GAP))
+    last_used = {}
+    for i, r in enumerate(history):
+        if r.get('music'):
+            last_used[r['music'].get('style')] = i
+    music = sorted((s for s in MUSIC_STYLES if s not in blocked), key=lambda s: last_used.get(s, -1))
     return {'date': today.isoformat(), 'already_posted_today': posted_today,
-            'plan': [p for p in plan if p['subjects']], 'recent_hooks': recent_hooks}
+            'plan': [p for p in plan if p['subjects']], 'recent_hooks': recent_hooks,
+            'music_styles': music}
 
 
 def main(argv):

@@ -16,6 +16,9 @@ runs it 4 days a week by following [`TASK.md`](TASK.md).
 3. `render/compose.py` adds an eased camera, touch rings, the hook and
    captions, an end card and an original music bed. The result is
    1080×1920, ≤ 2.8 MB. `render/still.py` makes 1080×1350 feed stills.
+   Music comes from `render/music.py`: six original synthesized styles (lofi,
+   house, disco-funk, tropical, synthpop, acoustic). Every render randomizes key,
+   tempo, chord progression and patterns, so tracks never repeat. Nothing is licensed.
 4. `planner.py` decides what's due and refuses repeats. Its `check` must say
    `OK` before anything is uploaded.
 

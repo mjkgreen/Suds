@@ -113,18 +113,18 @@ FROM (VALUES (1,'beer','Pilsner','Copper Tap',NULL),(2,'beer','Hazy IPA','Half M
 INSERT INTO drink_tags (drink_log_id, user_id)
 SELECT '00000000-0000-4000-b000-000000000202'::uuid, id FROM profiles WHERE username IN ('priyap','lukeb','mayachen');
 
--- Your own Night Out from last weekend: drinks over a few hours, photos, friends tagged.
+-- Your own Night Out, 9 days ago, starting ~1.5 h before the browser's clock (which always reads ~9 pm): drinks over a few hours, photos, friends tagged.
 INSERT INTO sessions (id, user_id, title, started_at, ended_at, created_at) VALUES
  ('00000000-0000-4000-c000-000000000003','00000000-0000-4000-a000-000000000001','Mia''s birthday',
-  date_trunc('day', now()) - interval '9 days' + interval '19 hours 30 minutes',
-  date_trunc('day', now()) - interval '9 days' + interval '24 hours 50 minutes',
-  date_trunc('day', now()) - interval '9 days' + interval '19 hours 30 minutes');
+  now() - interval '9 days 1 hour 30 minutes',
+  now() - interval '9 days' + interval '3 hours 50 minutes',
+  now() - interval '9 days 1 hour 30 minutes');
 INSERT INTO drink_logs (id, user_id, session_id, drink_type, drink_name, brand, quantity, location_name, location_lat, location_lng,
                         notes, rating, logged_at, created_at)
 SELECT ('00000000-0000-4000-b000-00000000030' || n)::uuid, '00000000-0000-4000-a000-000000000001',
        '00000000-0000-4000-c000-000000000003', t, nm, br, 1, pl, la, ln, note, r,
-       date_trunc('day', now()) - interval '9 days' + interval '19 hours 40 minutes' + mins * interval '1 minute',
-       date_trunc('day', now()) - interval '9 days' + interval '19 hours 40 minutes' + mins * interval '1 minute'
+       now() - interval '9 days 1 hour 20 minutes' + mins * interval '1 minute',
+       now() - interval '9 days 1 hour 20 minutes' + mins * interval '1 minute'
 FROM (VALUES
   (1,'cocktail','Margarita',NULL,'Juniper & Rye',39.7469,-104.9920,'birthday girl picked the spot',8,0),
   (2,'beer','Pilsner','Copper Tap','Juniper & Rye',39.7469,-104.9920,NULL,7,55),
