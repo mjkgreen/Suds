@@ -53,5 +53,21 @@
    ],
    "ready": true
   }
+ ],
+ "music_styles": [
+  "lofi",
+  "house",
+  "disco-funk",
+  "tropical",
+  "synthpop",
+  "acoustic"
+ ],
+ "music_gap_reels": 2,
+ "scenario_gap_posts": 6,
+ "post_days": [
+  3,
+  4,
+  5,
+  6
  ]
 }

@@ -37,6 +37,6 @@ module.exports = {
   async still(ctx) {
     await module.exports.open(ctx);
     await ctx.page.mouse.move(270, 400);
-    await ctx.page.mouse.wheel(0, 180);
+    await ctx.page.mouse.wheel(0, 110);
   },
 };

@@ -1,5 +1,5 @@
 // Night Out: start one in a tap, then a past night's page (photos, rounds, route, BAC).
-const SESSION = '/session/00000000-0000-4000-c000-000000000003'; // "Mia's birthday" in the seed
+const SESSION = '/session/00000000-0000-4000-c000-000000000003'; // your night out (scenario.nights.yours)
 module.exports = {
   about: 'Night Out groups a whole evening: rounds, spots, photos, friends, pace and a BAC estimate.',
   defaults: {
@@ -7,7 +7,7 @@ module.exports = {
     captions: ['One tap starts the night', 'Every round, every spot', 'Pace yourself'],
     headline: 'Every round.\nEvery spot.',
   },
-  async reel({ rec, page, on, caption, copy, waitFor }) {
+  async reel({ rec, page, on, caption, copy, waitFor, scenario }) {
     rec.cut('start');
     rec.setOverlay({ text: copy.hook, style: 'hook' });
     rec.setCamera({ cx: 270, cy: 540, z: 1.0 });
@@ -18,13 +18,13 @@ module.exports = {
     await rec.tap(await on('Start a Night Out'));
     await rec.shoot(14);
     const input = page.getByPlaceholder(/Friday at The Crown/);
-    await rec.type(input, 'Friday with the crew', 2);
+    await rec.type(input, scenario.start_title, 2);
     await rec.shoot(8);
     await rec.tap(await on("Let's go 🌙", { exact: false }).catch(() => on(/Let's go/, { exact: false })));
     await rec.shoot(40);
 
     await page.goto('http://localhost:8081' + SESSION);          // off camera
-    await waitFor("Mia's birthday");
+    await waitFor(scenario.nights.yours.title);
     await rec.settle(2500);
     rec.cut('session');
     rec.setOverlay(caption(1));
@@ -43,9 +43,9 @@ module.exports = {
     await rec.scrollBy(700, 40, 270, 600, 1.5);  // the drinks of the night, quicker
     await rec.shoot(20);
   },
-  async still({ page, rec, on, waitFor }) {
+  async still({ page, rec, on, waitFor, scenario }) {
     await page.goto('http://localhost:8081' + SESSION);
-    await waitFor("Mia's birthday");
+    await waitFor(scenario.nights.yours.title);
     await rec.settle(2000);
     await page.mouse.move(270, 400);
     await page.mouse.wheel(0, 260);
