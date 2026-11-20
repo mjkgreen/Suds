@@ -11,11 +11,13 @@ social/out/media/picks.json the next time the database is rebuilt, which
 make_post.sh does. Unsplash needs the environment's network secret for
 api.unsplash.com. If fetching fails, skip it: the library defaults are used.
 
+Photos used in earlier posts (history.json's "photos") are refused.
+
 Pick only photos that match the slot's drink and setting, with no clearly
 visible faces, no readable brand logos, and nothing that looks like underage drinking.
 Hands, crowds from behind or far away, and silhouettes are fine.
 """
-import json, os, shutil, sys, urllib.parse, urllib.request
+import json, os, shutil, subprocess, sys, urllib.parse, urllib.request
 from PIL import Image, ImageDraw
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -23,7 +25,10 @@ OUT = os.path.join(HERE, '..', 'out', 'media')
 CAND, RUN = os.path.join(OUT, 'cand'), os.path.join(OUT, 'run')
 PICKS = os.path.join(OUT, 'picks.json')
 BASE = 'http://127.0.0.1:54321/storage/v1/object/public/drink-media/run/'
-SLOTS = {s['slot']: s for s in json.load(open(os.path.join(HERE, 'slots.json')))['slots']}
+sys.path.insert(0, os.path.join(HERE, '..', 'backend'))
+import scenario as _scenario
+SLOTS = {s['slot']: s for s in _scenario.load()['slots']}   # this run's scenario (backend/scenario.py)
+HISTORY = os.path.join(OUT, '..', 'history.json')
 
 
 def get(url):
@@ -70,8 +75,14 @@ def cmd_use(slot, ids):
     picks = json.load(open(PICKS)) if os.path.exists(PICKS) else {}
     credits_p = os.path.join(OUT, 'credits.json')
     credits = json.load(open(credits_p)) if os.path.exists(credits_p) else {}
+    used = set()
+    if os.path.exists(HISTORY):
+        for r in json.load(open(HISTORY)):
+            used.update(u.rstrip('/').split('-')[-1] if 'unsplash.com/photos/' in u else u for u in r.get('photos', []))
     items = []
     for pid in ids:
+        if pid in used:
+            sys.exit(f'{pid} was used in an earlier post; pick another photo')
         src = os.path.join(CAND, slot, pid)
         meta = json.load(open(src + '.json'))
         try:
@@ -80,8 +91,21 @@ def cmd_use(slot, ids):
             pass
         name = f'{slot}-{pid}.jpg'
         shutil.copy(src + '.jpg', os.path.join(RUN, name))
-        items.append({'url': BASE + name, 'type': 'image', 'width': 1080, 'height': 1350})
         credits[name] = meta
+        if SLOTS[slot].get('video') and not items:
+            # A short slow push-in over the photo, posted as a video. It's the real photo with
+            # camera motion added (no stock video source is available), not AI-generated footage.
+            clip, poster = f'{slot}-{pid}.mp4', f'{slot}-{pid}-poster.jpg'
+            subprocess.run(['ffmpeg', '-loglevel', 'error', '-y', '-loop', '1', '-i', os.path.join(RUN, name), '-vf',
+                            "scale=2160:-2,zoompan=z='1+0.0016*on':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=180:s=864x1080:fps=30,format=yuv420p",
+                            '-t', '6', '-c:v', 'libx264', '-crf', '26', '-preset', 'slow', '-movflags', '+faststart', '-an',
+                            os.path.join(RUN, clip)], check=True)
+            subprocess.run(['ffmpeg', '-loglevel', 'error', '-y', '-i', os.path.join(RUN, clip), '-frames:v', '1', '-q:v', '3',
+                            os.path.join(RUN, poster)], check=True)
+            items.append({'url': BASE + clip, 'type': 'video', 'width': 864, 'height': 1080,
+                          'poster_url': BASE + poster, 'duration': 6.0})
+            continue
+        items.append({'url': BASE + name, 'type': 'image', 'width': 1080, 'height': 1350})
     picks[slot] = items
     json.dump(picks, open(PICKS, 'w'), indent=1)
     json.dump(credits, open(credits_p, 'w'), indent=1)

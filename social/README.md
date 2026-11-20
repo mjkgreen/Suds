@@ -7,7 +7,7 @@ runs it 4 days a week by following [`TASK.md`](TASK.md).
 ## How it works
 
 1. `setup.sh` builds a throwaway local backend: Postgres with every migration
-   in `supabase/migrations`, plus a demo seed (`backend/seed.sql`), PostgREST,
+   in `supabase/migrations`, plus generated demo data (`backend/scenario.py`), PostgREST,
    and a gateway (`backend/gateway.js`) standing in for Supabase auth and
    storage. It also starts the Expo web app pointed at that backend. Nothing
    touches production.
@@ -30,9 +30,18 @@ runs it 4 days a week by following [`TASK.md`](TASK.md).
 Each one has a reel, a still, default words and an `about` line. To add a
 subject, add a file there and list it in `plan.json`.
 
+## Fresh demo data per post
+
+`backend/scenario.py new` invents a scenario for each post: city (7 to choose from),
+a cast of six people, 16 fictional venues, three nights out, featured feed posts, the
+drink logged on camera, and the photo slots. It avoids anything the last 6 posts used,
+and the planner refuses a post that reuses people, nights, venues, its seed, the
+previous post's city, or any earlier photo. The video on the feed's first post is a
+slow push-in made from that post's picked photo.
+
 ## Photos per post
 
-Seeded posts have photo **slots** (`media/slots.json`): which post, what drink, which
+Seeded posts have photo **slots** (from the scenario): which post, what drink, which
 subjects show it. Each run fetches fresh Unsplash photos for just the slots its
 subject shows, matched to the drink and the day's angle, and reviews them before use
 (`media/pick.py slots|fetch|use`). Picks live in `social/out/media/` for that run
@@ -40,11 +49,11 @@ only. Slots that aren't refilled use the library defaults.
 
 ## Demo data and media
 
-- People and venues are fictional. Times are relative to each run, and the
+- People and venues are fictional (random first + last names; invented venue names at
+  random spots in real neighbourhoods). Times are relative to each run, and the
   browser is always set to ~9 pm.
 - Fallback drink photos come from Unsplash (`media/library`, credits in `credits.json`,
-  no clearly visible faces). `clip-garnish.mp4` is a slow pan over one of those
-  photos. `media/unsplash.py` adds more; it needs the environment's Unsplash
+  no clearly visible faces). `media/unsplash.py` adds more; it needs the environment's Unsplash
   network secret.
 
 ## Common commands

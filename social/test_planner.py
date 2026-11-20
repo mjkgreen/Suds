@@ -11,8 +11,20 @@ def write(path, obj):
         json.dump(obj, f)
 
 
-def post(date, type_, subject, hook):
-    return {'date': date, 'type': type_, 'subject': subject, 'hook': hook}
+_seed = [0]
+
+
+def scen(city=None, cast=None, nights=None, venues=None):
+    _seed[0] += 1
+    return {'seed': _seed[0], 'city': city or f'City{_seed[0]}', 'cast': cast or [f'P{_seed[0]}a X', f'P{_seed[0]}b Y'],
+            'nights': nights or [f'Night {_seed[0]}'], 'venues': venues or [f'Venue {_seed[0]}']}
+
+
+def post(date, type_, subject, hook, **sc):
+    p = {'date': date, 'type': type_, 'subject': subject, 'hook': hook, 'scenario': scen(**sc)}
+    if type_ == 'reel':
+        p['music'] = {'style': f'style{_seed[0]}', 'key': 'C major', 'bpm': 100, 'progression': _seed[0]}
+    return p
 
 
 class PlannerRules(unittest.TestCase):
@@ -35,7 +47,8 @@ class PlannerRules(unittest.TestCase):
         return h
 
     def test_reel_needs_music(self):
-        e = planner.check(self.music_history(), post('2026-11-10', 'reel', 'profile', 'Know your numbers'))
+        p = post('2026-11-10', 'reel', 'profile', 'Know your numbers'); p.pop('music')
+        e = planner.check(self.music_history(), p)
         self.assertTrue(any('no "music"' in x for x in e), e)
 
     def test_music_style_gap(self):
@@ -109,6 +122,36 @@ class PlannerRules(unittest.TestCase):
             out = subprocess.run([sys.executable, planner.__file__, 'check', d, pj], capture_output=True, text=True)
             self.assertEqual(out.returncode, 1)
             self.assertTrue(out.stdout.startswith('REFUSED'))
+
+
+class ScenarioRules(unittest.TestCase):
+    def setUp(self):
+        self.h = [post('2026-11-01', 'reel', 'feed', 'alpha one', city='Austin', cast=['Maya Chen', 'Theo Kim'],
+                       nights=["Rosa's birthday", 'Trivia night'], venues=['The Blue Fox']),
+                  post('2026-11-02', 'still', 'map', 'beta two', city='Denver')]
+        self.h[0]['photos'] = ['https://unsplash.com/photos/abc']
+
+    def test_needs_scenario(self):
+        p = post('2026-11-10', 'reel', 'profile', 'Know your numbers'); p.pop('scenario')
+        self.assertTrue(any('no "scenario"' in x for x in planner.check(self.h, p)))
+
+    def test_same_city_as_previous(self):
+        e = planner.check(self.h, post('2026-11-10', 'reel', 'profile', 'Know your numbers', city='Denver'))
+        self.assertTrue(any('same city' in x for x in e), e)
+
+    def test_people_nights_venues_not_reused(self):
+        p = post('2026-11-10', 'reel', 'profile', 'Know your numbers', city='Chicago', cast=['Maya Novak'],
+                 nights=["Ezra's birthday"], venues=['The Blue Fox'])
+        e = ' | '.join(planner.check(self.h, p))
+        self.assertIn('people reused', e); self.assertIn('nights out reused', e); self.assertIn('venues reused', e)
+
+    def test_photos_never_reused(self):
+        p = post('2026-11-10', 'reel', 'profile', 'Know your numbers', city='Chicago')
+        p['photos'] = ['https://unsplash.com/photos/abc']
+        self.assertTrue(any('photos used' in x for x in planner.check(self.h, p)))
+
+    def test_fresh_scenario_ok(self):
+        self.assertEqual(planner.check(self.h, post('2026-11-10', 'reel', 'profile', 'Know your numbers', city='Chicago')), [])
 
 
 if __name__ == '__main__':

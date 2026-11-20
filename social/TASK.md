@@ -46,6 +46,11 @@ repository checkout (`mjkgreen/Suds`, branch `main`). Everything you need is in
    - For a reel, choose the music style: the first of `music_styles` (the least recently
      used ones come first), unless a later one clearly suits the subject's mood better.
 
+3b. **Make fresh demo data.** `python3 social/backend/scenario.py new social/out/history.json social/out/scenario.json`.
+   It picks a new city, cast, venues, nights out and drinks, avoiding everything the recent
+   posts used, and prints a summary. Keep that summary for `post.json`'s `scenario`. Every
+   later step (the database, photo slots, captures) uses this scenario automatically.
+
 4. **Write the words.** Read `social/capture/subjects/<subject>.js`: its
    `about` says what the subject shows, and `defaults` shows the shape.
    Write `social/out/copy.json` with fresh words:
@@ -75,9 +80,11 @@ repository checkout (`mjkgreen/Suds`, branch `main`). Everything you need is in
    {"date": "<today, YYYY-MM-DD>", "type": "<reel|still>", "subject": "<subject>",
     "hook": "<the hook for a reel, the headline for a still, on one line>",
     "caption": "<the caption from step 7>", "created_at": "<ISO timestamp>",
-    "music": {"style": "<style from step 3>"}}
+    "music": {"style": "<style from step 3>"},
+    "scenario": <the summary printed in step 3b>}
    ```
-   (`music` only for a reel. A still has no music, so leave it out.)
+   (`music` only for a reel. A still has no music, so leave it out.) The planner refuses a
+   post that reuses a person, night out, venue, city (back to back), scenario or photo from earlier posts.
    Run `python3 social/planner.py check social/out/history.json social/out/post.json`.
    If it prints `REFUSED`, fix what it names (usually reword the hook) and check
    again. Make at most 3 attempts. If it still refuses, stop and report why.

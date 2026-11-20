@@ -16,6 +16,10 @@ Rules (check refuses with exit 1 and prints why):
      has been used since its last use (a "cycle")
   4. the same subject (any type) not within SUBJECT_GAP_DAYS days
   5. a hook may not share 3+ meaningful words with any earlier hook
+  7. every post records its demo-data "scenario" (backend/scenario.py summary): its seed is
+     new, its city differs from the previous post's, and no person, night out or venue
+     from the last SCENARIO_GAP posts appears again
+  8. no photo (post.json "photos") from any earlier post is used again
   6. a reel must record its music (render/compose.py writes it); its style may
      not match the previous MUSIC_GAP reels, and the exact track (style, key,
      tempo, progression) may never repeat
@@ -27,11 +31,13 @@ import re
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-CONFIG = json.load(open(os.path.join(HERE, 'plan.json')))
+with open(os.path.join(HERE, 'plan.json')) as _f:
+    CONFIG = json.load(_f)
 SUBJECT_GAP_DAYS = CONFIG.get('subject_gap_days', 6)
 HOOK_WORD_LIMIT = 3
 MUSIC_STYLES = CONFIG.get('music_styles', [])
 MUSIC_GAP = CONFIG.get('music_gap_reels', 2)
+SCENARIO_GAP = CONFIG.get('scenario_gap_posts', 6)
 
 STOPWORDS = set('''a an and are as at be but by can do does for from get got has have how i if in
 into is it its just me my no not of on or our out so than that the their them then there these
@@ -134,6 +140,28 @@ def check(history, post):
                 errs.append(f'music style {m["style"]!r} was used in the last {MUSIC_GAP} reels')
             if any(r.get('music') and track_id(r['music']) == track_id(m) for r in history):
                 errs.append('this exact music track was used before')
+    sc = post.get('scenario')
+    if not sc or 'seed' not in sc:
+        errs.append('post has no "scenario" record (scenario.py summary)')
+    else:
+        earlier = [r for r in history if r['date'] < post['date'] and r.get('scenario')]
+        if any(r['scenario'].get('seed') == sc['seed'] for r in history if r.get('scenario')):
+            errs.append('this scenario seed was used before')
+        if earlier and earlier[-1]['scenario'].get('city') == sc.get('city'):
+            errs.append(f'same city as the previous post ({sc.get("city")})')
+        first = lambda names: {n.split()[0] for n in names}
+        strip = lambda t: re.sub(r"^\w+'s ", "{f}'s ", t)
+        for r in earlier[-SCENARIO_GAP:]:
+            o = r['scenario']
+            for label, mine_, theirs in (('people', first(sc.get('cast', [])), first(o.get('cast', []))),
+                                         ('nights out', {strip(t) for t in sc.get('nights', [])}, {strip(t) for t in o.get('nights', [])}),
+                                         ('venues', set(sc.get('venues', [])), set(o.get('venues', [])))):
+                if mine_ & theirs:
+                    errs.append(f'{label} reused from {r["date"]}: {", ".join(sorted(mine_ & theirs))}')
+    used_photos = {u for r in history for u in r.get('photos', [])}
+    again = used_photos & set(post.get('photos', []))
+    if again:
+        errs.append(f'photos used in an earlier post: {", ".join(sorted(again))}')
     mine = words(post['hook'])
     for r in history:
         shared = mine & words(r.get('hook', ''))

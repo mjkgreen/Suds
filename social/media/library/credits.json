@@ -80,26 +80,6 @@
   "photographer_url": "https://unsplash.com/@anshu18",
   "query": "apple cider glass"
  },
- "clip-garnish-poster.jpg": {
-  "description": "person holding clear wine glass with white liquid",
-  "id": "hXg4gGjIfhw",
-  "license": "Unsplash License (https://unsplash.com/license)",
-  "note": "first frame of clip-garnish.mp4",
-  "photo_url": "https://unsplash.com/photos/person-holding-clear-wine-glass-with-white-liquid-hXg4gGjIfhw",
-  "photographer": "Emily Andreeva",
-  "photographer_url": "https://unsplash.com/@emiandreeva",
-  "query": "cocktail bar bartender"
- },
- "clip-garnish.mp4": {
-  "description": "person holding clear wine glass with white liquid",
-  "id": "hXg4gGjIfhw",
-  "license": "Unsplash License (https://unsplash.com/license)",
-  "note": "6 s slow push-in made from cocktail-garnish-hand.jpg (a real photo with camera motion added; not AI-generated)",
-  "photo_url": "https://unsplash.com/photos/person-holding-clear-wine-glass-with-white-liquid-hXg4gGjIfhw",
-  "photographer": "Emily Andreeva",
-  "photographer_url": "https://unsplash.com/@emiandreeva",
-  "query": "cocktail bar bartender"
- },
  "cocktail-coupe.jpg": {
   "description": "clear wine glass",
   "id": "93SyHCNujyU",

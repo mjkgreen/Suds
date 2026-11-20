@@ -8,7 +8,7 @@
 // Subjects live in ./subjects/<name>.js and export { about, defaults, reel(ctx), still(ctx) }.
 const fs = require('fs');
 const path = require('path');
-const { openApp } = require('./lib');
+const { openApp, SCENARIO } = require('./lib');
 const { Recorder } = require('./recorder');
 
 const STILL_VIEWPORT = { width: 540, height: 61 + 587 };
@@ -24,7 +24,8 @@ const STILL_VIEWPORT = { width: 540, height: 61 + 587 };
     beforeLoad: Recorder.installClock });
   const rec = new Recorder(page, out, { viewport: vp });
   const ctx = {
-    rec, page, copy,
+    rec, page, copy, scenario: SCENARIO,
+    person: (i) => SCENARIO.people[i],
     caption: (i, extra = {}) => (copy.captions[i] ? { text: copy.captions[i], style: 'caption', ...extra } : null),
     // the copy of `text` that is actually on screen; throws if it isn't
     on: async (text, opts) => { const el = await rec.onTop(text, opts); if (!el) throw new Error(`"${text}" not on screen`); return el; },
