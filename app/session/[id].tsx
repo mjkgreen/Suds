@@ -12,6 +12,7 @@ import {
   View,
   useWindowDimensions,
 } from "react-native";
+import type { TextInputInstance } from "react-native";
 import { useColorScheme } from "nativewind";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Avatar } from "@/components/common/Avatar";
@@ -57,7 +58,7 @@ export default function SessionDetailScreen() {
   const { width } = useWindowDimensions();
   const isDesktop = Platform.OS === "web" && width >= 1024;
   const [commentText, setCommentText] = useState("");
-  const inputRef = useRef<TextInput>(null);
+  const inputRef = useRef<TextInputInstance>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ["sessionDetail", id],
@@ -122,19 +123,52 @@ export default function SessionDetailScreen() {
 
   function handleDeleteSession() {
     if (!data) return;
-    const message = isActive
-      ? "This will end the night out for all members and permanently delete it. Everyone's drinks stay in their own history. This cannot be undone."
-      : "This will permanently delete this night out. Everyone's drinks stay in their own history. This cannot be undone.";
+    const sessionId = data.session.id;
+    const myDrinks = data.drinks.filter((d) => d.user_id === user?.id);
+    const othersHaveDrinks = data.drinks.some((d) => d.user_id !== user?.id);
+    const intro = isActive
+      ? "This will end the night out for all members and permanently delete it."
+      : "This will permanently delete this night out.";
+    const othersNote = othersHaveDrinks ? " Other members' drinks stay in their own history." : "";
+
+    async function remove(deleteOwnDrinks: boolean) {
+      await deleteSession({ sessionId, deleteOwnDrinks });
+      router.replace("/(tabs)/feed");
+    }
+
+    // Nothing of yours to keep or delete: a plain confirm.
+    if (myDrinks.length === 0) {
+      const message = `${intro}${othersNote} This cannot be undone.`;
+      if (Platform.OS === "web") {
+        if (window.confirm(`Delete Night Out?\n\n${message}`)) void remove(false);
+        return;
+      }
+      Alert.alert("Delete Night Out?", message, [
+        { text: "Cancel", style: "cancel" },
+        { text: "Delete", style: "destructive", onPress: () => void remove(false) },
+      ]);
+      return;
+    }
+
+    const count = myDrinks.length === 1 ? "your drink" : `your ${myDrinks.length} drinks`;
+    const message =
+      `${intro} Do you also want to delete ${count} from it? ` +
+      `If you keep them, they stay in your history as separate drinks.${othersNote} This cannot be undone.`;
+
+    // Web can't show a multi-button Alert: ask twice instead.
+    if (Platform.OS === "web") {
+      if (!window.confirm(`Delete Night Out?\n\n${intro}${othersNote} This cannot be undone.`)) return;
+      const deleteMine = window.confirm(
+        `Also delete ${count} from this night out?\n\nOK deletes them. Cancel keeps them in your history as separate drinks.`
+      );
+      void remove(deleteMine);
+      return;
+    }
+
     Alert.alert("Delete Night Out?", message, [
       { text: "Cancel", style: "cancel" },
-      {
-        text: "Delete",
-        style: "destructive",
-        onPress: async () => {
-          await deleteSession(data.session.id);
-          router.replace("/(tabs)/feed");
-        },
-      },
+      { text: "Keep My Drinks", onPress: () => void remove(false) },
+      { text: "Delete My Drinks Too", style: "destructive", onPress: () => void remove(true) },
     ]);
   }
 

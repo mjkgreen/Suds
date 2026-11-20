@@ -74,7 +74,7 @@ export default function BrowseScreen() {
               <View className="py-6 items-center">
                 <ActivityIndicator color="#f59e0b" />
               </View>
-            ) : null
+            ) : undefined
           }
           ListEmptyComponent={
             <View className="py-16 items-center px-8">

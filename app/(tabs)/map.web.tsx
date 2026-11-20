@@ -4,10 +4,11 @@ import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { supabase } from '@/lib/supabase';
+import { buildMapClusters, fetchMapLogs, fetchSessionRoutes, groupMapLocation, isMyNightOut, MapLog } from '@/lib/mapData';
+import { getDisplayName, getUsername } from '@/utils/profileHelpers';
 import { DRINK_TYPE_MAP } from '@/lib/constants';
 import { useAuthStore } from '@/stores/authStore';
-import { Coordinate, DrinkLog, DrinkType, Session, SessionWithLogs, DrinkLogWithSessionAndProfile } from '@/types/models';
+import { DrinkType } from '@/types/models';
 import { formatDateTime } from '@/utils/dateHelpers';
 
 type MapFilter = 'mine' | 'friends';
@@ -67,6 +68,69 @@ function MapLocationCenterer({ useMap }: { useMap: any }) {
 }
 
 // Inner component that uses react-leaflet hooks (must be inside MapContainer)
+/**
+ * What a pin's popup lists: one clickable row per night out (opens it) or
+ * per drink logged on its own (opens the drink). Same entries as the app's
+ * MapLocationSheet.
+ */
+function MapPopupList({ items, onOpen }: { items: MapLog[]; onOpen: (path: string) => void }) {
+  const entries = groupMapLocation(
+    items,
+    (type) => (DRINK_TYPE_MAP[type as DrinkType] ?? DRINK_TYPE_MAP['other']).label,
+    getDisplayName,
+    getUsername,
+  );
+  const total = Math.round(items.reduce((sum, i) => sum + Number(i.quantity), 0) * 10) / 10;
+
+  return (
+    <div style={{ minWidth: 220, maxWidth: 280, fontFamily: 'system-ui, sans-serif' }}>
+      {items.length > 1 && (
+        <div style={{ fontWeight: 700, fontSize: 13, color: '#111827', margin: '0 0 6px' }}>{total} drinks at this spot</div>
+      )}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 260, overflowY: 'auto' }}>
+        {entries.map((entry) => {
+          const path = entry.sessionId ? `/session/${entry.sessionId}` : `/drink/${entry.items[0].id}`;
+          return (
+            <button
+              key={entry.sessionId ?? entry.items[0].id}
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onOpen(path);
+              }}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 8, width: '100%', textAlign: 'left',
+                background: '#f3f4f6', border: 0, borderRadius: 10, padding: '8px 10px', cursor: 'pointer',
+              }}
+              aria-label={entry.sessionId ? `View night out ${entry.title}` : `View drink ${entry.title}`}
+            >
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontWeight: 700, fontSize: 13, color: '#111827', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {entry.sessionId ? '🌙 ' : ''}{entry.title}
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, margin: '3px 0' }}>
+                  {Object.entries(entry.typeCounts).map(([type, count]) => {
+                    const info = DRINK_TYPE_MAP[type as DrinkType] ?? DRINK_TYPE_MAP['other'];
+                    return (
+                      <span key={type} style={{ fontSize: 11, fontWeight: 600, color: info.color, background: info.color + '22', borderRadius: 999, padding: '1px 6px' }}>
+                        {info.label} ×{count}
+                      </span>
+                    );
+                  })}
+                </div>
+                <div style={{ fontSize: 11, color: '#6b7280', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {[entry.who, formatDateTime(entry.loggedAt), entry.locationName].filter(Boolean).join(' · ')}
+                </div>
+              </div>
+              <span style={{ color: '#9ca3af', fontSize: 18, lineHeight: 1 }}>›</span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function MapClickHandler({ onMapClick }: { onMapClick: (lat: number, lng: number) => void }) {
   // Loaded dynamically — access via window.ReactLeaflet set below
   const [useMapEvents, setUseMapEvents] = useState<any>(null);
@@ -128,25 +192,7 @@ export default function MapScreen() {
     queryKey: ['mapLogs', user?.id],
     queryFn: async () => {
       if (!user) return [];
-
-      const { data: follows } = await supabase
-        .from('follows')
-        .select('following_id')
-        .eq('follower_id', user.id);
-      const ids = (follows as { following_id: string }[] | null ?? []).map((f) => f.following_id);
-      const allIds = [user.id, ...ids];
-
-      const { data, error } = await supabase
-        .from('drink_logs')
-        .select('*, profile:profiles!drink_logs_user_id_fkey(id, username, display_name, avatar_url), session:sessions(id, title, started_at, ended_at, created_at, user_id)')
-        .not('location_lat', 'is', null)
-        .not('location_lng', 'is', null)
-        .in('user_id', allIds)
-        .order('logged_at', { ascending: false })
-        .limit(1000);
-
-      if (error) throw error;
-      return data as DrinkLogWithSessionAndProfile[];
+      return fetchMapLogs(user.id);
     },
     enabled: !!user,
   });
@@ -155,56 +201,7 @@ export default function MapScreen() {
     queryKey: ['sessionRoutes', user?.id],
     queryFn: async () => {
       if (!user) return [];
-
-      const { data: follows } = await supabase
-        .from('follows')
-        .select('following_id')
-        .eq('follower_id', user.id);
-      const ids = (follows as { following_id: string }[] | null ?? []).map((f) => f.following_id);
-      const allIds = [user.id, ...ids];
-
-      // Single database query fetching sessions along with their coordinates, joining the sessions table with drink_logs
-      const { data: sessionsData, error: sError } = await supabase
-        .from('sessions')
-        // Only what the route lines need, and only recent sessions: this used
-        // to pull every column of every drink in every session, unbounded.
-        .select('*, logs:drink_logs(id, location_lat, location_lng, location_name, logged_at)')
-        .in('user_id', allIds)
-        .order('started_at', { ascending: false })
-        .limit(200);
-
-      if (sError) throw sError;
-      if (!sessionsData || sessionsData.length === 0) return [];
-
-      const results: SessionWithLogs[] = sessionsData.map((session: any) => {
-        // Filter out logs that don't have coordinates and sort them chronologically
-        const sessionLogs = (session.logs as DrinkLog[] ?? [])
-          .filter((log) => log.location_lat !== null && log.location_lng !== null)
-          .sort((a, b) => new Date(a.logged_at).getTime() - new Date(b.logged_at).getTime());
-
-        const route: Coordinate[] = sessionLogs.map((log, index) => ({
-          latitude: log.location_lat!,
-          longitude: log.location_lng!,
-          timestamp: log.logged_at,
-          sequence_order: index + 1,
-          session_id: session.id,
-          location_name: log.location_name,
-          drink_log_id: log.id,
-        }));
-
-        return {
-          id: session.id,
-          user_id: session.user_id,
-          title: session.title,
-          started_at: session.started_at,
-          ended_at: session.ended_at,
-          created_at: session.created_at,
-          logs: sessionLogs,
-          route,
-        };
-      });
-
-      return results;
+      return fetchSessionRoutes(user.id);
     },
     enabled: !!user,
   });
@@ -212,7 +209,7 @@ export default function MapScreen() {
   const filteredSessions = React.useMemo(() => {
     if (!sessionsWithRoutes) return [];
     return sessionsWithRoutes.filter((session) => {
-      const isMine = session.user_id === user?.id;
+      const isMine = isMyNightOut(session, user?.id);
       return filter === 'mine' ? isMine : !isMine;
     });
   }, [sessionsWithRoutes, filter, user?.id]);
@@ -224,22 +221,8 @@ export default function MapScreen() {
     return [avgLat, avgLng];
   }, [logs]);
 
-  // Group nearby logs into clusters (~100m radius via 3-decimal rounding)
-  const clusters = React.useMemo(() => {
-    const groups = new Map<string, { items: DrinkLogWithSessionAndProfile[]; isMine: boolean }>();
-    for (const log of logs ?? []) {
-      if (!log.location_lat || !log.location_lng) continue;
-      const isMine = log.user_id === user?.id;
-      const key = `${isMine ? 'mine' : 'friend'}-${log.location_lat.toFixed(3)},${log.location_lng.toFixed(3)}`;
-      const existing = groups.get(key) ?? { items: [], isMine };
-      groups.set(key, { ...existing, items: [...existing.items, log] });
-    }
-    return Array.from(groups.entries()).map(([key, data]) => {
-      const coordsPart = key.slice(key.indexOf('-') + 1);
-      const [lat, lng] = coordsPart.split(',').map(Number);
-      return { lat, lng, items: data.items, isMine: data.isMine };
-    });
-  }, [logs, user?.id]);
+  // Nearby drinks grouped into My Drinks / Friends pins (src/lib/mapData.ts)
+  const clusters = React.useMemo(() => buildMapClusters(logs, user?.id), [logs, user?.id]);
 
   const filteredClusters = React.useMemo(() => {
     return clusters.filter((c) => {
@@ -336,37 +319,7 @@ export default function MapScreen() {
                   }
                 }}
               >
-                <L.Popup>
-                  <div className="min-w-[160px] p-1 font-sans">
-                    <h3 className="font-bold text-sm text-gray-900 m-0 leading-tight">
-                      {session.title || 'Drink Route'}
-                    </h3>
-                    <p className="text-blue-600 font-semibold text-xs mt-1 mb-1">
-                      {session.ended_at ? 'Completed Session' : 'Active Session'}
-                    </p>
-                    <p className="text-gray-600 text-xs my-0.5">
-                      🕒 Started: {formatDateTime(session.started_at)}
-                    </p>
-                    {session.ended_at && (
-                      <p className="text-gray-600 text-xs my-0.5">
-                        🏁 Ended: {formatDateTime(session.ended_at)}
-                      </p>
-                    )}
-                    <p className="text-gray-400 text-[11px] mt-1 mb-2">
-                      🍺 {session.route.length} stops logged
-                    </p>
-                    
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        router.push(`/session/${session.id}`);
-                      }}
-                      className="mt-2 w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold text-xs text-center py-1.5 px-3 rounded block transition-colors border-0 cursor-pointer"
-                    >
-                      View Session Detail
-                    </button>
-                  </div>
-                </L.Popup>
+                <L.Tooltip sticky>{session.title || 'Night Out'}</L.Tooltip>
               </L.Polyline>
             );
           })}
@@ -397,41 +350,7 @@ export default function MapScreen() {
               return (
                 <L.Marker key={log.id} position={[lat, lng]} icon={divIcon}>
                   <L.Popup>
-                    <div className="min-w-[160px] p-1 font-sans">
-                      <h3 className="font-bold text-sm text-gray-900 m-0">
-                        {log.drink_name || info.label}
-                      </h3>
-                      <p className="text-gray-600 text-xs my-0.5 font-medium">
-                        @{log.profile?.username}
-                      </p>
-                      {log.location_name && (
-                        <p className="text-gray-600 text-xs my-0.5">
-                          📍 {log.location_name}
-                        </p>
-                      )}
-                      <p className="text-gray-400 text-[11px] mt-1 mb-2">
-                        {formatDateTime(log.logged_at)}
-                      </p>
-
-                      {log.session_id ? (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            router.push(`/session/${log.session_id}`);
-                          }}
-                          className="mt-2 w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold text-xs text-center py-1.5 px-3 rounded block transition-colors border-0 cursor-pointer"
-                        >
-                          View Session Detail
-                        </button>
-                      ) : (
-                        <button
-                          disabled
-                          className="mt-2 w-full bg-gray-300 text-gray-500 font-semibold text-xs text-center py-1.5 px-3 rounded block border-0 cursor-not-allowed"
-                        >
-                          No Associated Session
-                        </button>
-                      )}
-                    </div>
+                    <MapPopupList items={items} onOpen={(path) => router.push(path as any)} />
                   </L.Popup>
                 </L.Marker>
               );
@@ -450,49 +369,10 @@ export default function MapScreen() {
                     })
                 : undefined;
 
-            const sessionLog = items.find((item) => item.session_id);
-            const clusterSessionId = sessionLog?.session_id;
-
             return (
               <L.Marker key={`cluster-${lat}-${lng}`} position={[lat, lng]} icon={clusterIcon}>
                 <L.Popup>
-                  <div className="min-w-[180px] p-1 font-sans">
-                    <h3 className="font-bold text-sm text-gray-900 m-0 mb-1">
-                      {clusterCount} drinks here
-                    </h3>
-                    {items.slice(0, 3).map((log) => {
-                      const info = DRINK_TYPE_MAP[log.drink_type as DrinkType] ?? DRINK_TYPE_MAP['other'];
-                      return (
-                        <p key={log.id} className="text-gray-600 text-xs my-0.5 leading-tight">
-                          • {log.drink_name || info.label} · @{log.profile?.username}
-                        </p>
-                      );
-                    })}
-                    {items.length > 3 && (
-                      <p className="text-gray-400 text-[11px] mt-1 mb-2">
-                        +{items.length - 3} more
-                      </p>
-                    )}
-
-                    {clusterSessionId ? (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          router.push(`/session/${clusterSessionId}`);
-                        }}
-                        className="mt-2 w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold text-xs text-center py-1.5 px-3 rounded block transition-colors border-0 cursor-pointer"
-                      >
-                        View Session Detail
-                      </button>
-                    ) : (
-                      <button
-                        disabled
-                        className="mt-2 w-full bg-gray-300 text-gray-500 font-semibold text-xs text-center py-1.5 px-3 rounded block border-0 cursor-not-allowed"
-                      >
-                        No Associated Session
-                      </button>
-                    )}
-                  </div>
+                  <MapPopupList items={items} onOpen={(path) => router.push(path as any)} />
                 </L.Popup>
               </L.Marker>
             );

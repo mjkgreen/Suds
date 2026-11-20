@@ -15,7 +15,7 @@ import { AvatarStack } from "@/components/social/AvatarStack";
 import { LikersModal } from "@/components/social/LikersModal";
 import { DRINK_TYPE_MAP } from "@/lib/constants";
 import { groupDrinks } from "@/lib/drinkGroups";
-import { drinkTotal } from "@/lib/drinkCounts";
+import { drinkTotal, quickLogLabel } from "@/lib/drinkCounts";
 import { shareLink } from "@/lib/share";
 import { useShareInviteLink } from "@/hooks/useShareLinks";
 import { useSessionStore } from "@/stores/sessionStore";
@@ -23,6 +23,9 @@ import { DrinkType, FeedItem, SessionFeedGroup } from "@/types/models";
 import { formatDateTime, formatDuration } from "@/utils/dateHelpers";
 import { formatMemberNames, getDisplayName, getUsername } from "@/utils/profileHelpers";
 import { findBadgeById, TIER_COLORS } from "@/utils/badgeHelpers";
+
+/** Most photos/videos a night out shows in the feed carousel. */
+const FEED_SESSION_MEDIA_LIMIT = 12;
 
 interface SessionCardProps {
   group: SessionFeedGroup;
@@ -149,7 +152,13 @@ export const SessionCard = React.memo(function SessionCard({ group, currentUserI
     (1000 * 60 * 60);
   const drinksPerHour = hoursElapsed >= 0.25 && totalQuantity > 0 ? (totalQuantity / hoursElapsed).toFixed(1) : "—";
 
-  const media = group.items.flatMap((i) => getDrinkMedia(i).slice(0, 1));
+  // Every photo/video from the night out's drinks, oldest drink first, so the
+  // carousel can be swiped through all of them. Capped to keep the feed light
+  // (the night out page shows everything).
+  const media = [...group.items]
+    .sort((a, b) => new Date(a.logged_at).getTime() - new Date(b.logged_at).getTime())
+    .flatMap((i) => getDrinkMedia(i))
+    .slice(0, FEED_SESSION_MEDIA_LIMIT);
 
   return (
     <PressableCard
@@ -333,7 +342,7 @@ export const SessionCard = React.memo(function SessionCard({ group, currentUserI
                         ) : (
                           <Ionicons name="add" size={11} color="#f59e0b" />
                         )}
-                        <Text className="text-primary text-xs font-semibold">{didLog ? "Added!" : "+1"}</Text>
+                        <Text className="text-primary text-xs font-semibold">{didLog ? "Added!" : quickLogLabel(item.quantity)}</Text>
                       </Pressable>
                     )}
                   </View>

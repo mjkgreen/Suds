@@ -16,7 +16,7 @@ import { MilestoneBanner } from "@/components/profile/MilestoneBanner";
 import { BadgePicker } from "@/components/profile/BadgePicker";
 import { ActivityCalendar } from "@/components/profile/ActivityCalendar";
 import { useAuth } from "@/hooks/useAuth";
-import { useShareInviteLink } from "@/hooks/useShareLinks";
+import { InviteFriendsButton } from "@/components/invite/InviteFriendsButton";
 import { useMyFeed } from "@/hooks/useFeed";
 import { useMilestones } from "@/hooks/useMilestones";
 import { useProfile, useUserStats, useUpdateProfile } from "@/hooks/useProfile";
@@ -82,8 +82,6 @@ function TabBar({ active, onChange }: { active: Tab; onChange: (t: Tab) => void 
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const shareInvite = useShareInviteLink();
-  const inviteFriends = () => shareInvite.mutate({ kind: "profile" });
   const { user } = useAuthStore();
   const activeSession = useActiveSession();
   const topEdges = activeSession ? [] : ["top" as const];
@@ -247,9 +245,7 @@ export default function ProfileScreen() {
 
             {/* Action buttons */}
             <View style={{ flexDirection: "row", gap: 8 }}>
-              <Pressable className="bg-accent rounded-xl p-2" onPress={inviteFriends} accessibilityLabel="Invite friends to Suds">
-                <Ionicons name="person-add-outline" size={16} color="#6b7280" />
-              </Pressable>
+              <InviteFriendsButton size={16} />
               <Pressable className="bg-accent rounded-xl p-2" onPress={() => router.push("/user/edit")}>
                 <Ionicons name="pencil-sharp" size={16} color="#6b7280" />
               </Pressable>
@@ -272,9 +268,7 @@ export default function ProfileScreen() {
             <Avatar uri={profile?.avatar_url} name={profile ? getDisplayName(profile) : "User"} size={72} />
           </View>
           <View className="flex-row gap-2">
-            <Pressable className="bg-accent rounded-xl p-2" onPress={inviteFriends} accessibilityLabel="Invite friends to Suds">
-              <Ionicons name="person-add-outline" size={20} color="#6b7280" />
-            </Pressable>
+            <InviteFriendsButton size={20} />
             <Pressable className="bg-accent rounded-xl p-2" onPress={() => router.push("/user/edit")}>
               <Ionicons name="pencil-sharp" size={20} color="#6b7280" />
             </Pressable>
@@ -399,7 +393,7 @@ export default function ProfileScreen() {
                       <View className="py-4 items-center">
                         <ActivityIndicator color="#f59e0b" />
                       </View>
-                    ) : null
+                    ) : undefined
                   }
                   onEndReached={handleEndReached}
                   onEndReachedThreshold={0.4}
@@ -623,7 +617,7 @@ export default function ProfileScreen() {
                 <View className="py-4 items-center">
                   <ActivityIndicator color="#f59e0b" />
                 </View>
-              ) : null
+              ) : undefined
             }
             onEndReached={handleEndReached}
             onEndReachedThreshold={0.4}

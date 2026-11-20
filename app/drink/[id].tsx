@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useRef, useState } from "react";
 import { ActivityIndicator, Alert, Platform, Pressable, Text, TextInput, View, useWindowDimensions } from "react-native";
+import type { TextInputInstance } from "react-native";
 import { useColorScheme } from "nativewind";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Avatar } from "@/components/common/Avatar";
@@ -42,7 +43,7 @@ export default function DrinkDetailScreen() {
   const isDesktop = Platform.OS === "web" && width >= 1024;
   const [commentText, setCommentText] = useState("");
   const [showLikers, setShowLikers] = useState(false);
-  const inputRef = useRef<TextInput>(null);
+  const inputRef = useRef<TextInputInstance>(null);
 
   const { data: comments, isLoading: commentsLoading } = useComments(id);
   const { scrollRef, onComposerFocus, onCommentSent } = useCommentAutoScroll(comments?.length ?? 0);

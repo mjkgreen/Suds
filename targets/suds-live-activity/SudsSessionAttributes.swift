@@ -10,6 +10,7 @@ struct SudsSessionAttributes: ActivityAttributes {
         var drinkCount: Double    // the user's OWN drinks (fractional quantities allowed) — pace and fallback BAC
         var groupDrinkCount: Double // all drinks in the session across members
         var lastDrinkName: String
+        var lastDrinkQuantity: Double // what the +1 button logs (it repeats the last drink, e.g. 1.5)
         var memberCount: Int
         var memberNames: String
         var isLogging: Bool
@@ -17,10 +18,11 @@ struct SudsSessionAttributes: ActivityAttributes {
 
         // `bac` has no default on purpose: every update must carry it forward, or the
         // widget would fall back to the rough count-based estimate.
-        init(drinkCount: Double, groupDrinkCount: Double, lastDrinkName: String, memberCount: Int, memberNames: String, isLogging: Bool = false, bac: BACState?) {
+        init(drinkCount: Double, groupDrinkCount: Double, lastDrinkName: String, lastDrinkQuantity: Double, memberCount: Int, memberNames: String, isLogging: Bool = false, bac: BACState?) {
             self.drinkCount = drinkCount
             self.groupDrinkCount = groupDrinkCount
             self.lastDrinkName = lastDrinkName
+            self.lastDrinkQuantity = lastDrinkQuantity
             self.memberCount = memberCount
             self.memberNames = memberNames
             self.isLogging = isLogging
@@ -35,6 +37,7 @@ struct SudsSessionAttributes: ActivityAttributes {
             let c = try decoder.container(keyedBy: CodingKeys.self)
             drinkCount = try c.decode(Double.self, forKey: .drinkCount) // older builds sent Int; decodes as Double
             lastDrinkName = try c.decode(String.self, forKey: .lastDrinkName)
+            lastDrinkQuantity = (try? c.decodeIfPresent(Double.self, forKey: .lastDrinkQuantity)) ?? 1
             memberCount = try c.decode(Int.self, forKey: .memberCount)
             memberNames = try c.decode(String.self, forKey: .memberNames)
             isLogging = (try? c.decodeIfPresent(Bool.self, forKey: .isLogging)) ?? false

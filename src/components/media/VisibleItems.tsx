@@ -1,5 +1,8 @@
 import React, { createContext, useContext, useRef, useState } from 'react';
-import { ViewabilityConfig, ViewToken } from 'react-native';
+import type { FlatListProps, ListViewToken } from 'react-native';
+
+type ViewabilityConfig = NonNullable<FlatListProps<unknown>['viewabilityConfig']>;
+type ViewToken = ListViewToken;
 
 /**
  * Keys of the list rows currently on screen. Null outside a tracked list

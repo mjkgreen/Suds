@@ -25,6 +25,7 @@ import {
   useUpdateNotificationPreference,
 } from "@/hooks/useNotificationPreferences";
 import { useProfile, useUpdateProfile } from "@/hooks/useProfile";
+import { ShareInviteLinkSection } from "@/components/invite/ShareInviteLinkSection";
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -369,6 +370,15 @@ export default function SettingsScreen() {
     </View>
   );
 
+  const inviteSection = (
+    <View style={{ marginBottom: 28 }}>
+      <Text className="text-muted-foreground text-xs font-bold uppercase tracking-wider mb-4 ml-1">
+        Invite Link
+      </Text>
+      <ShareInviteLinkSection kind="profile" />
+    </View>
+  );
+
   const bacSection = (
     <View style={{ marginBottom: 28 }}>
       <Text className="text-muted-foreground text-xs font-bold uppercase tracking-wider mb-4 ml-1">
@@ -499,6 +509,7 @@ export default function SettingsScreen() {
                 {appearanceSection}
                 {preferencesSection}
                 {notificationsSection}
+                {inviteSection}
               </View>
               <View style={{ flex: 1 }}>
                 {bacSection}
@@ -512,6 +523,7 @@ export default function SettingsScreen() {
             {appearanceSection}
             {preferencesSection}
             {notificationsSection}
+            {inviteSection}
             {bacSection}
             {accountSection}
             {legalSection}

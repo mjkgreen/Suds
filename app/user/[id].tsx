@@ -246,7 +246,7 @@ export default function UserProfileScreen() {
         </View>
       </View>
     </View>
-    ) : null
+    ) : undefined
   // eslint-disable-next-line react-hooks/exhaustive-deps
   ), [profile, isOwnProfile, currentUser?.id, canViewContent, isBlocked, unblock.isPending, handleMoreOptions, selectedBadges]);
 
@@ -302,7 +302,7 @@ export default function UserProfileScreen() {
               <View className="py-4 items-center">
                 <ActivityIndicator color="#f59e0b" />
               </View>
-            ) : null
+            ) : undefined
           }
           onEndReached={handleEndReached}
           onEndReachedThreshold={0.4}

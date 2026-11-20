@@ -206,7 +206,7 @@ export default function NotificationsScreen() {
             <Text className="text-muted-foreground text-base mt-3">No notifications yet</Text>
           </View>
         }
-        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor="#f59e0b" />}
+        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={() => { refetch(); }} tintColor="#f59e0b" />}
       />
     </SafeAreaView>
   );
