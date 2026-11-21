@@ -87,18 +87,6 @@
     },
     {
       "source": "/app",
-      "has": [
-        {
-          "type": "header",
-          "key": "user-agent",
-          "value": "(?i).*android.*"
-        }
-      ],
-      "destination": "https://play.google.com/store/apps/details?id=com.sudssocial.app",
-      "permanent": false
-    },
-    {
-      "source": "/app",
       "destination": "/",
       "permanent": false
     }

@@ -9,17 +9,16 @@ const DISMISS_KEY = 'suds-get-app-bar-dismissed';
 const DISMISS_DAYS = 14;
 
 /**
- * Phones where Apple's Smart App Banner can't appear: in-app browsers
- * (Instagram, Facebook, TikTok, Snapchat, X, LinkedIn…), Chrome/Firefox/Edge on
- * iOS, and Android. iPhone Safari gets Apple's own banner (app/+html.tsx) instead.
+ * iPhones where Apple's Smart App Banner can't appear: in-app browsers
+ * (Instagram, Facebook, TikTok, Snapchat, X, LinkedIn…) and Chrome/Firefox/Edge
+ * on iOS. iPhone Safari gets Apple's own banner instead (scripts/web-postbuild.js).
+ * Not Android: there's no Google Play listing yet.
  */
 export function wantsGetAppBar(ua: string): boolean {
-  const phone = /iPhone|iPod|Android/i.test(ua);
-  if (!phone) return false;
+  if (!/iPhone|iPod/i.test(ua)) return false;
   const inAppBrowser = /Instagram|FBAN|FBAV|FB_IAB|musical_ly|BytedanceWebview|TikTok|Snapchat|Twitter|LinkedInApp|Line\/|Pinterest/i.test(ua);
   const otherIosBrowser = /CriOS|FxiOS|EdgiOS|OPiOS/i.test(ua);
-  const android = /Android/i.test(ua);
-  return inAppBrowser || otherIosBrowser || android;
+  return inAppBrowser || otherIosBrowser;
 }
 
 function dismissedRecently(): boolean {
