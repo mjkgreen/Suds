@@ -667,14 +667,14 @@ export function MarketingHomepage() {
 
           {/* Desktop visitors can't install here: a code to scan with their phone (→ /app redirect). */}
           {isWide && (
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: "#fff", borderRadius: 14, padding: 6, paddingRight: 14 }}>
+            <View style={{ alignItems: "center", gap: 4, backgroundColor: "#fff", borderRadius: 14, paddingTop: 8, paddingBottom: 6, paddingHorizontal: 8 }}>
+              <Text style={{ color: "#111827", fontWeight: "700", fontSize: 13 }}>Get the app</Text>
               <Image
                 source={require("../../../assets/qr-get-app.svg")}
                 style={{ width: 88, height: 88 }}
                 contentFit="contain"
-                accessibilityLabel="QR code: scan to get the Suds app"
+                accessibilityLabel="QR code: get the Suds app"
               />
-              <Text style={{ color: "#111827", fontWeight: "700", fontSize: 13, lineHeight: 17 }}>{"Scan to get\nthe app"}</Text>
             </View>
           )}
 
