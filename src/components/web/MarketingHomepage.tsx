@@ -665,6 +665,19 @@ export function MarketingHomepage() {
         <View style={{ flexDirection: isWide ? "row" : "column", gap: 12, alignItems: "center" }}>
           <AppStoreBadge variant="white" height={52} />
 
+          {/* Desktop visitors can't install here: a code to scan with their phone (→ /app redirect). */}
+          {isWide && (
+            <View style={{ alignItems: "center", gap: 4, backgroundColor: "#fff", borderRadius: 14, paddingTop: 8, paddingBottom: 6, paddingHorizontal: 8 }}>
+              <Text style={{ color: "#111827", fontWeight: "700", fontSize: 13 }}>Get the app</Text>
+              <Image
+                source={require("../../../assets/qr-get-app.svg")}
+                style={{ width: 88, height: 88 }}
+                contentFit="contain"
+                accessibilityLabel="QR code: get the Suds app"
+              />
+            </View>
+          )}
+
 
           <Pressable
             onPress={() => router.push("/(auth)/sign-up" as never)}
