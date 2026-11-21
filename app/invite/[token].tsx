@@ -67,6 +67,17 @@ export default function InviteScreen() {
           : null;
   const copy = preview ? shareCopy(preview) : null;
 
+  // Point the Smart App Banner (one tag, from app/+html.tsx) at this invite, so
+  // "Open" lands on it in the app instead of the home screen.
+  useEffect(() => {
+    if (Platform.OS !== 'web' || !validToken || typeof document === 'undefined') return;
+    const tag = document.querySelector('meta[name="apple-itunes-app"]');
+    if (!tag) return;
+    const before = tag.getAttribute('content');
+    tag.setAttribute('content', `app-id=6761397970, app-argument=${inviteUrl(validToken)}`);
+    return () => { if (before) tag.setAttribute('content', before); };
+  }, [validToken]);
+
   // Signed in now: this invite is being handled, so sign-up won't reopen it.
   useEffect(() => {
     if (signedIn && validToken && pendingInvites.peek()?.token === validToken) void pendingInvites.clear();
@@ -84,7 +95,6 @@ export default function InviteScreen() {
       <meta name="twitter:card" content="summary" />
       <meta name="twitter:title" content={copy?.title ?? STATIC_TITLE} />
       <meta name="twitter:description" content={copy?.description ?? STATIC_DESCRIPTION} />
-      {mounted && validToken && <meta name="apple-itunes-app" content={`app-id=6761397970, app-argument=${inviteUrl(validToken)}`} />}
     </Head>
   );
 
