@@ -4,7 +4,7 @@ import { Link } from "expo-router";
 import { Platform, Pressable, Text, View } from "react-native";
 import { useColorScheme } from "nativewind";
 import { Avatar } from "@/components/common/Avatar";
-import { AppStoreBadge, GooglePlayButton } from "@/components/web/AppStoreBadge";
+import { AppStoreBadge } from "@/components/web/AppStoreBadge";
 import { formatDrinkTotal, personName, SharePreview, shareCopy } from "@/lib/shareLinks";
 import { formatDuration } from "@/utils/dateHelpers";
 
@@ -138,7 +138,7 @@ export function PublicInvitePreview({ token, preview, onSignUp, onSignIn }: Publ
           <Text className={`text-sm font-semibold ${isDark ? "text-gray-300" : "text-gray-700"}`}>Get the app</Text>
           <View style={{ flexDirection: "row", gap: 12, flexWrap: "wrap", justifyContent: "center" }}>
             <AppStoreBadge variant={isDark ? "white" : "black"} height={44} />
-            <GooglePlayButton variant={isDark ? "white" : "black"} height={44} />
+            {/* Google Play button (GooglePlayButton) goes back here once there's a listing. */}
           </View>
           <Link href={`suds://invite/${token}` as never} asChild>
             <Pressable style={{ flexDirection: "row", alignItems: "center", gap: 6, paddingVertical: 6 }} accessibilityRole="link">

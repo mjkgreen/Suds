@@ -1,13 +1,25 @@
 {
+  "buildCommand": "npx expo export -p web && node scripts/web-postbuild.js dist",
+  "outputDirectory": "dist",
   "cleanUrls": true,
   "headers": [
     {
       "source": "/.well-known/apple-app-site-association",
-      "headers": [{ "key": "Content-Type", "value": "application/json" }]
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        }
+      ]
     },
     {
       "source": "/.well-known/assetlinks.json",
-      "headers": [{ "key": "Content-Type", "value": "application/json" }]
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        }
+      ]
     }
   ],
   "rewrites": [
@@ -41,6 +53,42 @@
     {
       "source": "/(.*)",
       "destination": "/index.html"
+    }
+  ],
+  "redirects": [
+    {
+      "source": "/app",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": "(?i).*(iphone|ipad|ipod).*"
+        },
+        {
+          "type": "query",
+          "key": "c",
+          "value": "(?<c>[A-Za-z0-9_-]{1,40})"
+        }
+      ],
+      "destination": "https://apps.apple.com/app/apple-store/id6761397970?pt=128723220&mt=8&ct=:c",
+      "permanent": false
+    },
+    {
+      "source": "/app",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": "(?i).*(iphone|ipad|ipod).*"
+        }
+      ],
+      "destination": "https://apps.apple.com/app/apple-store/id6761397970?pt=128723220&mt=8&ct=link",
+      "permanent": false
+    },
+    {
+      "source": "/app",
+      "destination": "/",
+      "permanent": false
     }
   ]
 }

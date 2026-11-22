@@ -20,6 +20,7 @@ import { useLegalAgeGate } from '@/hooks/useLegalAgeGate';
 import { AgeRestrictedScreen } from '@/components/common/AgeRestrictedScreen';
 import { homeRoute, pendingInvites } from '@/hooks/useShareLinks';
 import { inviteTokenFromUrl } from '@/lib/shareLinks';
+import { GetAppBar } from '@/components/web/GetAppBar';
 
 // Pages anyone can read without an account. On web these also render while
 // auth is still loading, so the static export holds their real content for
@@ -184,6 +185,7 @@ function AuthGuard() {
         <Stack.Screen name="support" />
         <Stack.Screen name="about" />
       </Stack>
+      {Platform.OS === 'web' && !session && <GetAppBar />}
       {/* Covers the app (rather than replacing the navigator, which would
           make the redirects above loop) for people under the legal age. */}
       {ageGate.blocked && !showPublicPageWhileLoading && (
