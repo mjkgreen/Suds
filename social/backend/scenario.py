@@ -241,18 +241,7 @@ ON CONFLICT (user_id) DO UPDATE SET birthdate = excluded.birthdate, height = exc
     o.append('INSERT INTO places VALUES ' + ', '.join(f"({q(v['name'])}, {v['lat']}, {v['lng']})" for v in V) + ';')
     o.append('CREATE TEMP TABLE menu(drink_type text, drink_name text, brand text);')
     o.append('INSERT INTO menu VALUES ' + ', '.join(f"({q(m[0])}, {q(m[1])}, {q(m[2])})" for m in sc['menu']) + ';')
-    o.append(f"""-- ~90 days of history for everyone
-INSERT INTO drink_logs (user_id, drink_type, drink_name, brand, quantity, location_name, location_lat, location_lng, logged_at, created_at, rating)
-SELECT p.id, m.drink_type, m.drink_name, m.brand, 1, pl.name, pl.lat, pl.lng, t, t, 6 + floor(random()*5)::int
-FROM profiles p
-CROSS JOIN generate_series(3, 92) AS d
-CROSS JOIN LATERAL (SELECT CASE WHEN extract(dow FROM now() - d * interval '1 day') IN (5,6)
-                               THEN floor(random()*4)::int ELSE (random() < 0.25)::int END AS n) k
-CROSS JOIN LATERAL generate_series(1, k.n) AS i
-CROSS JOIN LATERAL (SELECT date_trunc('day', now() - d * interval '1 day') + interval '18 hours'
-                           + (i * 50 + floor(random()*30) + 0*k.n) * interval '1 minute' AS t) tt
-CROSS JOIN LATERAL (SELECT * FROM menu OFFSET floor(random()*{len(sc['menu'])})::int + 0*i LIMIT 1) m
-CROSS JOIN LATERAL (SELECT * FROM places OFFSET floor(random()*{len(V)})::int + 0*i LIMIT 1) pl;""")
+    o.extend(history_sql(sc))
     def log_row(d, user, when_sql, session=None):
         v = V[d['venue']]
         return (f"('{d['id']}', '{U(user + 1)}', {q(session)}, {q(d['type'])}, {q(d['name'])}, {q(d.get('brand'))}, {d.get('qty', 1)}, "
@@ -289,6 +278,73 @@ WHERE l.id::text LIKE '00000000-0000-4000-b000-%' AND random() < 0.7;""")
     o.append('SELECT refresh_drink_catalog();')
     return '\n'.join(o)
 
+
+
+def history_sql(sc):
+    """~90 days of believable history for everyone: each person has a few regular spots, and goes
+    out on named nights (often with friends from the cast) with a mix of different drinks, plus
+    the odd after-work drink on its own. Built here, not in SQL, so every row is really random
+    (Postgres reuses uncorrelated random() subqueries, which gave everyone the same drink)."""
+    import uuid
+    rng = random.Random(sc['seed'] * 7919 + 17)
+    P, V = sc['people'], sc['venues']
+    uid = lambda: str(uuid.UUID(int=rng.getrandbits(128), version=4))
+    menu = [m for m in sc['menu'] if m[0] != 'water']
+    first = lambda i: P[i]['name'].split()[0]
+    taken = {t.format(f='') for t in [n['title'] for n in sc['nights'].values()] + [sc['start_title']]}
+    titles = [t for t in NIGHTS if t.format(f='') not in taken]
+    rng.shuffle(titles)
+    title_n = [0]
+    def next_title():                            # cycle so the same name doesn't keep coming back
+        title_n[0] += 1
+        return titles[(title_n[0] - 1) % len(titles)]
+    regulars = [rng.sample(range(len(V)), 3) for _ in P]
+    sessions, logs = [], []
+
+    def drinks_for(n):
+        picks = rng.sample(menu, n)              # a different drink each round
+        if n >= 3 and rng.random() < 0.3:        # sometimes a zero-proof round
+            zero = [m for m in menu if m[0] == 'mocktail']
+            if zero:
+                picks[-1] = rng.choice(zero)
+        return picks
+
+    def when(day, minutes_back, offset):
+        return f"now() - interval '{day} days' - interval '{minutes_back} minutes' + interval '{offset} minutes'"
+
+    for day in range(3, 93):
+        weekend = (dt.date.today() - dt.timedelta(days=day)).weekday() in (4, 5)
+        # named nights, mostly with friends
+        for _ in range(2 if weekend and rng.random() < 0.3 else 1):
+            if rng.random() > (0.55 if weekend else 0.12):
+                continue
+            host = rng.randrange(len(P))
+            crew = [host] + rng.sample([i for i in range(len(P)) if i != host], rng.randint(1, 3))
+            title = next_title().format(f=first(rng.choice(crew)))
+            venue_pool = regulars[host] + [rng.randrange(len(V))]
+            stops = rng.sample(venue_pool, rng.randint(1, 2))
+            back, length = rng.randint(60, 150), rng.randint(150, 260)
+            for who in crew:
+                sid = uid()
+                start = when(day, back + rng.randint(-10, 10), 0)
+                sessions.append(f"('{sid}', '{U(who + 1)}', {q(title)}, {start}, {start} + interval '{length} minutes', {start})")
+                n = rng.randint(2, 4)
+                for k, (t, name, brand, _) in enumerate(drinks_for(n)):
+                    v = V[stops[min(k * len(stops) // n, len(stops) - 1)]]
+                    off = int(15 + k * (length - 40) / max(1, n - 1)) + rng.randint(-8, 8)
+                    logs.append((who, sid, t, name, brand, v, when(day, back, off)))
+        # an after-work drink on its own
+        for who in range(len(P)):
+            if rng.random() < (0.05 if weekend else 0.1):
+                t, name, brand, _ = rng.choice(menu)
+                logs.append((who, None, t, name, brand, V[rng.choice(regulars[who])], when(day, rng.randint(160, 230), 0)))
+
+    cols = '(id, user_id, session_id, drink_type, drink_name, brand, quantity, location_name, location_lat, location_lng, rating, logged_at, created_at)'
+    rows = [f"('{uid()}', '{U(who + 1)}', {q(sid)}, {q(t)}, {q(name)}, {q(brand)}, 1, {q(v['name'])}, {v['lat']}, {v['lng']}, "
+            f"{rng.randint(6, 10)}, {w}, {w})" for who, sid, t, name, brand, v, w in logs]
+    return ['-- ~90 days of history for everyone',
+            'INSERT INTO sessions (id, user_id, title, started_at, ended_at, created_at) VALUES ' + ',\n'.join(sessions) + ';',
+            f'INSERT INTO drink_logs {cols} VALUES ' + ',\n'.join(rows) + ';']
 
 def summary(sc):
     return {'seed': sc['seed'], 'city': sc['city'], 'cast': [p['name'] for p in sc['people']],
