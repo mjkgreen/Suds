@@ -8,7 +8,7 @@ pattern from a seed, so no two posts share a track.
   python3 music.py <style|random> <seconds> <out.wav> [seed]   # try one out
   music.STYLES                                                 # style names
 
-make(style, duration, taps_s, out_wav, seed) -> signature dict
+make(style, duration, taps_s, out_wav, seed, outro_at) -> signature dict
   (style, key, mode, bpm, progression, seed), recorded in post.json so the
   planner can keep the music from repeating.
 """
@@ -158,16 +158,62 @@ def render(style, duration, seed=None, taps_s=()):
 
 def write_wav(x, path):
     with wave.open(path, 'wb') as w:
-        w.setnchannels(1); w.setsampwidth(2); w.setframerate(SR)
+        w.setnchannels(1 if x.ndim == 1 else x.shape[1]); w.setsampwidth(2); w.setframerate(SR)
         w.writeframes((x * 32767).astype(np.int16).tobytes())
 
 
-def make(style, duration, taps_s, out_wav, seed=None):
+def make(style, duration, taps_s, out_wav, seed=None, outro_at=None):
+    """outro_at: seconds where the end card starts; the bed fades out and the Suds theme plays."""
     if style in (None, 'random'):
         style = str(np.random.default_rng(seed).choice(sorted(STYLES)))
     x, sig = render(style, duration, seed, taps_s)
+    if outro_at is not None:
+        x = with_theme(x, outro_at)
     write_wav(x, out_wav)
     return sig
+
+
+THEME_DB = -1.0     # the sting's loudness against the bed's: just under, so it doesn't jump out
+
+
+def _biquad(x, b, a):
+    y = np.empty_like(x); x1 = x2 = y1 = y2 = 0.0
+    b0, b1, b2 = b[0] / a[0], b[1] / a[0], b[2] / a[0]; a1, a2 = a[1] / a[0], a[2] / a[0]
+    for i in range(len(x)):
+        y0 = b0 * x[i] + b1 * x1 + b2 * x2 - a1 * y1 - a2 * y2
+        x2, x1, y2, y1 = x1, x[i], y1, y0; y[i] = y0
+    return y
+
+
+def _power(ch):
+    """Mean power of channels (n, c) after K-weighting (ITU BS.1770, what LUFS uses), summed over channels."""
+    w = 2 * np.pi * 1500 / SR; A = 10 ** (4 / 40); al = np.sin(w) / np.sqrt(2); c = np.cos(w); r = 2 * np.sqrt(A) * al
+    shelf = ([A * ((A + 1) + (A - 1) * c + r), -2 * A * ((A - 1) + (A + 1) * c), A * ((A + 1) + (A - 1) * c - r)],
+             [(A + 1) - (A - 1) * c + r, 2 * ((A - 1) - (A + 1) * c), (A + 1) - (A - 1) * c - r])
+    w = 2 * np.pi * 38 / SR; al = np.sin(w); c = np.cos(w)                       # Q = 0.5
+    high = ([(1 + c) / 2, -(1 + c), (1 + c) / 2], [1 + al, -2 * c, 1 - al])
+    return sum(np.mean(_biquad(_biquad(ch[:, j], *shelf), *high) ** 2) for j in range(ch.shape[1])) + 1e-12
+
+
+def with_theme(bed, at):
+    """Fade the bed out across the end card's first moments and lay the Suds theme over it,
+    matched to how loud the bed was just before.
+
+    The bed is in a random key and the theme is in G, so the bed is gone by the
+    time the theme's chord rings. Returns stereo (n, 2), as long as the bed."""
+    import theme
+    n = len(bed); t = np.arange(n) / SR
+    k = np.clip((t - (at - 0.2)) / 0.6, 0, 1)        # 0.2 s before the card to 0.4 s into it
+    out = np.repeat((bed * 0.5 * (1 + np.cos(np.pi * k)))[:, None], 2, axis=1)
+    sting = theme.render()
+    i = int(at * SR)
+    ref = bed[max(0, i - 8 * SR):i]
+    if len(ref) > SR:
+        bed_p = _power(np.repeat(ref[:, None], 2, axis=1))
+        sting = sting * np.sqrt(bed_p / _power(sting[:int(2.5 * SR)])) * 10 ** (THEME_DB / 20)
+    m = min(len(sting), n - i)
+    out[i:i + m] += sting[:m]
+    return out / max(1.0, np.abs(out).max() / 0.89)
 
 
 # ---------- styles ----------

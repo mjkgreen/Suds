@@ -35,50 +35,65 @@ module.exports = {
     await page.waitForTimeout(1500);
     await rec.shoot(55);
 
-    // Off camera: zoom the map in on the busiest spot (Leaflet animates on the real clock).
-    hot = await busiest();
-    if (hot) {
-      await page.mouse.move(hot.x, hot.y);
-      await page.mouse.wheel(0, -100); await page.waitForTimeout(1200);
-      await rec.settle(1000);
-      await page.waitForTimeout(2500);
-    }
-    rec.cut('zoomed');
-    rec.setOverlay(caption(2));
-    const route = page.locator('path.leaflet-interactive').first();
-    if (await route.count()) await rec.focus(route, 1.15); else rec.setCamera({ cx: 270, cy: 541, z: 1.1 });
-    await rec.shoot(50);
-    // Off camera: find a pin whose popup links to a Night Out, then close it.
-    let target = null;
+    // Off camera: zoom in a step so the spots spread out and are easy to tap.
+    await page.mouse.move(270, 541);
+    await page.mouse.wheel(0, -100); await page.waitForTimeout(1200);
+    await rec.settle(1000);
+    await page.waitForTimeout(2500);
+
+    // Off camera: find a couple of spots whose popup lists some history (2+ rows).
     const pins = page.locator('.leaflet-marker-icon');
-    for (let k = 0; k < Math.min(await pins.count(), 25) && !target; k++) {
-      const pin = pins.nth(k);
-      const b = await pin.boundingBox();
-      if (!b || b.y < 140 || b.y > 900 || b.x < 40 || b.x > 500) continue;
-      await pin.click().catch(() => {});
-      await page.waitForTimeout(400);
-      if (await page.locator('.leaflet-popup:has-text("View Session Detail")').count()) target = b;
-      await page.keyboard.press('Escape');
+    const closePopup = async () => {
       await page.locator('.leaflet-popup-close-button').click().catch(() => {});
-      await page.waitForTimeout(300);
+      await page.keyboard.press('Escape').catch(() => {});
+      await rec.settle(500, 200);
+    };
+    const inView = (b) => b && b.y > 160 && b.y < 860 && b.x > 40 && b.x < 500;
+    const found = [];
+    for (let k = 0; k < Math.min(await pins.count(), 30); k++) {
+      const b = await pins.nth(k).boundingBox();
+      if (!inView(b)) continue;
+      await pins.nth(k).click().catch(() => {});
+      await rec.settle(600, 200);
+      const rows = await page.locator('.leaflet-popup button[aria-label^="View "]').count();
+      await closePopup();
+      if (rows >= 2) found.push({ k, rows, x: b.x, y: b.y });
     }
-    if (target) {
-      rec.setCamera({ cx: target.x, cy: target.y - 90, z: 1.2 });
-      await rec.shoot(20);
-      rec.pendingTap = { x: target.x + target.width / 2, y: target.y + target.height / 2 };
-      await rec.shoot(4);
-      await page.mouse.click(target.x + target.width / 2, target.y + target.height / 2);
-      await rec.shoot(35);
-      const link = page.locator('.leaflet-popup').getByText('View Session Detail');
-      await rec.tap(link);
-      await waitFor('Night Out BAC Profile', 30000).catch(() => {});
-      await rec.settle(1500);
-      rec.cut('session');
+    // Two spots, apart from each other (more history first); fall back to whatever has a popup.
+    found.sort((a, b) => b.rows - a.rows);
+    const spots = [];
+    for (const f of found) {
+      if (spots.every((s) => Math.hypot(s.x - f.x, s.y - f.y) > 30)) spots.push(f);
+      if (spots.length === 2) break;
+    }
+
+    rec.cut('spots');
+    rec.setOverlay(caption(2));
+    rec.setCamera({ cx: 270, cy: 541, z: 1.0 });
+    await rec.shoot(15);
+    for (const s of spots) {
+      const pin = pins.nth(s.k);
+      if (!inView(await pin.boundingBox())) continue;   // the last popup panned it away
+      await rec.tap(pin);
+      await rec.shoot(12);                                 // popup opens, map pans to fit it
+      const popup = page.locator('.leaflet-popup-content');
+      if (!(await popup.count())) continue;
+      await rec.focus(popup, 1.3);
+      await rec.shoot(30);                                 // read the top of the history
+      const list = popup.locator('div[style*="overflow"]').first();
+      const lb = await list.boundingBox();
+      const extra = await list.evaluate((n) => n.scrollHeight - n.clientHeight).catch(() => 0);
+      if (lb && extra > 10) {
+        await rec.scrollBy(Math.min(extra, 320), 45, lb.x + lb.width / 2, lb.y + lb.height / 2);
+        await rec.shoot(20);
+      } else {
+        await rec.shoot(20);
+      }
       rec.setCamera({ cx: 270, cy: 541, z: 1.0 });
-      await rec.shoot(45);
-    } else {
-      await rec.shoot(40);
+      await closePopup();
+      await rec.shoot(10);
     }
+    if (!spots.length) await rec.shoot(40);
   },
   async still({ page, rec, on, waitFor }) {
     await page.waitForSelector('.leaflet-tile-loaded', { timeout: 60000 });

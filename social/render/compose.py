@@ -6,7 +6,8 @@
 Does, per frame: an eased camera crop (pan/zoom that follows the action),
 touch rings where real taps happened, the hook / caption overlays, then an
 end card with the call to action. Adds a synthesized music bed (no licensed
-audio) with soft taps, and encodes under the Drive upload cap.
+audio) with soft taps and the Suds theme over the end card, and encodes under
+the Drive upload cap.
 """
 import argparse, json, math, os, shutil, subprocess, sys, tempfile
 import numpy as np
@@ -22,7 +23,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.abspath(os.path.join(HERE, '..', '..'))
 FONT_DIR = '/usr/share/fonts/opentype/inter'
 AMBER, AMBER_DARK, INK = (243, 156, 11), (245, 90, 7), (17, 24, 39)
-END_FRAMES, FADE_FRAMES = 78, 8
+END_FRAMES, FADE_FRAMES = 120, 8   # 4 s: the Suds theme (theme.py) plays over it
 # Safe area: platform UI covers the bottom fifth and the right-edge buttons.
 SAFE_X0, SAFE_X1, SAFE_BOTTOM = 70, W - 150, int(H * 0.8)
 
@@ -160,18 +161,35 @@ def draw_taps(img, taps):
 
 
 _END_BUBBLES = {}
+_LOGOS = {}
+
+
+def glass_logo(size):
+    """The Suds glass with its amber square keyed out, so whatever is behind it shows through.
+
+    assets/Suds.png is two flat colours (amber background, orange glass) plus
+    antialiased edges between them; green separates them, so it sets the alpha.
+    """
+    if size not in _LOGOS:
+        rgb = np.asarray(Image.open(os.path.join(ROOT, 'assets', 'Suds.png')).convert('RGB')).astype(np.float32)
+        alpha = np.clip((158 - rgb[..., 1]) / (158 - 84), 0, 1)
+        out = np.zeros(rgb.shape[:2] + (4,), np.uint8)
+        out[..., :3] = (247, 84, 5)
+        out[..., 3] = (alpha * 255).round().astype(np.uint8)
+        _LOGOS[size] = Image.fromarray(out, 'RGBA').resize((size, size), Image.LANCZOS)
+    return _LOGOS[size]
 
 
 def end_bubbles(n, title, cta, url):
-    """Bubbles rising through the end card; they fade behind the logo, wordmark, title, button and URL."""
+    """Bubbles rising through the end card; they fade behind the wordmark, title, button and URL (not the see-through logo)."""
     key = (n, title, cta, url)
     if key not in _END_BUBBLES:
         d = ImageDraw.Draw(Image.new('RGBA', (1, 1)))
         cx = W / 2 - 30
         def box(width, y0, y1):  # y ranges include the 40px slide-in
             return (cx - width / 2, y0, cx + width / 2, y1 + 40)
-        avoid = [box(360, 330, 690),
-                 box(d.textlength('Suds', font=font('Black', 120)), 730, 880)]
+        # No box for the logo: it's see-through, so bubbles stay visible around and inside the glass.
+        avoid = [box(d.textlength('Suds', font=font('Black', 120)), 730, 880)]
         lines = title.split('\n')
         avoid.append(box(max(d.textlength(l, font=font('Bold', 64)) for l in lines), 900, 900 + 80 * len(lines)))
         avoid.append(box(d.textlength(cta, font=font('ExtraBold', 54)) + 110, 1130, 1130 + 120))
@@ -184,12 +202,9 @@ def end_card(i, n, title, cta, url):
     img = Image.new('RGBA', (W, H), AMBER + (255,))
     img.alpha_composite(end_bubbles(n, title, cta, url).render(i))
     d = ImageDraw.Draw(img)
-    logo = Image.open(os.path.join(ROOT, 'assets', 'Suds.png')).convert('RGBA').resize((360, 360), Image.LANCZOS)
-    mask = Image.new('L', logo.size, 0)
-    ImageDraw.Draw(mask).rounded_rectangle((0, 0, 359, 359), radius=80, fill=255)
     t = ease(i / 10)
     y_off = int(40 * (1 - t))
-    img.paste(logo, ((W - 360) // 2 - 30, 330 + y_off), mask)
+    img.alpha_composite(glass_logo(360), ((W - 360) // 2 - 30, 330 + y_off))
     f1 = font('Black', 120)
     word = 'Suds'
     d.text(((W - d.textlength(word, font=f1)) / 2 - 30, 730 + y_off), word, font=f1, fill=INK)
@@ -336,7 +351,7 @@ def main():
     duration = total / FPS
     wav = os.path.join(work, 'music.wav')
     seed = a.music_seed if a.music_seed is not None else int(np.random.default_rng().integers(1, 2**31))
-    sig = music.make(a.music, duration, tap_times, wav, seed)
+    sig = music.make(a.music, duration, tap_times, wav, seed, outro_at=n / FPS)
     json.dump(sig, open(os.path.splitext(a.out)[0] + '.music.json', 'w'))
     how = encode(out_frames, wav, a.out, a.max_mb, duration)
     size = os.path.getsize(a.out) / 1e6
