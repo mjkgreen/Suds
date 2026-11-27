@@ -173,11 +173,31 @@ def make(style, duration, taps_s, out_wav, seed=None, outro_at=None):
     return sig
 
 
-THEME_GAIN = 0.85    # the sting sits ~2 dB above the bed so the logo moment lands
+THEME_DB = -1.0     # the sting's loudness against the bed's: just under, so it doesn't jump out
+
+
+def _biquad(x, b, a):
+    y = np.empty_like(x); x1 = x2 = y1 = y2 = 0.0
+    b0, b1, b2 = b[0] / a[0], b[1] / a[0], b[2] / a[0]; a1, a2 = a[1] / a[0], a[2] / a[0]
+    for i in range(len(x)):
+        y0 = b0 * x[i] + b1 * x1 + b2 * x2 - a1 * y1 - a2 * y2
+        x2, x1, y2, y1 = x1, x[i], y1, y0; y[i] = y0
+    return y
+
+
+def _power(ch):
+    """Mean power of channels (n, c) after K-weighting (ITU BS.1770, what LUFS uses), summed over channels."""
+    w = 2 * np.pi * 1500 / SR; A = 10 ** (4 / 40); al = np.sin(w) / np.sqrt(2); c = np.cos(w); r = 2 * np.sqrt(A) * al
+    shelf = ([A * ((A + 1) + (A - 1) * c + r), -2 * A * ((A - 1) + (A + 1) * c), A * ((A + 1) + (A - 1) * c - r)],
+             [(A + 1) - (A - 1) * c + r, 2 * ((A - 1) - (A + 1) * c), (A + 1) - (A - 1) * c - r])
+    w = 2 * np.pi * 38 / SR; al = np.sin(w); c = np.cos(w)                       # Q = 0.5
+    high = ([(1 + c) / 2, -(1 + c), (1 + c) / 2], [1 + al, -2 * c, 1 - al])
+    return sum(np.mean(_biquad(_biquad(ch[:, j], *shelf), *high) ** 2) for j in range(ch.shape[1])) + 1e-12
 
 
 def with_theme(bed, at):
-    """Fade the bed out across the end card's first moments and lay the Suds theme over it.
+    """Fade the bed out across the end card's first moments and lay the Suds theme over it,
+    matched to how loud the bed was just before.
 
     The bed is in a random key and the theme is in G, so the bed is gone by the
     time the theme's chord rings. Returns stereo (n, 2), as long as the bed."""
@@ -185,8 +205,13 @@ def with_theme(bed, at):
     n = len(bed); t = np.arange(n) / SR
     k = np.clip((t - (at - 0.2)) / 0.6, 0, 1)        # 0.2 s before the card to 0.4 s into it
     out = np.repeat((bed * 0.5 * (1 + np.cos(np.pi * k)))[:, None], 2, axis=1)
-    sting = theme.render() * THEME_GAIN
-    i = int(at * SR); m = min(len(sting), n - i)
+    sting = theme.render()
+    i = int(at * SR)
+    ref = bed[max(0, i - 8 * SR):i]
+    if len(ref) > SR:
+        bed_p = _power(np.repeat(ref[:, None], 2, axis=1))
+        sting = sting * np.sqrt(bed_p / _power(sting[:int(2.5 * SR)])) * 10 ** (THEME_DB / 20)
+    m = min(len(sting), n - i)
     out[i:i + m] += sting[:m]
     return out / max(1.0, np.abs(out).max() / 0.89)
 
