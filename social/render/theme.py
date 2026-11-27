@@ -6,11 +6,14 @@ congas, then two glasses clink "cheers" (tuned to B and D of the chord) and ring
 out. Synthesized here like the music bed, nothing sampled. Fixed seeds, so every
 reel gets the identical sting: it's the brand's sound, not a variation.
 
-Timing (seconds from the start of the end card):
-  0.12  first pan note (the logo is sliding in)
-  1.08  final chord
-  2.04  the clink, which rings to the end
-  4.00  end (last 0.8 s fades out)
+Timing, in melody steps (a step is 0.16 s in the original):
+  0     first pan note (0.12 s into the end card, as the logo slides in)
+  6     final chord
+  12    the clink (six steps of rest), which rings to the end
+  end   4.0 s after the card starts (last 0.8 s fades out)
+
+In reels, music.with_theme plays it in the bed's key and on the bed's 16th-note
+grid, starting on a beat, so the handoff from the bed isn't discordant.
 
   python3 theme.py out.wav      # write it on its own to listen
   theme.render() -> (n, 2) float array, peak 0.89
@@ -20,9 +23,7 @@ import numpy as np
 
 SR = 44100
 DUR = 4.0
-STEP = 0.16                     # one melody note
-LAST = 6 * STEP + 0.12          # the final chord
-CLINK = LAST + 6 * STEP         # six notes of rest, then cheers
+STEP = 0.16                     # one melody note (a 16th note at 93.75 bpm)
 
 
 def hz(m): return 440.0 * 2 ** ((m - 69) / 12)
@@ -94,9 +95,17 @@ def reverb(L, R, wet=0.22, length=1.4, damp=3.5):
 
 # ---------- the sting ----------
 
-def render():
+def render(shift=0, step=STEP, start=0.12, dur=DUR):
+    """The sting as (n, 2) floats, peak 0.89, `dur` seconds long.
+
+    shift: semitones from G major, so it can sit in the music bed's key.
+    step: seconds per melody note (0.16 = 16th notes at 93.75 bpm); everything
+    rhythmic, the rest before the clink included, scales with it.
+    start: when the first note plays. The defaults are the approved original."""
     perc, clink = np.random.default_rng(42), np.random.default_rng(7)
-    L = np.zeros(int(DUR * SR) + 3 * SR); R = np.zeros_like(L)
+    L = np.zeros(int(max(dur, DUR) * SR) + 3 * SR); R = np.zeros_like(L)
+    p = lambda m: hz(m + shift)
+    last, ping = start + 6 * step, start + 12 * step
 
     def add(t, x, gain=1.0, pan=0.0):
         i = int(t * SR); x = x[: len(L) - i] * gain
@@ -104,20 +113,19 @@ def render():
         R[i:i + len(x)] += x * np.sqrt((1 + pan) / 2)
 
     for k, m in enumerate((74, 79, 83, 79, 81, 83, 86)):              # D G B G A B D
-        last = k == 6
-        add(k * STEP + 0.12, steelpan(hz(m), 3.0, ring=1.8) if last else steelpan(hz(m)), 0.5, (m - 80) / 15)
+        add(start + k * step, steelpan(p(m), 3.0, ring=1.8) if k == 6 else steelpan(p(m)), 0.5, (m - 80) / 15)
     for m in (71, 74, 79):                                            # G major under the last note
-        add(LAST, steelpan(hz(m), 3.0, 0.7, ring=1.8), 0.25, (m - 74) / 10)
-    add(LAST, steelpan(hz(43), 3.0, ring=2.2), 0.35)                  # low G bass pan
+        add(last, steelpan(p(m), 3.0, 0.7, ring=1.8), 0.25, (m - 74) / 10)
+    add(last, steelpan(p(43), 3.0, ring=2.2), 0.35)                   # low G bass pan
     for k in range(12):
-        add(0.12 + k * STEP / 2, shaker(perc), 0.12 if k % 2 else 0.2, 0.5)
-    for t0, f in ((0.12, 220), (0.36, 300), (0.44, 300), (0.6, 220), (0.88, 330), (1.08, 220)):
-        add(t0, conga(perc, f), 0.35, -0.4)
-    add(CLINK, glass(clink, hz(98)), 0.30, -0.35)                     # D7 and B6: two glasses, cheers
-    add(CLINK + 0.025, glass(clink, hz(95), bright=0.8), 0.24, 0.35)
+        add(start + k * step / 2, shaker(perc), 0.12 if k % 2 else 0.2, 0.5)
+    for at, f in ((0, 220), (1.5, 300), (2, 300), (3, 220), (4.75, 330), (6, 220)):   # in melody steps
+        add(start + at * step, conga(perc, f), 0.35, -0.4)
+    add(ping, glass(clink, p(98)), 0.30, -0.35)                       # D and B on top: two glasses, cheers
+    add(ping + 0.025, glass(clink, p(95), bright=0.8), 0.24, 0.35)
 
     L, R = reverb(L, R)
-    n = int(DUR * SR); L, R = L[:n], R[:n]
+    n = int(dur * SR); L, R = L[:n], R[:n]
     fade = np.ones(n); k = int(0.8 * SR); fade[-k:] = np.linspace(1, 0, k) ** 2
     st = np.stack([L, R], 1) * fade[:, None]
     return np.tanh(st / np.max(np.abs(st)) * 1.3) / np.tanh(1.3) * 0.89

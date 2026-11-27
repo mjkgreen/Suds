@@ -26,7 +26,9 @@ runs it 4 days a week by following [`TASK.md`](TASK.md).
    tempo, chord progression and patterns, so tracks never repeat. Nothing is licensed.
    The end card is 4 s and always plays the **Suds theme** (`render/theme.py`): a
    steel-pan hook, then two glasses clink "cheers" and ring out. The bed fades out
-   as the card comes in, and the theme is matched to the bed's loudness. Unlike the bed, the theme never changes: it's the brand's sound.
+   as the card comes in. The theme is fitted to each reel's bed: same key (a minor bed
+   gets its relative major), one hook note per 16th of the bed's tempo, first note on a
+   beat, 2 dB under the bed's loudness. The melody and sounds never change: it's the brand's sound.
    `python3 render/theme.py out.wav` writes it on its own.
 4. `planner.py` decides what's due and refuses repeats. Its `check` must say
    `OK` before anything is uploaded.

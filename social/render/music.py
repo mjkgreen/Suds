@@ -12,7 +12,7 @@ make(style, duration, taps_s, out_wav, seed, outro_at) -> signature dict
   (style, key, mode, bpm, progression, seed), recorded in post.json so the
   planner can keep the music from repeating.
 """
-import json, sys, wave
+import json, math, sys, wave
 import numpy as np
 
 SR = 44100
@@ -163,17 +163,17 @@ def write_wav(x, path):
 
 
 def make(style, duration, taps_s, out_wav, seed=None, outro_at=None):
-    """outro_at: seconds where the end card starts; the bed fades out and the Suds theme plays."""
+    """outro_at: seconds where the end card starts; the Suds theme plays over it, fitted to the bed."""
     if style in (None, 'random'):
         style = str(np.random.default_rng(seed).choice(sorted(STYLES)))
     x, sig = render(style, duration, seed, taps_s)
     if outro_at is not None:
-        x = with_theme(x, outro_at)
+        x = with_theme(x, outro_at, sig)
     write_wav(x, out_wav)
     return sig
 
 
-THEME_DB = -1.0     # the sting's loudness against the bed's: just under, so it doesn't jump out
+THEME_DB = -2.0     # the sting's loudness against the bed's: a little under, so it doesn't jump out
 
 
 def _biquad(x, b, a):
@@ -195,22 +195,31 @@ def _power(ch):
     return sum(np.mean(_biquad(_biquad(ch[:, j], *shelf), *high) ** 2) for j in range(ch.shape[1])) + 1e-12
 
 
-def with_theme(bed, at):
-    """Fade the bed out across the end card's first moments and lay the Suds theme over it,
-    matched to how loud the bed was just before.
+def with_theme(bed, at, sig):
+    """Lay the Suds theme over the end card (starting at `at` s), fitted to the bed:
 
-    The bed is in a random key and the theme is in G, so the bed is gone by the
-    time the theme's chord rings. Returns stereo (n, 2), as long as the bed."""
+    - key: transposed to the bed's key (a minor bed gets its relative major, so the
+      major-key hook stays in the bed's scale), by the smallest shift from G;
+    - tempo: one melody note per 16th note of the bed's beat;
+    - phase: the first note lands on the bed's first beat after the card starts,
+      and the bed fades out into that beat, so the handoff is in time and in tune;
+    - level: THEME_DB against the bed's loudness over the 8 s before the card.
+    Returns stereo (n, 2), as long as the bed."""
     import theme
+    name, mode = sig['key'].split()
+    tonic = (NOTE_NAMES.index(name) + (3 if mode == 'minor' else 0)) % 12
+    shift = (tonic - 7 + 6) % 12 - 6
+    beat = 60 / sig['bpm']
+    first = math.ceil((at + 0.12) / beat - 1e-6) * beat     # absolute time of the first note
     n = len(bed); t = np.arange(n) / SR
-    k = np.clip((t - (at - 0.2)) / 0.6, 0, 1)        # 0.2 s before the card to 0.4 s into it
+    k = np.clip((t - (first - 0.6)) / 0.7, 0, 1)            # bed gone just after the first note
     out = np.repeat((bed * 0.5 * (1 + np.cos(np.pi * k)))[:, None], 2, axis=1)
-    sting = theme.render()
     i = int(at * SR)
+    sting = theme.render(shift, beat / 4, first - at, (n - i) / SR)
     ref = bed[max(0, i - 8 * SR):i]
     if len(ref) > SR:
-        bed_p = _power(np.repeat(ref[:, None], 2, axis=1))
-        sting = sting * np.sqrt(bed_p / _power(sting[:int(2.5 * SR)])) * 10 ** (THEME_DB / 20)
+        j = int((first - at) * SR)
+        sting = sting * np.sqrt(_power(np.repeat(ref[:, None], 2, axis=1)) / _power(sting[j:j + int(2.5 * SR)])) * 10 ** (THEME_DB / 20)
     m = min(len(sting), n - i)
     out[i:i + m] += sting[:m]
     return out / max(1.0, np.abs(out).max() / 0.89)
