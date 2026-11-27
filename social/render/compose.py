@@ -160,18 +160,35 @@ def draw_taps(img, taps):
 
 
 _END_BUBBLES = {}
+_LOGOS = {}
+
+
+def glass_logo(size):
+    """The Suds glass with its amber square keyed out, so whatever is behind it shows through.
+
+    assets/Suds.png is two flat colours (amber background, orange glass) plus
+    antialiased edges between them; green separates them, so it sets the alpha.
+    """
+    if size not in _LOGOS:
+        rgb = np.asarray(Image.open(os.path.join(ROOT, 'assets', 'Suds.png')).convert('RGB')).astype(np.float32)
+        alpha = np.clip((158 - rgb[..., 1]) / (158 - 84), 0, 1)
+        out = np.zeros(rgb.shape[:2] + (4,), np.uint8)
+        out[..., :3] = (247, 84, 5)
+        out[..., 3] = (alpha * 255).round().astype(np.uint8)
+        _LOGOS[size] = Image.fromarray(out, 'RGBA').resize((size, size), Image.LANCZOS)
+    return _LOGOS[size]
 
 
 def end_bubbles(n, title, cta, url):
-    """Bubbles rising through the end card; they fade behind the logo, wordmark, title, button and URL."""
+    """Bubbles rising through the end card; they fade behind the wordmark, title, button and URL (not the see-through logo)."""
     key = (n, title, cta, url)
     if key not in _END_BUBBLES:
         d = ImageDraw.Draw(Image.new('RGBA', (1, 1)))
         cx = W / 2 - 30
         def box(width, y0, y1):  # y ranges include the 40px slide-in
             return (cx - width / 2, y0, cx + width / 2, y1 + 40)
-        avoid = [box(360, 330, 690),
-                 box(d.textlength('Suds', font=font('Black', 120)), 730, 880)]
+        # No box for the logo: it's see-through, so bubbles stay visible around and inside the glass.
+        avoid = [box(d.textlength('Suds', font=font('Black', 120)), 730, 880)]
         lines = title.split('\n')
         avoid.append(box(max(d.textlength(l, font=font('Bold', 64)) for l in lines), 900, 900 + 80 * len(lines)))
         avoid.append(box(d.textlength(cta, font=font('ExtraBold', 54)) + 110, 1130, 1130 + 120))
@@ -184,12 +201,9 @@ def end_card(i, n, title, cta, url):
     img = Image.new('RGBA', (W, H), AMBER + (255,))
     img.alpha_composite(end_bubbles(n, title, cta, url).render(i))
     d = ImageDraw.Draw(img)
-    logo = Image.open(os.path.join(ROOT, 'assets', 'Suds.png')).convert('RGBA').resize((360, 360), Image.LANCZOS)
-    mask = Image.new('L', logo.size, 0)
-    ImageDraw.Draw(mask).rounded_rectangle((0, 0, 359, 359), radius=80, fill=255)
     t = ease(i / 10)
     y_off = int(40 * (1 - t))
-    img.paste(logo, ((W - 360) // 2 - 30, 330 + y_off), mask)
+    img.alpha_composite(glass_logo(360), ((W - 360) // 2 - 30, 330 + y_off))
     f1 = font('Black', 120)
     word = 'Suds'
     d.text(((W - d.textlength(word, font=f1)) / 2 - 30, 730 + y_off), word, font=f1, fill=INK)
