@@ -6,7 +6,8 @@
 Does, per frame: an eased camera crop (pan/zoom that follows the action),
 touch rings where real taps happened, the hook / caption overlays, then an
 end card with the call to action. Adds a synthesized music bed (no licensed
-audio) with soft taps, and encodes under the Drive upload cap.
+audio) with soft taps and the Suds theme over the end card, and encodes under
+the Drive upload cap.
 """
 import argparse, json, math, os, shutil, subprocess, sys, tempfile
 import numpy as np
@@ -22,7 +23,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.abspath(os.path.join(HERE, '..', '..'))
 FONT_DIR = '/usr/share/fonts/opentype/inter'
 AMBER, AMBER_DARK, INK = (243, 156, 11), (245, 90, 7), (17, 24, 39)
-END_FRAMES, FADE_FRAMES = 78, 8
+END_FRAMES, FADE_FRAMES = 120, 8   # 4 s: the Suds theme (theme.py) plays over it
 # Safe area: platform UI covers the bottom fifth and the right-edge buttons.
 SAFE_X0, SAFE_X1, SAFE_BOTTOM = 70, W - 150, int(H * 0.8)
 
@@ -350,7 +351,7 @@ def main():
     duration = total / FPS
     wav = os.path.join(work, 'music.wav')
     seed = a.music_seed if a.music_seed is not None else int(np.random.default_rng().integers(1, 2**31))
-    sig = music.make(a.music, duration, tap_times, wav, seed)
+    sig = music.make(a.music, duration, tap_times, wav, seed, outro_at=n / FPS)
     json.dump(sig, open(os.path.splitext(a.out)[0] + '.music.json', 'w'))
     how = encode(out_frames, wav, a.out, a.max_mb, duration)
     size = os.path.getsize(a.out) / 1e6

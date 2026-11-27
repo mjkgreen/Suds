@@ -8,7 +8,7 @@ pattern from a seed, so no two posts share a track.
   python3 music.py <style|random> <seconds> <out.wav> [seed]   # try one out
   music.STYLES                                                 # style names
 
-make(style, duration, taps_s, out_wav, seed) -> signature dict
+make(style, duration, taps_s, out_wav, seed, outro_at) -> signature dict
   (style, key, mode, bpm, progression, seed), recorded in post.json so the
   planner can keep the music from repeating.
 """
@@ -158,16 +158,37 @@ def render(style, duration, seed=None, taps_s=()):
 
 def write_wav(x, path):
     with wave.open(path, 'wb') as w:
-        w.setnchannels(1); w.setsampwidth(2); w.setframerate(SR)
+        w.setnchannels(1 if x.ndim == 1 else x.shape[1]); w.setsampwidth(2); w.setframerate(SR)
         w.writeframes((x * 32767).astype(np.int16).tobytes())
 
 
-def make(style, duration, taps_s, out_wav, seed=None):
+def make(style, duration, taps_s, out_wav, seed=None, outro_at=None):
+    """outro_at: seconds where the end card starts; the bed fades out and the Suds theme plays."""
     if style in (None, 'random'):
         style = str(np.random.default_rng(seed).choice(sorted(STYLES)))
     x, sig = render(style, duration, seed, taps_s)
+    if outro_at is not None:
+        x = with_theme(x, outro_at)
     write_wav(x, out_wav)
     return sig
+
+
+THEME_GAIN = 0.85    # the sting sits ~2 dB above the bed so the logo moment lands
+
+
+def with_theme(bed, at):
+    """Fade the bed out across the end card's first moments and lay the Suds theme over it.
+
+    The bed is in a random key and the theme is in G, so the bed is gone by the
+    time the theme's chord rings. Returns stereo (n, 2), as long as the bed."""
+    import theme
+    n = len(bed); t = np.arange(n) / SR
+    k = np.clip((t - (at - 0.2)) / 0.6, 0, 1)        # 0.2 s before the card to 0.4 s into it
+    out = np.repeat((bed * 0.5 * (1 + np.cos(np.pi * k)))[:, None], 2, axis=1)
+    sting = theme.render() * THEME_GAIN
+    i = int(at * SR); m = min(len(sting), n - i)
+    out[i:i + m] += sting[:m]
+    return out / max(1.0, np.abs(out).max() / 0.89)
 
 
 # ---------- styles ----------
